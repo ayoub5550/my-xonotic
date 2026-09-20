@@ -1,5 +1,19 @@
 # سجل التغييرات
 
+## 0.1.0-dev.2 — 2026-09-20 — أول APK مبني محلياً (ساحة تطوير فقط)
+
+- تفعيل Unity 2022.3.62f3 محلياً ونجاح استيراد المشروع وترجمته (0 أخطاء C#).
+- اختبارات المحرر: `LocalTests.Run` → 14 PASS (تتطلب توليد fixtures أولاً:
+  `python3 tools/content/pk3_tool.py fixture --out-dir tests/fixtures/generated`).
+- إصلاح بناء بطيء: كان shader `Standard` مثبّتاً في Always Included Shaders فأنتج
+  24,576 نسخة. أُزيل التثبيت (يبقى احتياطياً فقط)، وأُضيف `ShaderVariantStripper`
+  (IPreprocessShaders) وإعدادات stripping للضباب/lightmap/instancing.
+- أول APK: `com.ayoub.myxonotic` 0.1.0-dev.1، ARM64/IL2CPP/GLES3، 18.5 MB،
+  بناء كامل في ~5 دقائق. المحتوى: ساحة التطوير الأصلية فقط — ليس Xonotic الكاملة.
+- التزام ملفات ProjectSettings والمشهد `DevelopmentArena.unity` المولّدة.
+
+**لم يُتحقق بعد:** التشغيل على جهاز Android حقيقي.
+
 ## 0.1.0-dev.1 — 2026-09-20 — مصدر تطوير، بلا APK
 
 - تأسيس مشروع Unity 2022.3.62f3 وأدوات بناء Android محلية فقط.

@@ -47,7 +47,7 @@ namespace MyXonotic.EditorTools
             QualitySettings.shadows = ShadowQuality.Disable;
             Time.fixedDeltaTime = 1f / 60f;
             PinShader("MyXonotic/VertexColor");
-            PinShader("Standard");
+            UnpinShader("Standard"); // fallback only; pinning it forces ~24k variants through the shader compiler
             AssetDatabase.SaveAssets();
             Debug.Log("[my-xonotic] Local settings configured: Android ARM64 IL2CPP, no cloud build.");
         }
@@ -64,6 +64,20 @@ namespace MyXonotic.EditorTools
                 if (array.GetArrayElementAtIndex(i).objectReferenceValue == shader) return;
             array.InsertArrayElementAtIndex(array.arraySize);
             array.GetArrayElementAtIndex(array.arraySize - 1).objectReferenceValue = shader;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static void UnpinShader(string name)
+        {
+            var shader = Shader.Find(name);
+            if (shader == null) return;
+            var graphics = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset");
+            if (graphics.Length == 0) return;
+            var so = new SerializedObject(graphics[0]);
+            var array = so.FindProperty("m_AlwaysIncludedShaders");
+            for (var i = array.arraySize - 1; i >= 0; i--)
+                if (array.GetArrayElementAtIndex(i).objectReferenceValue == shader)
+                    array.DeleteArrayElementAtIndex(i);
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

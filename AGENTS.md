@@ -13,9 +13,9 @@ pack. It is NOT the complete game, a verified Unity project import, or an APK.
 | Standalone BSP checks | PASS: 53 assertions including two actual release maps; 49 synthetic-only |
 | Python intake/range/resource-index checks | PASS: 57 tests |
 | Source asset GUID check | PASS: generated once and checked for missing/duplicate GUIDs |
-| Unity Editor import/compilation | BLOCKED before project import: local activation returned HTTP 401 |
-| Editor tests / Play Mode | Written and host-compiled, NOT RUN |
-| Android build / installation / device play | NOT RUN; no APK produced |
+| Unity Editor import/compilation | PASS 2026-09-20: activated locally (Personal), project imported, 0 C# errors |
+| Editor tests / Play Mode | Editor tests PASS (14) after generating fixtures; Play Mode smoke NOT RUN |
+| Android build / installation / device play | APK BUILT 2026-09-20 (0.1.0-dev.1, 18.5 MB, ~5 min); device play NOT verified |
 
 The local Editor existed; matching Android support/JDK/NDK/SDK were installed during
 this task. Installation checks are not build proof. Do not use an earlier
@@ -46,6 +46,16 @@ this task. Installation checks are not build proof. Do not use an earlier
 - Update this handoff, test evidence and CHANGELOG with each tangible increment.
 - One Unity instance at a time. Worker assignments from the initial task are finished;
   no lasting parallel file ownership is implied.
+
+## Local build notes (2026-09-20)
+
+- Never pin `Standard` in Always Included Shaders: it expands to 24,576 variants and
+  the sandbox shader compiler (qemu-emulated) needs ~1 h for it. `LocalBuild.Configure`
+  now unpins it; `Editor/ShaderVariantStripper.cs` keeps only minimal forward variants
+  of built-in shaders; GraphicsSettings strips fog/lightmap/instancing variants.
+- Run `python3 tools/content/pk3_tool.py fixture --out-dir tests/fixtures/generated`
+  before `tools/local_unity.py test`.
+- Task order that works: compile → configure → scene → test → android.
 
 ## Layout and entry points
 
@@ -120,10 +130,8 @@ full release SHA512 was not verified. It is never run implicitly by a build.
 
 ## Next actions, in order
 
-1. Resolve legitimate local Unity activation with the owner privately. Do not
-   retry guessed accounts, reuse unrelated mailbox access, or publish credentials.
-2. On an activated machine run compile → Editor checks → real Play Mode smoke.
-   Inspect errors and screenshots, then run Android build and validate its APK.
+1. DONE: local activation, compile, Editor checks, Android APK (see table).
+2. Run the real Play Mode smoke (`playtest`, needs Xvfb + `-force-glcore`).
 3. Run on a real ARM64 Android device: independent move/look/fire, safe area,
    pause/background/resume, shots/walls, score/respawn, performance and thermals.
 4. Verify remaining source/attribution gaps in the upstream resource manifests

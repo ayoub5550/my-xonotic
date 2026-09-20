@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Xonotic</string>
+    <string name="data_title">Xonotic game data</string>
+    <string name="data_missing">Game data (about 1 GB) is not installed yet.\nDownload it from dl.xonotic.org over Wi-Fi, or copy the .pk3 files into:\n%1$s</string>
+    <string name="download">Download game data</string>
+    <string name="play">Play</string>
+    <string name="downloading">Downloading… %1$d MB / %2$d MB</string>
+    <string name="extracting">Extracting %1$s…</string>
+    <string name="failed">Failed: %1$s</string>
+</resources>

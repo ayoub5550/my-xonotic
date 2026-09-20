@@ -46,6 +46,10 @@ icons = {
     "gfx/touch_jumpbutton.tga":    icon((256, 128), lambda d, s: button(d, s, "JUMP")),
     "gfx/touch_attackbutton.tga":  icon((256, 128), lambda d, s: button(d, s, "FIRE", (140, 30, 30, 170))),
     "gfx/touch_attack2button.tga": icon((256, 128), lambda d, s: button(d, s, "ALT", (30, 60, 140, 170))),
+    "gfx/touch_crouchbutton.tga":  icon((256, 128), lambda d, s: button(d, s, "CROUCH")),
+    "gfx/touch_zoombutton.tga":    icon((128, 128), lambda d, s: button(d, s, "ZOOM")),
+    "gfx/touch_weapnextbutton.tga": icon((256, 128), lambda d, s: button(d, s, "WPN+")),
+    "gfx/touch_weapprevbutton.tga": icon((256, 128), lambda d, s: button(d, s, "WPN-")),
 }
 
 cfg = """// xonotic-android: mobile defaults (loaded after default.cfg via autoexec chain)
@@ -57,6 +61,17 @@ r_shadow_realtimedlight 0
 r_bloom 0
 r_motionblur 0
 vid_samples 1
+// Explicit mobile bindings; upstream SHIFT is crouch, not zoom.
+bind CTRL +crouch
+bind SHIFT +zoom
+bind SPACE +jump
+bind MOUSE1 +attack
+bind MOUSE2 +attack2
+bind MWHEELUP weapnext
+bind MWHEELDOWN weapprev
+// Stick presses must not also trigger upstream weaplast / grapple hook.
+unbind MOUSE4
+unbind MOUSE5
 """
 
 os.makedirs(os.path.dirname(OUT), exist_ok=True)

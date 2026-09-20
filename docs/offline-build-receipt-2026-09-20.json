@@ -1,0 +1,12 @@
+{
+  "version": "0.1.1",
+  "versionCode": 2,
+  "apk_bytes": 1191463450,
+  "sha256": "d9e41ba21114a005be587b6a1cf0b310c972ce9e62f82e4a3a7c3728b32785d9",
+  "signature_verified": "v2; same debug certificate as 0.1.0",
+  "embedded_resource_count": 8,
+  "embedded_sha256_checks": "all passed",
+  "installer_test_assertions": 26,
+  "android_runtime": "NOT VERIFIED",
+  "delivery": "Drive quota exceeded; Slack upload rejected (400)"
+}

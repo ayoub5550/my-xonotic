@@ -1,67 +1,3 @@
-diff --git a/gl_rmain.c b/gl_rmain.c
-index f9007ca..a318969 100644
---- a/gl_rmain.c
-+++ b/gl_rmain.c
-@@ -3111,7 +3111,7 @@ static void gl_main_start(void)
- 
- 	r_refdef.fogmasktable_density = 0;
- 
--#ifdef __ANDROID__
-+#if defined(__ANDROID__) && defined(DP_STEELSTORM_PREWARM)
- 	// For Steelstorm Android
- 	// FIXME CACHE the program and reload
- 	// FIXME see possible combinations for SS:BR android
-diff --git a/gl_textures.c b/gl_textures.c
-index 049240b..23a3905 100644
---- a/gl_textures.c
-+++ b/gl_textures.c
-@@ -104,7 +104,7 @@ static textypeinfo_t textype_rgba                        = {"rgba",
- static textypeinfo_t textype_rgba_alpha                  = {"rgba_alpha",               TEXTYPE_RGBA          ,  4,  4,  4.0f, GL_RGBA                               , GL_RGBA           , GL_UNSIGNED_BYTE };
- static textypeinfo_t textype_bgra                        = {"bgra",                     TEXTYPE_BGRA          ,  4,  4,  4.0f, GL_RGBA                               , GL_BGRA           , GL_UNSIGNED_BYTE };
- static textypeinfo_t textype_bgra_alpha                  = {"bgra_alpha",               TEXTYPE_BGRA          ,  4,  4,  4.0f, GL_RGBA                               , GL_BGRA           , GL_UNSIGNED_BYTE };
--#ifdef __ANDROID__
-+#if defined(__ANDROID__) && defined(DP_USE_KTX)
- static textypeinfo_t textype_etc1                        = {"etc1",                     TEXTYPE_ETC1          ,  1,  3,  0.5f, GL_ETC1_RGB8_OES                         , 0                 , 0                };
- #endif
- #else
-@@ -260,7 +260,7 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
- 	case TEXTYPE_PALETTE: return (flags & TEXF_ALPHA) ? &textype_palette_alpha : &textype_palette;
- 	case TEXTYPE_RGBA: return ((flags & TEXF_ALPHA) ? &textype_rgba_alpha : &textype_rgba);
- 	case TEXTYPE_BGRA: return ((flags & TEXF_ALPHA) ? &textype_bgra_alpha : &textype_bgra);
--#ifdef __ANDROID__
-+#if defined(__ANDROID__) && defined(DP_USE_KTX)
- 	case TEXTYPE_ETC1: return &textype_etc1;
- #endif
- 	case TEXTYPE_ALPHA: return &textype_alpha;
-@@ -1561,7 +1561,7 @@ int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qbool skipuncompr
- #endif
- }
- 
--#ifdef __ANDROID__
-+#if defined(__ANDROID__) && defined(DP_USE_KTX)
- // ELUAN: FIXME: separate this code
- #include "ktx10/include/ktx.h"
- #endif
-@@ -1586,7 +1586,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
- 	fs_offset_t ddsfilesize;
- 	unsigned int ddssize;
- 	qbool force_swdecode;
--#ifdef __ANDROID__
-+#if defined(__ANDROID__) && defined(DP_USE_KTX)
- 	// ELUAN: FIXME: separate this code
- 	char vabuf[1024];
- 	char vabuf2[1024];
-@@ -1597,7 +1597,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
- 	if (cls.state == ca_dedicated)
- 		return NULL;
- 
--#ifdef __ANDROID__
-+#if defined(__ANDROID__) && defined(DP_USE_KTX)
- 	// ELUAN: FIXME: separate this code
- 	if (vid.renderpath != RENDERPATH_GLES2)
- 	{
-diff --git a/glquake.h b/glquake.h
-index 8d603ad..00bd622 100644
 --- a/glquake.h
 +++ b/glquake.h
 @@ -4,7 +4,45 @@
@@ -110,11 +46,50 @@ index 8d603ad..00bd622 100644
  #else
  //#include <SDL_opengl.h>
  //#include <SDL_opengl_glext.h>
-diff --git a/vid_sdl.c b/vid_sdl.c
-index ea6fe26..657a171 100644
 --- a/vid_sdl.c
 +++ b/vid_sdl.c
-@@ -1720,15 +1720,18 @@ static qbool VID_InitModeGL(const viddef_mode_t *mode)
+@@ -875,9 +875,10 @@
+ 	memset(multitouchs, 0, sizeof(multitouchs));
+ 
+ 	// simple quake controls
++	// Match SDL finger events: all touch hit-box coordinates are normalized 0..1.
+ 	multitouch[MAXFINGERS-1][0] = SDL_GetMouseState(&x, &y);
+-	multitouch[MAXFINGERS-1][1] = x * 32768 / vid.mode.width;
+-	multitouch[MAXFINGERS-1][2] = y * 32768 / vid.mode.height;
++	multitouch[MAXFINGERS-1][1] = (float)x / vid.mode.width;
++	multitouch[MAXFINGERS-1][2] = (float)y / vid.mode.height;
+ 
+ 	// top of screen is toggleconsole and K_ESCAPE
+ 	switch(keydest)
+@@ -905,6 +906,11 @@
+ 		VID_TouchscreenArea( 2,   0,-160,  64,  32, "gfx/touch_jumpbutton.tga"   , 0.0f, NULL, NULL, &buttons[3], K_SPACE, NULL, 0, 0, 0, true);
+ 		VID_TouchscreenArea( 3,-128,-160,  64,  32, "gfx/touch_attackbutton.tga" , 0.0f, NULL, NULL, &buttons[2], K_MOUSE1, NULL, 0, 0, 0, true);
+ 		VID_TouchscreenArea( 3, -64,-160,  64,  32, "gfx/touch_attack2button.tga", 0.0f, NULL, NULL, &buttons[4], K_MOUSE2, NULL, 0, 0, 0, true);
++		// Mobile key bindings are explicitly set by bundled android.cfg.
++		VID_TouchscreenArea( 2,   0,-192,  64,  32, "gfx/touch_crouchbutton.tga"  , 0.0f, NULL, NULL, &buttons[5], K_CTRL, NULL, 0, 0, 0, true);
++		VID_TouchscreenArea( 1, -64,   0,  64,  64, "gfx/touch_zoombutton.tga"    , 0.0f, NULL, NULL, &buttons[6], K_SHIFT, NULL, 0, 0, 0, true);
++		VID_TouchscreenArea( 3,-192,-160,  64,  32, "gfx/touch_weapnextbutton.tga", 0.0f, NULL, NULL, &buttons[7], K_MWHEELUP, NULL, 0, 0, 0, true);
++		VID_TouchscreenArea( 3,-192,-128,  64,  32, "gfx/touch_weapprevbutton.tga", 0.0f, NULL, NULL, &buttons[8], K_MWHEELDOWN, NULL, 0, 0, 0, true);
+ 		buttons[15] = false;
+ 		break;
+ 	default:
+@@ -925,6 +931,15 @@
+ 			in_windowmouse_y = y;
+ 		}
+ 		break;
++	}
++
++	// Release held mobile-only buttons on menu/console transitions.
++	if (keydest != key_game)
++	{
++		VID_TouchscreenArea(0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &buttons[5], K_CTRL, NULL, 0, 0, 0, true);
++		VID_TouchscreenArea(0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &buttons[6], K_SHIFT, NULL, 0, 0, 0, true);
++		VID_TouchscreenArea(0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &buttons[7], K_MWHEELUP, NULL, 0, 0, 0, true);
++		VID_TouchscreenArea(0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &buttons[8], K_MWHEELDOWN, NULL, 0, 0, 0, true);
+ 	}
+ 
+ 	cl.cmd.forwardmove -= move[1] * cl_forwardspeed.value;
+@@ -1720,15 +1735,18 @@
  
  #ifdef DP_MOBILETOUCH
  	// mobile platforms are always fullscreen, we'll get the resolution after opening the window
@@ -135,7 +110,7 @@ index ea6fe26..657a171 100644
  	{
  		windowflags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
  		vid.mode.fullscreen = vid.mode.desktopfullscreen = true;
-@@ -1774,7 +1777,7 @@ static qbool VID_InitModeGL(const viddef_mode_t *mode)
+@@ -1774,7 +1792,7 @@
  
  #ifdef USE_GLES2
  	SDL_GL_SetAttribute (SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
@@ -144,3 +119,61 @@ index ea6fe26..657a171 100644
  	SDL_GL_SetAttribute (SDL_GL_CONTEXT_MINOR_VERSION, 0);
  #else
  	SDL_GL_SetAttribute (SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+--- a/gl_textures.c
++++ b/gl_textures.c
+@@ -104,7 +104,7 @@
+ static textypeinfo_t textype_rgba_alpha                  = {"rgba_alpha",               TEXTYPE_RGBA          ,  4,  4,  4.0f, GL_RGBA                               , GL_RGBA           , GL_UNSIGNED_BYTE };
+ static textypeinfo_t textype_bgra                        = {"bgra",                     TEXTYPE_BGRA          ,  4,  4,  4.0f, GL_RGBA                               , GL_BGRA           , GL_UNSIGNED_BYTE };
+ static textypeinfo_t textype_bgra_alpha                  = {"bgra_alpha",               TEXTYPE_BGRA          ,  4,  4,  4.0f, GL_RGBA                               , GL_BGRA           , GL_UNSIGNED_BYTE };
+-#ifdef __ANDROID__
++#if defined(__ANDROID__) && defined(DP_USE_KTX)
+ static textypeinfo_t textype_etc1                        = {"etc1",                     TEXTYPE_ETC1          ,  1,  3,  0.5f, GL_ETC1_RGB8_OES                         , 0                 , 0                };
+ #endif
+ #else
+@@ -260,7 +260,7 @@
+ 	case TEXTYPE_PALETTE: return (flags & TEXF_ALPHA) ? &textype_palette_alpha : &textype_palette;
+ 	case TEXTYPE_RGBA: return ((flags & TEXF_ALPHA) ? &textype_rgba_alpha : &textype_rgba);
+ 	case TEXTYPE_BGRA: return ((flags & TEXF_ALPHA) ? &textype_bgra_alpha : &textype_bgra);
+-#ifdef __ANDROID__
++#if defined(__ANDROID__) && defined(DP_USE_KTX)
+ 	case TEXTYPE_ETC1: return &textype_etc1;
+ #endif
+ 	case TEXTYPE_ALPHA: return &textype_alpha;
+@@ -1561,7 +1561,7 @@
+ #endif
+ }
+ 
+-#ifdef __ANDROID__
++#if defined(__ANDROID__) && defined(DP_USE_KTX)
+ // ELUAN: FIXME: separate this code
+ #include "ktx10/include/ktx.h"
+ #endif
+@@ -1586,7 +1586,7 @@
+ 	fs_offset_t ddsfilesize;
+ 	unsigned int ddssize;
+ 	qbool force_swdecode;
+-#ifdef __ANDROID__
++#if defined(__ANDROID__) && defined(DP_USE_KTX)
+ 	// ELUAN: FIXME: separate this code
+ 	char vabuf[1024];
+ 	char vabuf2[1024];
+@@ -1597,7 +1597,7 @@
+ 	if (cls.state == ca_dedicated)
+ 		return NULL;
+ 
+-#ifdef __ANDROID__
++#if defined(__ANDROID__) && defined(DP_USE_KTX)
+ 	// ELUAN: FIXME: separate this code
+ 	if (vid.renderpath != RENDERPATH_GLES2)
+ 	{
+--- a/gl_rmain.c
++++ b/gl_rmain.c
+@@ -3111,7 +3111,7 @@
+ 
+ 	r_refdef.fogmasktable_density = 0;
+ 
+-#ifdef __ANDROID__
++#if defined(__ANDROID__) && defined(DP_STEELSTORM_PREWARM)
+ 	// For Steelstorm Android
+ 	// FIXME CACHE the program and reload
+ 	// FIXME see possible combinations for SS:BR android

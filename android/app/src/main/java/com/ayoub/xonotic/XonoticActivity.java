@@ -18,20 +18,10 @@ import java.util.List;
 /** Hosts the DarkPlaces engine (libmain.so, SDL2) with Xonotic's game data. */
 public class XonoticActivity extends SDLActivity {
     private static final String TAG = "Xonotic";
-    /** Bump when the bundled touch-control pk3 changes so it gets re-copied. */
-    private static final String ANDROID_PK3 = "zz-xonotic-android-touch.pk3";
-    private static final String ANDROID_PK3_VERSION = "1";
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        if (!GameData.isInstalled(this)) {
-            // Data vanished (user cleared storage): go back to the launcher.
-            Intent i = new Intent(this, LauncherActivity.class);
-            i.putExtra("returned", true);
-            startActivity(i);
-            finish();
-        }
-        installBundledPk3();
+        // Launcher verifies every resource, including touch assets, before entering here.
+        // This activity is not exported; do not continue SDL startup after a failed setup.
         GameData.userDir(this).mkdirs();
         super.onCreate(savedInstanceState);
     }
@@ -60,21 +50,4 @@ public class XonoticActivity extends SDLActivity {
         return args.toArray(new String[0]);
     }
 
-    /** Copies assets/<ANDROID_PK3> into the data directory (touch icons, mobile cfg). */
-    private void installBundledPk3() {
-        File dataDir = GameData.dataDir(this);
-        File target = new File(dataDir, ANDROID_PK3);
-        File stamp = new File(dataDir, ANDROID_PK3 + ".v" + ANDROID_PK3_VERSION);
-        if (target.isFile() && stamp.isFile()) return;
-        AssetManager am = getAssets();
-        try (InputStream in = am.open(ANDROID_PK3); OutputStream out = new FileOutputStream(target)) {
-            byte[] buf = new byte[1 << 16];
-            int n;
-            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
-            stamp.createNewFile();
-            Log.i(TAG, "installed " + ANDROID_PK3);
-        } catch (IOException e) {
-            Log.w(TAG, "could not install " + ANDROID_PK3 + ": " + e);
-        }
-    }
 }

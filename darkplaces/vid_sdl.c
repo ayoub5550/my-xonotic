@@ -875,9 +875,10 @@ static void IN_Move_TouchScreen_Quake(void)
 	memset(multitouchs, 0, sizeof(multitouchs));
 
 	// simple quake controls
+	// Match SDL finger events: all touch hit-box coordinates are normalized 0..1.
 	multitouch[MAXFINGERS-1][0] = SDL_GetMouseState(&x, &y);
-	multitouch[MAXFINGERS-1][1] = x * 32768 / vid.mode.width;
-	multitouch[MAXFINGERS-1][2] = y * 32768 / vid.mode.height;
+	multitouch[MAXFINGERS-1][1] = (float)x / vid.mode.width;
+	multitouch[MAXFINGERS-1][2] = (float)y / vid.mode.height;
 
 	// top of screen is toggleconsole and K_ESCAPE
 	switch(keydest)
@@ -905,6 +906,11 @@ static void IN_Move_TouchScreen_Quake(void)
 		VID_TouchscreenArea( 2,   0,-160,  64,  32, "gfx/touch_jumpbutton.tga"   , 0.0f, NULL, NULL, &buttons[3], K_SPACE, NULL, 0, 0, 0, true);
 		VID_TouchscreenArea( 3,-128,-160,  64,  32, "gfx/touch_attackbutton.tga" , 0.0f, NULL, NULL, &buttons[2], K_MOUSE1, NULL, 0, 0, 0, true);
 		VID_TouchscreenArea( 3, -64,-160,  64,  32, "gfx/touch_attack2button.tga", 0.0f, NULL, NULL, &buttons[4], K_MOUSE2, NULL, 0, 0, 0, true);
+		// Mobile key bindings are explicitly set by bundled android.cfg.
+		VID_TouchscreenArea( 2,   0,-192,  64,  32, "gfx/touch_crouchbutton.tga"  , 0.0f, NULL, NULL, &buttons[5], K_CTRL, NULL, 0, 0, 0, true);
+		VID_TouchscreenArea( 1, -64,   0,  64,  64, "gfx/touch_zoombutton.tga"    , 0.0f, NULL, NULL, &buttons[6], K_SHIFT, NULL, 0, 0, 0, true);
+		VID_TouchscreenArea( 3,-192,-160,  64,  32, "gfx/touch_weapnextbutton.tga", 0.0f, NULL, NULL, &buttons[7], K_MWHEELUP, NULL, 0, 0, 0, true);
+		VID_TouchscreenArea( 3,-192,-128,  64,  32, "gfx/touch_weapprevbutton.tga", 0.0f, NULL, NULL, &buttons[8], K_MWHEELDOWN, NULL, 0, 0, 0, true);
 		buttons[15] = false;
 		break;
 	default:
@@ -925,6 +931,15 @@ static void IN_Move_TouchScreen_Quake(void)
 			in_windowmouse_y = y;
 		}
 		break;
+	}
+
+	// Release held mobile-only buttons on menu/console transitions.
+	if (keydest != key_game)
+	{
+		VID_TouchscreenArea(0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &buttons[5], K_CTRL, NULL, 0, 0, 0, true);
+		VID_TouchscreenArea(0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &buttons[6], K_SHIFT, NULL, 0, 0, 0, true);
+		VID_TouchscreenArea(0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &buttons[7], K_MWHEELUP, NULL, 0, 0, 0, true);
+		VID_TouchscreenArea(0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &buttons[8], K_MWHEELDOWN, NULL, 0, 0, 0, true);
 	}
 
 	cl.cmd.forwardmove -= move[1] * cl_forwardspeed.value;

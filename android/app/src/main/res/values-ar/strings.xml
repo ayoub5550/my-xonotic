@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Xonotic</string>
+    <string name="preparing">تجهيز ملفات اللعبة المدمجة والتحقق منها… %1$d%%\nلا يحتاج إلى تنزيل أو إنترنت. التجهيز الأول يحتاج حوالي 1.2 غيغابايت فارغة.</string>
+    <string name="retry">إعادة محاولة التجهيز</string>
+    <string name="play">العب</string>
+    <string name="failed">تعذّر تجهيز اللعبة: %1$s</string>
+</resources>

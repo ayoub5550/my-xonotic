@@ -17,6 +17,8 @@ namespace MyXonotic.Content.Bsp
         public int[] MeshVerts = System.Array.Empty<int>();
         public BspFace[] Faces = System.Array.Empty<BspFace>();
         public BspModel[] Models = System.Array.Empty<BspModel>();
+        /// <summary>Internal 128x128 RGB lightmap blocks (empty when the map uses external lightmaps).</summary>
+        public byte[][] Lightmaps = System.Array.Empty<byte[]>();
         public List<string> Warnings = new List<string>();
     }
 }

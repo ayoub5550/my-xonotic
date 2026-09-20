@@ -20,6 +20,26 @@ namespace MyXonotic.Content.Bsp
         public readonly List<BspVec3> Positions = new List<BspVec3>();
         public readonly List<BspColor32> Colors = new List<BspColor32>();
         public readonly List<int> Triangles = new List<int>();
+        public readonly List<BspVec2> SurfaceUvs = new List<BspVec2>();
+        public readonly List<BspVec2> LightmapUvs = new List<BspVec2>();
+        public readonly List<BspVec3> Normals = new List<BspVec3>();
+
+        /// <summary>
+        /// Drawn triangles grouped by (shader index, lightmap index) so the
+        /// importer can emit one sub-mesh + material per surface group.
+        /// Indices reference Positions, same as Triangles.
+        /// </summary>
+        public readonly List<BspSurfaceGroup> Groups = new List<BspSurfaceGroup>();
+
+        public BspSurfaceGroup GetGroup(int shaderIndex, int lightmapIndex)
+        {
+            for (int i = 0; i < Groups.Count; i++)
+                if (Groups[i].ShaderIndex == shaderIndex && Groups[i].LightmapIndex == lightmapIndex)
+                    return Groups[i];
+            var g = new BspSurfaceGroup { ShaderIndex = shaderIndex, LightmapIndex = lightmapIndex };
+            Groups.Add(g);
+            return g;
+        }
 
         /// <summary>
         /// Indices into Positions for surfaces that come from
@@ -28,6 +48,13 @@ namespace MyXonotic.Content.Bsp
         /// MeshCollider can be built for eligible geometry only.
         /// </summary>
         public readonly List<int> CollisionTriangles = new List<int>();
+    }
+
+    public sealed class BspSurfaceGroup
+    {
+        public int ShaderIndex;
+        public int LightmapIndex;
+        public readonly List<int> Triangles = new List<int>();
     }
 
     /// <summary>
@@ -162,7 +189,11 @@ namespace MyXonotic.Content.Bsp
                 var v = doc.Vertexes[face.Vertex + i];
                 mesh.Positions.Add(BspCoordinateSpace.QuakeToUnity(v.Position));
                 mesh.Colors.Add(v.Color);
+                mesh.SurfaceUvs.Add(v.SurfaceUv);
+                mesh.LightmapUvs.Add(v.LightmapUv);
+                mesh.Normals.Add(BspCoordinateSpace.QuakeDirectionToUnity(v.Normal));
             }
+            var group = skipDraw ? null : mesh.GetGroup(face.Texture, face.LightmapIndex);
 
             for (int i = 0; i < face.NumMeshVerts; i += 3)
             {
@@ -184,6 +215,9 @@ namespace MyXonotic.Content.Bsp
                     mesh.Triangles.Add(ia);
                     mesh.Triangles.Add(ic);
                     mesh.Triangles.Add(ib);
+                    group.Triangles.Add(ia);
+                    group.Triangles.Add(ic);
+                    group.Triangles.Add(ib);
                 }
                 if (collisionEligible)
                 {
@@ -250,6 +284,9 @@ namespace MyXonotic.Content.Bsp
                             var vertex = EvaluateBiquadratic(control, u, v);
                             mesh.Positions.Add(BspCoordinateSpace.QuakeToUnity(vertex.Position));
                             mesh.Colors.Add(vertex.Color);
+                            mesh.SurfaceUvs.Add(vertex.SurfaceUv);
+                            mesh.LightmapUvs.Add(vertex.LightmapUv);
+                            mesh.Normals.Add(BspCoordinateSpace.QuakeDirectionToUnity(vertex.Normal));
                             grid[sy, sx] = baseVertexOut + sy * samples + sx;
                         }
                     }
@@ -263,14 +300,14 @@ namespace MyXonotic.Content.Bsp
                             int c = grid[sy + 1, sx];
                             int d = grid[sy + 1, sx + 1];
 
-                            AddQuadTriangles(mesh, a, b, c, d, skipDraw, collisionEligible);
+                            AddQuadTriangles(mesh, a, b, c, d, skipDraw, collisionEligible, face);
                         }
                     }
                 }
             }
         }
 
-        private static void AddQuadTriangles(BspMeshData mesh, int a, int b, int c, int d, bool skipDraw, bool collisionEligible)
+        private static void AddQuadTriangles(BspMeshData mesh, int a, int b, int c, int d, bool skipDraw, bool collisionEligible, BspFace face)
         {
             // a b
             // c d
@@ -278,6 +315,9 @@ namespace MyXonotic.Content.Bsp
             {
                 mesh.Triangles.Add(a); mesh.Triangles.Add(c); mesh.Triangles.Add(b);
                 mesh.Triangles.Add(b); mesh.Triangles.Add(c); mesh.Triangles.Add(d);
+                var group = mesh.GetGroup(face.Texture, face.LightmapIndex);
+                group.Triangles.Add(a); group.Triangles.Add(c); group.Triangles.Add(b);
+                group.Triangles.Add(b); group.Triangles.Add(c); group.Triangles.Add(d);
             }
             if (collisionEligible)
             {
@@ -296,6 +336,8 @@ namespace MyXonotic.Content.Bsp
             // Reduce along u for each of the 3 rows (De Casteljau, degree 2).
             var rowPos = new BspVec3[3];
             var rowUv = new BspVec2[3];
+            var rowLm = new BspVec2[3];
+            var rowN = new BspVec3[3];
             var rowColor = new float[3, 4];
             for (int row = 0; row < 3; row++)
             {
@@ -309,6 +351,11 @@ namespace MyXonotic.Content.Bsp
                 var uv0 = new BspVec2(Lerp(p0.SurfaceUv.X, p1.SurfaceUv.X, u), Lerp(p0.SurfaceUv.Y, p1.SurfaceUv.Y, u));
                 var uv1 = new BspVec2(Lerp(p1.SurfaceUv.X, p2.SurfaceUv.X, u), Lerp(p1.SurfaceUv.Y, p2.SurfaceUv.Y, u));
                 rowUv[row] = new BspVec2(Lerp(uv0.X, uv1.X, u), Lerp(uv0.Y, uv1.Y, u));
+
+                var lm0 = new BspVec2(Lerp(p0.LightmapUv.X, p1.LightmapUv.X, u), Lerp(p0.LightmapUv.Y, p1.LightmapUv.Y, u));
+                var lm1 = new BspVec2(Lerp(p1.LightmapUv.X, p2.LightmapUv.X, u), Lerp(p1.LightmapUv.Y, p2.LightmapUv.Y, u));
+                rowLm[row] = new BspVec2(Lerp(lm0.X, lm1.X, u), Lerp(lm0.Y, lm1.Y, u));
+                rowN[row] = Lerp(Lerp(p0.Normal, p1.Normal, u), Lerp(p1.Normal, p2.Normal, u), u);
 
                 for (int ch = 0; ch < 4; ch++)
                 {
@@ -328,6 +375,10 @@ namespace MyXonotic.Content.Bsp
             var uvA = new BspVec2(Lerp(rowUv[0].X, rowUv[1].X, v), Lerp(rowUv[0].Y, rowUv[1].Y, v));
             var uvB = new BspVec2(Lerp(rowUv[1].X, rowUv[2].X, v), Lerp(rowUv[1].Y, rowUv[2].Y, v));
             var finalUv = new BspVec2(Lerp(uvA.X, uvB.X, v), Lerp(uvA.Y, uvB.Y, v));
+            var lmA = new BspVec2(Lerp(rowLm[0].X, rowLm[1].X, v), Lerp(rowLm[0].Y, rowLm[1].Y, v));
+            var lmB = new BspVec2(Lerp(rowLm[1].X, rowLm[2].X, v), Lerp(rowLm[1].Y, rowLm[2].Y, v));
+            var finalLm = new BspVec2(Lerp(lmA.X, lmB.X, v), Lerp(lmA.Y, lmB.Y, v));
+            var finalNormal = Lerp(Lerp(rowN[0], rowN[1], v), Lerp(rowN[1], rowN[2], v), v);
 
             byte[] finalColor = new byte[4];
             for (int ch = 0; ch < 4; ch++)
@@ -342,8 +393,8 @@ namespace MyXonotic.Content.Bsp
             {
                 Position = finalPos,
                 SurfaceUv = finalUv,
-                LightmapUv = default(BspVec2),
-                Normal = new BspVec3(0, 1, 0),
+                LightmapUv = finalLm,
+                Normal = finalNormal,
                 Color = new BspColor32(finalColor[0], finalColor[1], finalColor[2], finalColor[3]),
             };
         }

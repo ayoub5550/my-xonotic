@@ -36,6 +36,12 @@ namespace MyXonotic.Content.Bsp
                 q.Y / SourceUnitsPerUnityUnit);
         }
 
+        /// <summary>Direction/normal conversion: same axis swap, no scale.</summary>
+        public static BspVec3 QuakeDirectionToUnity(BspVec3 q)
+        {
+            return new BspVec3(q.X, q.Z, q.Y);
+        }
+
         /// <summary>
         /// Quake's yaw is degrees around the up axis, 0 = +X, increasing
         /// counter-clockwise looking from above. Unity's Transform.eulerAngles.y

@@ -1,0 +1,271 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using UnityEngine;
+
+namespace MyXonotic.EditorTools
+{
+    /// <summary>
+    /// Parsed subset of a Q3-style material script (scripts/*.shader).
+    /// Only the keys the importer needs; everything else is ignored.
+    /// </summary>
+    public sealed class MaterialScript
+    {
+        public string Name;
+        public string EditorImage;
+        public readonly List<string> SurfaceParms = new List<string>();
+        public readonly List<StageInfo> Stages = new List<StageInfo>();
+        public string SkyEnv;          // skyParms <env/name> ...
+        public bool CullNone;
+        public bool PolygonOffset;
+
+        public sealed class StageInfo
+        {
+            public string Map;
+            public string BlendFunc;   // raw tokens joined by space
+            public string AlphaFunc;
+            public bool UsesLightmap => Map == "$lightmap";
+        }
+
+        public bool Has(string parm) => SurfaceParms.Contains(parm, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Locates upstream Xonotic content (textures, material scripts, external
+    /// lightmaps, skyboxes) on the local disk. Roots, in priority order, come
+    /// from XONOTIC_CONTENT_ROOTS (path-separator separated) or default to
+    /// ExternalContent/maps, ExternalContent/data (extracted upstream pk3s,
+    /// git-ignored) and ThirdParty/Xonotic/maps-pk3 (bounded resources in Git).
+    /// Nothing here executes script content; scripts are parsed as data only.
+    /// </summary>
+    public sealed class XonoticContentResolver
+    {
+        static readonly string[] ImageExtensions = { ".tga", ".jpg", ".jpeg", ".png", ".dds" };
+
+        public readonly List<string> Roots = new List<string>();
+        readonly Dictionary<string, MaterialScript> _scripts = new Dictionary<string, MaterialScript>(StringComparer.OrdinalIgnoreCase);
+        public IReadOnlyDictionary<string, MaterialScript> Scripts => _scripts;
+
+        public XonoticContentResolver()
+        {
+            var env = Environment.GetEnvironmentVariable("XONOTIC_CONTENT_ROOTS");
+            var candidates = string.IsNullOrWhiteSpace(env)
+                ? new[] { "ExternalContent/maps", "ExternalContent/data", "ThirdParty/Xonotic/maps-pk3", "ThirdParty/Xonotic/data" }
+                : env.Split(Path.PathSeparator);
+            foreach (var c in candidates)
+            {
+                var full = Path.GetFullPath(c.Trim());
+                if (Directory.Exists(full)) Roots.Add(full);
+            }
+            LoadScripts();
+        }
+
+        void LoadScripts()
+        {
+            // Later roots have lower priority; only fill names not yet defined.
+            foreach (var root in Roots)
+            {
+                var dir = Path.Combine(root, "scripts");
+                if (!Directory.Exists(dir)) continue;
+                foreach (var file in Directory.GetFiles(dir, "*.shader").OrderBy(f => f, StringComparer.Ordinal))
+                {
+                    try
+                    {
+                        foreach (var script in ParseScriptFile(File.ReadAllText(file)))
+                            if (!_scripts.ContainsKey(script.Name)) _scripts[script.Name] = script;
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning("[XonoticContentResolver] failed to parse " + file + ": " + e.Message);
+                    }
+                }
+            }
+        }
+
+        public MaterialScript GetScript(string name)
+        {
+            MaterialScript s;
+            return _scripts.TryGetValue(name, out s) ? s : null;
+        }
+
+        /// <summary>Find an image for a bare content path such as "textures/exx/base-metal01" (no extension).</summary>
+        public string FindImage(string contentPath)
+        {
+            if (string.IsNullOrEmpty(contentPath)) return null;
+            contentPath = contentPath.Replace('\\', '/');
+            var withoutExt = Path.ChangeExtension(contentPath, null);
+            foreach (var root in Roots)
+            {
+                var exact = Path.Combine(root, contentPath);
+                if (File.Exists(exact) && ImageExtensions.Contains(Path.GetExtension(exact).ToLowerInvariant())) return exact;
+                foreach (var ext in ImageExtensions)
+                {
+                    var p = Path.Combine(root, withoutExt + ext);
+                    if (File.Exists(p)) return p;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Resolve the diffuse image for a BSP shader name: the literal texture file,
+        /// otherwise the first non-lightmap stage map of its script, otherwise
+        /// the editor image. Returns null when nothing is found.
+        /// </summary>
+        public string ResolveDiffuse(string shaderName, out MaterialScript script)
+        {
+            script = GetScript(shaderName);
+            var direct = FindImage(shaderName);
+            if (script == null) return direct;
+
+            foreach (var stage in script.Stages)
+            {
+                if (stage.UsesLightmap || string.IsNullOrEmpty(stage.Map)) continue;
+                if (stage.Map.StartsWith("$")) continue;
+                var img = FindImage(stage.Map);
+                if (img != null) return img;
+            }
+            if (direct != null) return direct;
+            if (!string.IsNullOrEmpty(script.EditorImage)) return FindImage(script.EditorImage);
+            return null;
+        }
+
+        /// <summary>External lightmap maps/&lt;map&gt;/lm_XXXX.(tga|jpg|png).</summary>
+        public string FindExternalLightmap(string mapName, int index)
+        {
+            return FindImage(string.Format("maps/{0}/lm_{1:D4}", mapName, index));
+        }
+
+        /// <summary>Six sky images env/&lt;name&gt;_{rt,lf,ft,bk,up,dn}. Returns null if any side is missing.</summary>
+        public Dictionary<string, string> FindSkybox(string envBase)
+        {
+            var result = new Dictionary<string, string>();
+            foreach (var side in new[] { "rt", "lf", "ft", "bk", "up", "dn" })
+            {
+                var p = FindImage(envBase + "_" + side);
+                if (p == null) return null;
+                result[side] = p;
+            }
+            return result;
+        }
+
+        // ------------------------------------------------------------------
+        // Minimal tokenizer for the brace-structured script format.
+        // ------------------------------------------------------------------
+        public static List<MaterialScript> ParseScriptFile(string text)
+        {
+            var tokens = Tokenize(text);
+            var result = new List<MaterialScript>();
+            int i = 0;
+            while (i < tokens.Count)
+            {
+                var name = tokens[i++];
+                if (name == "{" || name == "}") continue;
+                if (i >= tokens.Count || tokens[i] != "{") continue;
+                i++; // consume {
+                var script = new MaterialScript { Name = name };
+                int depth = 1;
+                MaterialScript.StageInfo stage = null;
+                var line = new List<string>();
+                while (i < tokens.Count && depth > 0)
+                {
+                    var t = tokens[i++];
+                    if (t == "{")
+                    {
+                        FlushLine(script, stage, line);
+                        depth++;
+                        if (depth == 2) stage = new MaterialScript.StageInfo();
+                        continue;
+                    }
+                    if (t == "}")
+                    {
+                        FlushLine(script, stage, line);
+                        depth--;
+                        if (depth == 1 && stage != null) { script.Stages.Add(stage); stage = null; }
+                        continue;
+                    }
+                    if (t == "\n") { FlushLine(script, stage, line); continue; }
+                    line.Add(t);
+                }
+                result.Add(script);
+            }
+            return result;
+        }
+
+        static void FlushLine(MaterialScript script, MaterialScript.StageInfo stage, List<string> line)
+        {
+            if (line.Count == 0) return;
+            var key = line[0].ToLowerInvariant();
+            if (stage == null)
+            {
+                switch (key)
+                {
+                    case "qer_editorimage": if (line.Count > 1) script.EditorImage = line[1]; break;
+                    case "surfaceparm": if (line.Count > 1) script.SurfaceParms.Add(line[1].ToLowerInvariant()); break;
+                    case "skyparms": if (line.Count > 1 && line[1] != "-") script.SkyEnv = line[1]; break;
+                    case "cull":
+                        if (line.Count > 1)
+                        {
+                            var v = line[1].ToLowerInvariant();
+                            script.CullNone = v == "none" || v == "disable" || v == "twosided";
+                        }
+                        break;
+                    case "polygonoffset": script.PolygonOffset = true; break;
+                }
+            }
+            else
+            {
+                switch (key)
+                {
+                    case "map":
+                    case "clampmap":
+                        if (line.Count > 1) stage.Map = line[1];
+                        break;
+                    case "animmap":
+                        if (line.Count > 2) stage.Map = line[2];
+                        break;
+                    case "blendfunc": stage.BlendFunc = string.Join(" ", line.Skip(1)).ToUpperInvariant(); break;
+                    case "alphafunc": stage.AlphaFunc = string.Join(" ", line.Skip(1)).ToUpperInvariant(); break;
+                }
+            }
+            line.Clear();
+        }
+
+        static List<string> Tokenize(string text)
+        {
+            var tokens = new List<string>();
+            int i = 0;
+            while (i < text.Length)
+            {
+                char c = text[i];
+                if (c == '\n') { tokens.Add("\n"); i++; continue; }
+                if (char.IsWhiteSpace(c)) { i++; continue; }
+                if (c == '/' && i + 1 < text.Length && text[i + 1] == '/')
+                {
+                    while (i < text.Length && text[i] != '\n') i++;
+                    continue;
+                }
+                if (c == '/' && i + 1 < text.Length && text[i + 1] == '*')
+                {
+                    int end = text.IndexOf("*/", i + 2, StringComparison.Ordinal);
+                    i = end < 0 ? text.Length : end + 2;
+                    continue;
+                }
+                if (c == '{' || c == '}') { tokens.Add(c.ToString()); i++; continue; }
+                if (c == '"')
+                {
+                    int end = text.IndexOf('"', i + 1);
+                    if (end < 0) end = text.Length;
+                    tokens.Add(text.Substring(i + 1, end - i - 1));
+                    i = end + 1;
+                    continue;
+                }
+                int start = i;
+                while (i < text.Length && !char.IsWhiteSpace(text[i]) && text[i] != '{' && text[i] != '}') i++;
+                tokens.Add(text.Substring(start, i - start));
+            }
+            return tokens;
+        }
+    }
+}

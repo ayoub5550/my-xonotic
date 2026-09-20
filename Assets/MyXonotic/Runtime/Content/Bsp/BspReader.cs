@@ -99,10 +99,40 @@ namespace MyXonotic.Content.Bsp
             doc.MeshVerts = ReadMeshVerts(reader, lumps[(int)BspLump.MeshVerts]);
             doc.Faces = ReadFaces(reader, lumps[(int)BspLump.Faces], doc.Warnings);
             doc.Models = ReadModels(reader, lumps[(int)BspLump.Models], doc.Warnings);
+            doc.Lightmaps = ReadLightmaps(data, lumps[(int)BspLump.LightMaps], doc.Warnings);
 
             ValidateFaceReferences(doc);
 
             return doc;
+        }
+
+        /// <summary>
+        /// Internal lightmaps: consecutive 128x128 RGB blocks. Maps compiled with
+        /// external lightmaps (Xonotic default) have an empty lump and ship
+        /// maps/&lt;name&gt;/lm_XXXX.tga instead; the importer resolves those.
+        /// </summary>
+        private static byte[][] ReadLightmaps(byte[] data, BspLumpDirEntry lump, List<string> warnings)
+        {
+            const int blockSize = 128 * 128 * 3;
+            if (lump.Length <= 0) return new byte[0][];
+            if (lump.Length % blockSize != 0)
+            {
+                warnings.Add("Lightmap lump is not a multiple of 128x128x3 bytes; internal lightmaps ignored.");
+                return new byte[0][];
+            }
+            int count = lump.Length / blockSize;
+            if (count > 4096)
+            {
+                warnings.Add("Lightmap lump declares more than 4096 blocks; internal lightmaps ignored.");
+                return new byte[0][];
+            }
+            var result = new byte[count][];
+            for (int i = 0; i < count; i++)
+            {
+                result[i] = new byte[blockSize];
+                System.Buffer.BlockCopy(data, lump.Offset + i * blockSize, result[i], 0, blockSize);
+            }
+            return result;
         }
 
         private static void RequireExactMultiple(BspLumpDirEntry lump, int recordSize, BspLump which)

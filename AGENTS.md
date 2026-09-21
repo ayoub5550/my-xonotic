@@ -16,7 +16,12 @@ Current passes: 55 BSP, 36 MD3, 68 match rules, 172 Boil entity-data, 130 Python
 22 Editor, 59 sky, 131 integration, 44 gameplay Play Mode, 12 synthetic Play Mode,
 100 original-Boil smoke assertions. No Android device/visual parity claim.
 All-map inventory reads 31 BSP files incl internal stub; no all-map playability claim.
-Read `docs/FULL-GAME-GATES.md`. APK receipt is a separate post-build gate.
+Read `docs/FULL-GAME-GATES.md`. Local dev.4 Android build succeeded from
+`3322efb2a3260c28edd4b36f6523ee68297d7e48`, 72,377,724 bytes, versionCode 4.
+SHA256 `9605df41cee8e68d7dd24d33953245b3de0df5979a74c6ebce06972a3b02e12a`.
+Receipt: `docs/unity-dev4-build-2026-09-21.json` (0 errors, 1 build warning).
+APK CRC/hash/manifest/ARM64 and v2 signature verified; same certificate as dev.3,
+still different from dev.2. No install/update/device test performed.
 Keep dev.3 evidence below historical when reporting this wave.
 
 ## Verified continuation checkpoint — 2026-09-21

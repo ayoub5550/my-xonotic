@@ -1,0 +1,9 @@
+{
+  "source_archive": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/staging_pk3/Xonotic/data/xonotic-20230620-data.pk3",
+  "source_archive_sha256": "7602be0d44a4f1ce4f0918c54ceb215c9bc963a103623d6c7874f081330c8505",
+  "entry_name": "models/player/erebus.iqm_0.skin",
+  "extracted_path": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/characters/erebus/source/models/player/erebus.iqm_0.skin",
+  "extracted_sha256": "55b1d3cb715cd737375f8fda69dc7b461c89012ce38c241abab1cc36e01208d9",
+  "extracted_size_bytes": 48,
+  "note": "Extracted content is third-party (Xonotic/community) unless proven otherwise; keep out of Git and review licence/distribution terms before shipping."
+}

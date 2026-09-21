@@ -1,0 +1,9 @@
+{
+  "source_archive": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/downloads/xonotic-0.8.6.zip",
+  "source_archive_sha256": "50850f8d800e7499722f6ea61e478e96464a375494b5a24da93aa0598cbe964d",
+  "entry_name": "Xonotic/COPYING",
+  "extracted_path": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/notices/Xonotic/COPYING",
+  "extracted_sha256": "9c6d680aa6e9daac858e86786637043ffd17d4007a20b57871836444ccace4bc",
+  "extracted_size_bytes": 2383,
+  "note": "Extracted content is third-party (Xonotic/community) unless proven otherwise; keep out of Git and review licence/distribution terms before shipping."
+}

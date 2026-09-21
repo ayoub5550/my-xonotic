@@ -1,5 +1,66 @@
 # my-xonotic — developer and agent handoff
 
+## Full-game continuation wave — dev.4 source checkpoint
+
+Owner reiterated full game after dev.3; a Boil-only release is not the endpoint.
+Do not manufacture a >1GB APK with unused files to simulate completeness.
+Current wave: original-map pickups, offline Deathmatch lifecycle, and a complete
+official-map/entity coverage inventory. Full weapons/animation/models/modes/network
+and Android validation remain separate acceptance gates.
+
+Workers finished; parent integrated and verified actual Unity Editor/Play Mode.
+25 Boil pickups (health/armor/rocket ammo) survive scene serialization and collect
+through actual physics. Pickup visuals are development spheres, not original art.
+Offline match limit/winner/tie/freeze/restart is wired into the arena and HUD.
+Current passes: 55 BSP, 36 MD3, 68 match rules, 172 Boil entity-data, 130 Python,
+22 Editor, 59 sky, 131 integration, 44 gameplay Play Mode, 12 synthetic Play Mode,
+100 original-Boil smoke assertions. No Android device/visual parity claim.
+All-map inventory reads 31 BSP files incl internal stub; no all-map playability claim.
+Read `docs/FULL-GAME-GATES.md`. Local dev.4 Android build succeeded from
+`3322efb2a3260c28edd4b36f6523ee68297d7e48`, 72,377,724 bytes, versionCode 4.
+SHA256 `9605df41cee8e68d7dd24d33953245b3de0df5979a74c6ebce06972a3b02e12a`.
+Receipt: `docs/unity-dev4-build-2026-09-21.json` (0 errors, 1 build warning).
+APK CRC/hash/manifest/ARM64 and v2 signature verified; same certificate as dev.3,
+still different from dev.2. No install/update/device test performed.
+Keep dev.3 evidence below historical when reporting this wave.
+
+## Verified continuation checkpoint — 2026-09-21
+
+Current working branch: `feat/unity-android-continuation`, based on `f59e34a`.
+Read this section and `docs/LOCAL_BUILD.md` before historical notes below.
+New bounded dev.3 APK built and verified; NOT complete Xonotic.
+Read `docs/UNITY-CONTINUATION.md` and the dated build receipt for evidence.
+
+- APK 72,332,393 bytes; SHA256
+  `cca7f66e67f18c229f889cca1b70a3427943ee1217f3fc650c5aafa4c3bd33c0`.
+- Build source `45e7e1c9c711142b8c4037023b6b0eaa04b6c4c8`; versionCode 3.
+- 55 BSP checks, 36 synthetic MD3 / 40 with real Rocket, 90 Python, 22 Editor,
+  59 sky-import, 12 synthetic Play Mode checks passed; Boil seven-spawn smoke passed.
+- Actual Unity weapon manifest confirms static view-model IQM Blaster + MD3 Rocket,
+  both resolved original diffuse skins. No animation or full-game claim.
+- APK v2 debug signature verified. Certificate differs from released dev.2:
+  in-place update will fail; never silently uninstall/delete app data.
+- Graphical Camera.Render still hangs in llvmpipe; no visual/device validation.
+- Complete official 0.8.6 archive SHA512 verified, selected extraction only.
+
+Completed scope: sky editor-preview routing, static original MD3 weapon support,
+selected DDS skins with provenance, and hardened local build verification.
+Only the parent launches Unity; workers finished.
+
+- `tools/local_unity.py` now requires a fresh invocation-bound build receipt,
+  matching target/output, nonempty artifact, byte count and SHA256 for Android
+  and Linux. Editor compile uses an executeMethod completion marker; Editor
+  tests and playtests cannot reuse stale result files.
+- `prepare_unity_textures.py` accepts repeatable `--texture` content paths,
+  validates containment and actual DDS format, stages conversions, and retains
+  earlier source/hash entries. It does not claim full texture/runtime support.
+- Full original assets on disk and complete gameplay are separate gates.
+  Do not rename a bounded development build as a complete Xonotic port.
+- Source/binary resource provenance and licence compatibility remain independent
+  review requirements; keep upstream art notices intact.
+- A user-reported test of the earlier experimental APK is not a device test of
+  any newly built version. Never transfer test claims between APK hashes.
+
 ## Current direction — 2026-09-21
 
 Owner explicitly rejected the native/DarkPlaces approach and requested returning
@@ -65,7 +126,7 @@ Critical corrections:
   followed by extracted maps/data and ThirdParty/Xonotic/maps-pk3.
 - Only parent launches Unity. Worker tasks are now complete; no ongoing ownership.
 
-## Read this first: current evidence, 2026-09-20
+## Historical checkpoint, 2026-09-20 — superseded where noted above
 
 **Goal:** genuinely bring Xonotic to Unity/Android, not a renamed LibreQuake game.
 **Current checkpoint:** `0.1.0-dev.1`, source + a bounded original upstream resource
@@ -165,7 +226,11 @@ See `docs/TESTING.md` for sample-map counts and what these checks cannot prove.
 The optional fetcher reproduces official BSP hashes using exact HTTP byte ranges;
 full release SHA512 was not verified. It is never run implicitly by a build.
 
-## Important implementation boundaries
+## Historical implementation boundaries (dev.1, not current feature inventory)
+
+The following describes the earlier dev.1 checkpoint. Texture/lightmap, static
+IQM and approximate trigger support were subsequently added as documented in the
+2026-09-21 checkpoint above. Do not use the older absence claims as current status.
 
 - Original 40×40 practice arena; 3 test bots, 5 pickups, 3 prototype guns. Not the
   full Xonotic arsenal, character art, AI, match modes, campaign or networking.
@@ -193,7 +258,7 @@ full release SHA512 was not verified. It is never run implicitly by a build.
 - Stable `.meta` GUIDs are committed. `tools/asset_meta.py --write-missing` seeds
   new source assets only and never rewrites an existing GUID.
 
-## Next actions, in order
+## Historical next actions (dev.1)
 
 1. DONE: local activation, compile, Editor checks, Android APK (see table).
 2. Run the real Play Mode smoke (`playtest`, needs Xvfb + `-force-glcore`).

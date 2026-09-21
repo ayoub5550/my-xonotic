@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using MyXonotic.Gameplay;
 using UnityEngine;
 
 namespace MyXonotic
@@ -37,6 +38,10 @@ namespace MyXonotic
         public Actor PlayerActor { get; private set; }
         public Player PlayerComponent { get; private set; }
         public WeaponController PlayerWeapons { get; private set; }
+        public MatchSession Match { get; private set; }
+        public int FragLimit = 20;
+        public float TimeLimitSeconds = 600f;
+        public bool MatchFinished => Match != null && Match.IsOver;
 
         public IReadOnlyList<Bot> Bots => _bots;
         public IReadOnlyList<Pickup> Pickups => _pickups;
@@ -73,6 +78,9 @@ namespace MyXonotic
             _hud = Hud.Build(transform);
             _hud.Player = PlayerActor;
             _hud.Weapons = PlayerWeapons;
+            Match = new MatchSession();
+            Match.MatchOver += OnMatchOver;
+            Match.StartMatch(CurrentMatchConfig(), GameState.Actors);
 
             IsReady = true;
             Instance = this;
@@ -80,6 +88,7 @@ namespace MyXonotic
 
         void Update()
         {
+            if (Match != null) Match.AdvanceTime(Time.deltaTime, IsPaused);
             if (Input.GetKeyDown(KeyCode.P) || Input.GetKeyDown(KeyCode.Escape)) SetPaused(!IsPaused);
             if (Input.GetKeyDown(KeyCode.R)) Restart();
             for (int i = 0; i < Input.touchCount; i++)
@@ -99,7 +108,9 @@ namespace MyXonotic
 
         public void SetPaused(bool paused)
         {
+            if (!paused && MatchFinished) return;
             IsPaused = paused;
+            if (Match != null) Match.Rules.SetPaused(paused);
             if (PlayerComponent != null) PlayerComponent.ResetInputState();
             Cursor.lockState = paused || TestMode || Application.isMobilePlatform
                 ? CursorLockMode.None : CursorLockMode.Locked;
@@ -109,6 +120,11 @@ namespace MyXonotic
         void OnDestroy()
         {
             if (Instance != this) return;
+            if (Match != null)
+            {
+                Match.MatchOver -= OnMatchOver;
+                Match.StopListening();
+            }
             Instance = null;
             IsReady = false;
             IsPaused = false;
@@ -375,7 +391,13 @@ namespace MyXonotic
 
         void BuildPickups()
         {
-            if (UsedImportedArena) return; // Do not invent pickups inside an upstream map.
+            if (UsedImportedArena)
+            {
+                // Imported by Editor from real entity positions; no Editor API in player.
+                foreach (var arena in FindObjectsOfType<MyXonotic.Content.ImportedArena>())
+                    _pickups.AddRange(arena.GetComponentsInChildren<Pickup>(true));
+                return;
+            }
             AddPickup(new Vector3(15f, 1f, 5f), PickupType.Health, 25, new Color(0.2f, 0.9f, 0.3f));
             AddPickup(new Vector3(-15f, 1f, -5f), PickupType.Armor, 25, new Color(0.3f, 0.5f, 0.9f));
             AddPickup(new Vector3(5f, 1f, -15f), PickupType.AmmoRifle, 20, new Color(0.9f, 0.9f, 0.2f));
@@ -423,7 +445,18 @@ namespace MyXonotic
                 pickup.ForceActivate();
             }
             foreach (var projectile in FindObjectsOfType<Projectile>()) Destroy(projectile.gameObject);
+            if (Match != null) Match.Restart(CurrentMatchConfig(), GameState.Actors);
             SetPaused(false);
+        }
+
+        MatchConfig CurrentMatchConfig() => new MatchConfig
+        {
+            FragLimit = FragLimit, TimeLimitSeconds = TimeLimitSeconds
+        };
+
+        void OnMatchOver(MatchResult<Actor> result)
+        {
+            SetPaused(true);
         }
     }
 }

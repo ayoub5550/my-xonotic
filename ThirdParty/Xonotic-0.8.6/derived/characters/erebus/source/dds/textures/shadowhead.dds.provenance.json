@@ -1,0 +1,9 @@
+{
+  "source_archive": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/staging_pk3/Xonotic/data/xonotic-20230620-data.pk3",
+  "source_archive_sha256": "7602be0d44a4f1ce4f0918c54ceb215c9bc963a103623d6c7874f081330c8505",
+  "entry_name": "dds/textures/shadowhead.dds",
+  "extracted_path": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/characters/erebus/source/dds/textures/shadowhead.dds",
+  "extracted_sha256": "fe01983f60e5551c4205347184aaf32e4d92c077aa35fbb81f8aa9cee5d5f6b6",
+  "extracted_size_bytes": 699192,
+  "note": "Extracted content is third-party (Xonotic/community) unless proven otherwise; keep out of Git and review licence/distribution terms before shipping."
+}

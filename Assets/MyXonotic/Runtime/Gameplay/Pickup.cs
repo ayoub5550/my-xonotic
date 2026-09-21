@@ -4,7 +4,28 @@ namespace MyXonotic
 {
     public enum PickupType { Health, Armor, AmmoBlaster, AmmoRifle, AmmoRocket }
 
-    /// <summary>World pickup with a respawn timer; grants health/armor/ammo on touch.</summary>
+    /// <summary>
+    /// World pickup with a respawn timer; grants health/armor/ammo on touch.
+    ///
+    /// Testable surface (no Play Mode / frame wait required):
+    ///  - <see cref="TryCollect(Actor)"/>: the accept/reject + grant +
+    ///    deactivate decision, callable directly instead of only through
+    ///    OnTriggerEnter. Returns false, leaving the pickup unchanged, when:
+    ///    inactive/respawning; arena paused; null/dead actor; a non-positive
+    ///    <see cref="Amount"/>; already-full health/armor; or a missing/capped
+    ///    ammo receiver.
+    ///  - <see cref="Tick(float)"/>: the per-frame update (spin + respawn
+    ///    countdown) as a plain method taking an explicit delta instead of
+    ///    reading Time.deltaTime, so a test can force a respawn with one call.
+    ///  - <see cref="IsAvailable"/> / <see cref="ForceActivate"/>: unchanged
+    ///    (ArenaBootstrap.Restart() already calls ForceActivate() on every
+    ///    pickup it owns).
+    ///
+    /// Both methods lazily populate the cached Renderer/Collider references if
+    /// called before Awake() has run (e.g. a test that calls TryCollect/Tick
+    /// right after AddComponent, in a context where Unity has not yet driven
+    /// the component lifecycle).
+    /// </summary>
     [RequireComponent(typeof(Collider))]
     public sealed class Pickup : MonoBehaviour
     {
@@ -14,52 +35,106 @@ namespace MyXonotic
 
         MeshRenderer _renderer;
         Collider _collider;
+        bool _cached;
         float _respawnTimer;
         bool _active = true;
         public bool IsAvailable => _active;
 
-        void Awake()
+        void Awake() => EnsureCached();
+
+        void EnsureCached()
         {
+            if (_cached) return;
             _renderer = GetComponent<MeshRenderer>();
             _collider = GetComponent<Collider>();
-            _collider.isTrigger = true;
+            if (_collider != null) _collider.isTrigger = true;
+            _cached = true;
         }
 
         void Update()
         {
             if (ArenaBootstrap.IsPaused) return;
-            transform.Rotate(Vector3.up, 60f * Time.deltaTime);
+            Tick(Time.deltaTime);
+        }
+
+        /// <summary>
+        /// Per-frame update: visual spin while available, respawn countdown
+        /// while consumed. Rejects a paused arena and any non-finite or
+        /// negative delta (no state change) so a direct caller cannot corrupt
+        /// the respawn timer; Update() additionally skips calling this at all
+        /// while paused, but the guard lives here too since this is public.
+        /// </summary>
+        public void Tick(float deltaTime)
+        {
+            EnsureCached();
+            if (ArenaBootstrap.IsPaused) return;
+            if (float.IsNaN(deltaTime) || float.IsInfinity(deltaTime) || deltaTime < 0f) return;
+
+            transform.Rotate(Vector3.up, 60f * deltaTime);
             if (_active) return;
-            _respawnTimer -= Time.deltaTime;
+            _respawnTimer -= deltaTime;
             if (_respawnTimer <= 0f) SetActive(true);
         }
 
         void OnTriggerEnter(Collider other)
         {
-            if (!_active || ArenaBootstrap.IsPaused) return;
-            var actor = other.GetComponentInParent<Actor>();
-            if (actor == null || actor.IsDead) return;
+            TryCollect(other.GetComponentInParent<Actor>());
+        }
+
+        /// <summary>
+        /// Attempts to grant this pickup to <paramref name="actor"/>. Returns
+        /// true and deactivates the pickup (starting its respawn timer) only
+        /// when something was actually granted; otherwise returns false and
+        /// leaves the pickup fully available and unchanged. Never throws on a
+        /// null actor.
+        /// </summary>
+        public bool TryCollect(Actor actor)
+        {
+            EnsureCached();
+            if (!_active || ArenaBootstrap.IsPaused) return false;
+            if (actor == null || actor.IsDead) return false;
+            if (Amount <= 0) return false;
 
             switch (Type)
             {
                 case PickupType.Health:
-                    if (actor.Health >= Actor.MaxHealth) return;
-                    actor.AddHealth(Amount); break;
+                    if (actor.Health >= Actor.MaxHealth) return false;
+                    actor.AddHealth(Amount);
+                    break;
                 case PickupType.Armor:
-                    if (actor.Armor >= Actor.MaxArmor) return;
-                    actor.AddArmor(Amount); break;
-                case PickupType.AmmoBlaster: GrantAmmo(actor, WeaponType.Blaster); break;
-                case PickupType.AmmoRifle: GrantAmmo(actor, WeaponType.Rifle); break;
-                case PickupType.AmmoRocket: GrantAmmo(actor, WeaponType.Rocket); break;
+                    if (actor.Armor >= Actor.MaxArmor) return false;
+                    actor.AddArmor(Amount);
+                    break;
+                case PickupType.AmmoBlaster:
+                    if (!TryGrantAmmo(actor, WeaponType.Blaster)) return false;
+                    break;
+                case PickupType.AmmoRifle:
+                    if (!TryGrantAmmo(actor, WeaponType.Rifle)) return false;
+                    break;
+                case PickupType.AmmoRocket:
+                    if (!TryGrantAmmo(actor, WeaponType.Rocket)) return false;
+                    break;
+                default:
+                    return false;
             }
+
             SetActive(false);
             _respawnTimer = RespawnTime;
+            return true;
         }
 
-        void GrantAmmo(Actor actor, WeaponType type)
+        /// <summary>
+        /// Grants ammo only if there is a receiver and it is not already full;
+        /// returns false (no state change on either side) otherwise so the
+        /// caller does not consume the pickup for nothing.
+        /// </summary>
+        bool TryGrantAmmo(Actor actor, WeaponType type)
         {
             var wc = actor.GetComponent<WeaponController>();
-            if (wc != null) wc.AddAmmo(type, Amount);
+            if (wc == null) return false;
+            if (wc.GetAmmo(type) >= wc.GetDef(type).MaxAmmo) return false;
+            wc.AddAmmo(type, Amount);
+            return true;
         }
 
         void SetActive(bool active)
@@ -70,6 +145,10 @@ namespace MyXonotic
         }
 
         /// Used by ArenaBootstrap.Restart() to reset all pickups immediately.
-        public void ForceActivate() => SetActive(true);
+        public void ForceActivate()
+        {
+            EnsureCached();
+            SetActive(true);
+        }
     }
 }

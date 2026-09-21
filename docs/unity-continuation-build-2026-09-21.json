@@ -1,0 +1,16 @@
+{
+    "unity": "2022.3.62f3",
+    "version": "0.1.0-dev.3",
+    "utc": "2026-09-21T12:11:22.5171310Z",
+    "target": "Android",
+    "result": "Succeeded",
+    "revision": "45e7e1c9c711142b8c4037023b6b0eaa04b6c4c8",
+    "content": "Original Boil geometry/art with approximate Unity development rules; NOT full Xonotic; Android device unverified",
+    "output": "my-xonotic-unity-boil.apk",
+    "sha256": "cca7f66e67f18c229f889cca1b70a3427943ee1217f3fc650c5aafa4c3bd33c0",
+    "invocation": "c4102c46468c4c77865c3c0b726c964f",
+    "artifactBytes": 72332393,
+    "errors": 0,
+    "warnings": 1,
+    "bytes": 486696103
+}

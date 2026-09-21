@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using UnityEditor;
 using UnityEngine;
 
@@ -22,13 +23,19 @@ namespace MyXonotic.EditorTools
     /// in the bounded resource pack: one mesh, position/texcoord/normal vertex
     /// arrays, triangles, and joints used purely as a bind pose (no pose/anim
     /// frames are read or applied — none exist in the current files). It does
-    /// NOT implement skeletal animation, MD3, or any other model format.
+    /// NOT implement skeletal animation or any per-frame vertex-animation
+    /// playback for either format it supports.
     ///
     /// AGENTS.md is explicit that the four bounded ".md3"-named files actually
     /// begin with the IQM magic ("INTERQUAKEMODEL\0"); this importer dispatches
-    /// on that 16-byte magic, never on file extension, and refuses (reports,
-    /// does not guess) anything else — e.g. the real upstream v_rl.md3, which
-    /// is genuine MD3 (IDP3) and is out of scope here.
+    /// on that 16-byte (or, for MD3, 4-byte "IDP3") magic, never on file
+    /// extension. A genuine MD3 file (e.g. an upstream v_rl.md3 reachable
+    /// through XONOTIC_CONTENT_ROOTS/ExternalContent — none is committed to
+    /// this bounded pack) is now read via
+    /// <c>MyXonotic.Content.Md3.Md3Reader</c> and
+    /// <see cref="Md3WeaponModelBuilder"/>, static-first (frame 0 only, no
+    /// tags/attachments, no animation): see those files' doc comments. Any
+    /// other magic is refused (reported, not guessed).
     /// </summary>
     public static class IqmWeaponImporter
     {
@@ -50,7 +57,7 @@ namespace MyXonotic.EditorTools
         {
             public string WeaponName;
             public string SourceModelPath;
-            public string SourceModelFormat;   // "IQM" or "unsupported"
+            public string SourceModelFormat;   // "IQM", "MD3", "unknown" or "missing"
             public bool MeshImported;
             public bool IsViewModel;            // true only for a genuine v_ first-person mesh
             public string TextureSourcePath;    // null if none found
@@ -58,6 +65,17 @@ namespace MyXonotic.EditorTools
             public string PrefabPath;
             public readonly List<string> AudioClipsImported = new List<string>();
             public readonly List<string> Notes = new List<string>();
+
+            /// <summary>
+            /// Structured per-surface texture provenance (shader/material
+            /// name -> resolved image path, or the reason it failed to
+            /// resolve/decode), for both IQM's single implicit surface and
+            /// every real MD3 surface. Feeds <see cref="WriteWeaponManifest"/>;
+            /// exposed here too so any other caller gets it without having to
+            /// parse <see cref="Notes"/> prose.
+            /// </summary>
+            public readonly List<Md3WeaponModelBuilder.SurfaceTextureProvenance> Textures =
+                new List<Md3WeaponModelBuilder.SurfaceTextureProvenance>();
         }
 
         /// <summary>
@@ -162,7 +180,114 @@ namespace MyXonotic.EditorTools
                 results.Add(GenerateOne(source, resolver));
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
+            WriteWeaponManifest(results);
             return results;
+        }
+
+        // ------------------------------------------------------------------
+        // Weapon manifest: same role/shape as BspImportPipeline's own
+        // per-map import-manifest.json (source path + SHA256 + role for
+        // every resolved asset), so LocalBuild's existing
+        // `Directory.GetFiles(..., "*manifest*.json", ...)` notices sweep
+        // (see LocalBuild.cs) picks this up automatically without needing
+        // a LocalBuild change. Written once per GenerateWeaponAssets() call,
+        // covering every weapon in one file (there are only two today).
+        // ------------------------------------------------------------------
+        [Serializable]
+        sealed class WeaponManifestTextureEntry
+        {
+            public string surfaceName;
+            public string shaderName;
+            public string matchedScriptName;
+            public string resolvedTexturePath;
+            public string resolvedTextureSha256;
+            public bool resolved;
+            public string failureReason;
+        }
+
+        [Serializable]
+        sealed class WeaponManifestEntry
+        {
+            public string weaponName;
+            public string format;          // "IQM", "MD3", "unknown" or "missing"
+            public bool isViewModel;       // true only for a genuine first-person ("v_") source mesh
+            public bool frame0Only;        // true when only a single static frame/pose is used (both supported formats today)
+            public string sourceModelPath;
+            public string sourceModelSha256;
+            public long sourceModelSizeBytes;
+            public string prefabPath;
+            public WeaponManifestTextureEntry[] textures;
+            public string[] notes;
+        }
+
+        [Serializable]
+        sealed class WeaponManifest
+        {
+            public string generatedAtUtc;
+            public WeaponManifestEntry[] weapons;
+        }
+
+        static void WriteWeaponManifest(List<WeaponAssetResult> results)
+        {
+            var entries = new List<WeaponManifestEntry>();
+            foreach (var r in results)
+            {
+                long sizeBytes = 0;
+                string sha256 = null;
+                if (!string.IsNullOrEmpty(r.SourceModelPath) && File.Exists(r.SourceModelPath))
+                {
+                    try { sizeBytes = new FileInfo(r.SourceModelPath).Length; } catch (Exception) { /* leave 0 */ }
+                    sha256 = Md3WeaponModelBuilder.Sha256OrNull(r.SourceModelPath);
+                }
+
+                var textures = new WeaponManifestTextureEntry[r.Textures.Count];
+                for (int i = 0; i < textures.Length; i++)
+                {
+                    var t = r.Textures[i];
+                    textures[i] = new WeaponManifestTextureEntry
+                    {
+                        surfaceName = t.SurfaceName,
+                        shaderName = t.ShaderName,
+                        matchedScriptName = t.MatchedScriptName,
+                        resolvedTexturePath = t.ResolvedTexturePath,
+                        resolvedTextureSha256 = t.Resolved && t.ResolvedTexturePath != null ? Md3WeaponModelBuilder.Sha256OrNull(t.ResolvedTexturePath) : null,
+                        resolved = t.Resolved,
+                        failureReason = t.FailureReason
+                    };
+                }
+
+                entries.Add(new WeaponManifestEntry
+                {
+                    weaponName = r.WeaponName,
+                    format = r.SourceModelFormat,
+                    isViewModel = r.IsViewModel,
+                    frame0Only = true, // both IQM (no pose/anim frames present) and MD3 (static-first) only use one frame today
+                    sourceModelPath = r.SourceModelPath,
+                    sourceModelSha256 = sha256,
+                    sourceModelSizeBytes = sizeBytes,
+                    prefabPath = r.PrefabPath,
+                    textures = textures,
+                    notes = r.Notes.ToArray()
+                });
+            }
+
+            var manifest = new WeaponManifest
+            {
+                generatedAtUtc = DateTime.UtcNow.ToString("o"),
+                weapons = entries.ToArray()
+            };
+
+            string path = GeneratedRoot + "/weapon-manifest.json";
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllText(path, JsonUtility.ToJson(manifest, true));
+                AssetDatabase.ImportAsset(path);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[IqmWeaponImporter] failed to write weapon manifest '" + path + "': " + e.Message);
+            }
         }
 
         static WeaponAssetResult GenerateOne(WeaponSource source, XonoticContentResolver resolver)
@@ -196,19 +321,19 @@ namespace MyXonotic.EditorTools
             {
                 byte[] viewBytes = File.ReadAllBytes(viewModelPath);
                 string viewFormat = DetectFormat(viewBytes);
-                if (viewFormat == "IQM")
+                if (viewFormat == "IQM" || viewFormat == "MD3")
                 {
                     activeModelPath = viewModelPath;
                     result.IsViewModel = true;
-                    result.Notes.Add("Found a genuine first-person (\"v_\") mesh at " + viewModelPath +
-                        " via configured content roots; using it instead of the world/pickup model.");
+                    result.Notes.Add("Found a genuine first-person (\"v_\") mesh at " + viewModelPath + " (" +
+                        viewFormat + ") via configured content roots; using it instead of the world/pickup model.");
                 }
                 else
                 {
                     result.Notes.Add("Found a first-person (\"v_\") mesh at " + viewModelPath + " but its magic is " +
-                        viewFormat + ", not IQM (\"INTERQUAKEMODEL\\0\"). This importer only reads IQM, so it is " +
-                        "NOT importing this file and is falling back to the world/pickup (\"g_\") model below. " +
-                        "Do not treat the fallback as a correct first-person model.");
+                        viewFormat + ", neither IQM (\"INTERQUAKEMODEL\\0\") nor MD3 (\"IDP3\"). This importer only " +
+                        "reads those two formats, so it is NOT importing this file and is falling back to the " +
+                        "world/pickup (\"g_\") model below. Do not treat the fallback as a correct first-person model.");
                 }
             }
             else
@@ -233,34 +358,110 @@ namespace MyXonotic.EditorTools
             string format = DetectFormat(bytes);
             result.SourceModelFormat = format;
 
-            if (format != "IQM")
+            Mesh mesh;
+            Material[] materials;
+
+            if (format == "IQM")
+            {
+                IqmStaticModel model;
+                try
+                {
+                    model = IqmReader.ReadStatic(bytes, activeModelPath);
+                }
+                catch (Exception e)
+                {
+                    result.Notes.Add("IQM parse failed: " + e.Message);
+                    return result;
+                }
+
+                mesh = BuildUnityMesh(model);
+                string meshAssetPath = GeneratedRoot + "/" + source.Name + "_Mesh.asset";
+                mesh = Persist(mesh, meshAssetPath);
+                result.MeshImported = true;
+                result.Notes.Add(string.Format(
+                    "Imported {0} vertices / {1} triangles from mesh \"{2}\" (material name in file: \"{3}\"); " +
+                    "{4} joint(s) present but unused (bind pose only, no pose/animation frames in this file).",
+                    model.Positions.Length, model.Triangles.Length / 3, model.MeshName, model.MaterialName, model.JointCount));
+
+                materials = new[] { BuildIqmMaterial(model, resolver, source, result) };
+            }
+            else if (format == "MD3")
+            {
+                MyXonotic.Content.Md3.Md3StaticModel model;
+                try
+                {
+                    model = MyXonotic.Content.Md3.Md3Reader.Read(bytes, activeModelPath);
+                }
+                catch (Exception e)
+                {
+                    result.Notes.Add("MD3 parse failed: " + e.Message);
+                    return result;
+                }
+
+                var built = Md3WeaponModelBuilder.Build(model, resolver, source.Name, GeneratedRoot, WeaponModelShaderName);
+                mesh = built.Mesh;
+                materials = built.Materials;
+                result.MeshImported = true;
+                result.Notes.AddRange(built.Notes);
+                result.Textures.AddRange(built.Textures);
+                // MD3 can have several independently-textured surfaces; there
+                // is no single "the" texture path. TextureSourcePath keeps
+                // its single-path meaning for IQM; MD3 callers should read
+                // result.Textures (one entry per surface) for full provenance.
+                result.TextureSourcePath = built.Textures.Count == 1 ? built.Textures[0].ResolvedTexturePath : null;
+                result.TextureIsPlaceholderIcon = false;
+            }
+            else
             {
                 result.Notes.Add(
-                    "File magic is not IQM (\"INTERQUAKEMODEL\\0\"); this importer only reads that format. " +
-                    "Not attempting a guess-based import of an unsupported format.");
+                    "File magic is neither IQM (\"INTERQUAKEMODEL\\0\") nor MD3 (\"IDP3\"); this importer only " +
+                    "reads those two formats. Not attempting a guess-based import of an unsupported format.");
                 return result;
             }
 
-            IqmStaticModel model;
-            try
+            // Audio: copy each available bounded .ogg into Resources/Weapons so
+            // runtime code can Resources.Load<AudioClip> it by weapon name.
+            foreach (var audioPath in source.AudioPaths)
             {
-                model = IqmReader.ReadStatic(bytes, source.ModelPath);
-            }
-            catch (Exception e)
-            {
-                result.Notes.Add("IQM parse failed: " + e.Message);
-                return result;
+                if (!File.Exists(audioPath))
+                {
+                    result.Notes.Add("Expected sound missing: " + audioPath);
+                    continue;
+                }
+                string destName = source.Name + "_" + Path.GetFileName(audioPath);
+                string destPath = ResourcesRoot + "/" + destName;
+                CopyIfChanged(audioPath, destPath);
+                result.AudioClipsImported.Add(destPath);
             }
 
-            var mesh = BuildUnityMesh(model);
-            string meshAssetPath = GeneratedRoot + "/" + source.Name + "_Mesh.asset";
-            mesh = Persist(mesh, meshAssetPath);
-            result.MeshImported = true;
-            result.Notes.Add(string.Format(
-                "Imported {0} vertices / {1} triangles from mesh \"{2}\" (material name in file: \"{3}\"); " +
-                "{4} joint(s) present but unused (bind pose only, no pose/animation frames in this file).",
-                model.Positions.Length, model.Triangles.Length / 3, model.MeshName, model.MaterialName, model.JointCount));
+            // Prefab: a plain MeshFilter/MeshRenderer under a root transform.
+            // Local placement/scale is a development-only first-person-camera
+            // approximation (no verified upstream viewmodel offset exists for
+            // a world-model substitute); WeaponView documents and owns this.
+            var go = new GameObject(source.Name + "WeaponVisual");
+            // Converted source +X must point along camera +Z.
+            go.transform.localRotation = Quaternion.Euler(0, -90, 0);
+            var meshFilter = go.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = mesh;
+            var renderer = go.AddComponent<MeshRenderer>();
+            renderer.sharedMaterials = materials;
 
+            string prefabPath = ResourcesRoot + "/" + source.Name + "WeaponVisual.prefab";
+            PrefabUtility.SaveAsPrefabAsset(go, prefabPath);
+            UnityEngine.Object.DestroyImmediate(go);
+            result.PrefabPath = prefabPath;
+            result.Notes.Add("Wrote prefab " + prefabPath + " (Resources-loadable as \"Weapons/" + source.Name + "WeaponVisual\").");
+
+            return result;
+        }
+
+        /// <summary>
+        /// IQM's single-material texture resolution, extracted unchanged from
+        /// the previous inline version so the MD3 branch above can share the
+        /// same GenerateOne() audio/prefab tail without duplicating it.
+        /// </summary>
+        static Material BuildIqmMaterial(IqmStaticModel model, XonoticContentResolver resolver, WeaponSource source, WeaponAssetResult result)
+        {
             // Texture resolution: try the material name recorded inside the IQM
             // file first (matches upstream layout, e.g. "models/weapons/laser.tga"),
             // then fall back to the bounded "_simple.tga" icon while saying so
@@ -293,43 +494,16 @@ namespace MyXonotic.EditorTools
                 result.Notes.Add("No texture resolved (neither the referenced material name nor the bounded " +
                                   "icon file exist); mesh will render with an untextured default material.");
             }
-            string materialAssetPath = GeneratedRoot + "/" + source.Name + "_Material.mat";
-            material = Persist(material, materialAssetPath);
-
-            // Audio: copy each available bounded .ogg into Resources/Weapons so
-            // runtime code can Resources.Load<AudioClip> it by weapon name.
-            foreach (var audioPath in source.AudioPaths)
+            result.Textures.Add(new Md3WeaponModelBuilder.SurfaceTextureProvenance
             {
-                if (!File.Exists(audioPath))
-                {
-                    result.Notes.Add("Expected sound missing: " + audioPath);
-                    continue;
-                }
-                string destName = source.Name + "_" + Path.GetFileName(audioPath);
-                string destPath = ResourcesRoot + "/" + destName;
-                CopyIfChanged(audioPath, destPath);
-                result.AudioClipsImported.Add(destPath);
-            }
-
-            // Prefab: a plain MeshFilter/MeshRenderer under a root transform.
-            // Local placement/scale is a development-only first-person-camera
-            // approximation (no verified upstream viewmodel offset exists for
-            // a world-model substitute); WeaponView documents and owns this.
-            var go = new GameObject(source.Name + "WeaponVisual");
-            // Converted source +X must point along camera +Z.
-            go.transform.localRotation = Quaternion.Euler(0, -90, 0);
-            var meshFilter = go.AddComponent<MeshFilter>();
-            meshFilter.sharedMesh = mesh;
-            var renderer = go.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = material;
-
-            string prefabPath = ResourcesRoot + "/" + source.Name + "WeaponVisual.prefab";
-            PrefabUtility.SaveAsPrefabAsset(go, prefabPath);
-            UnityEngine.Object.DestroyImmediate(go);
-            result.PrefabPath = prefabPath;
-            result.Notes.Add("Wrote prefab " + prefabPath + " (Resources-loadable as \"Weapons/" + source.Name + "WeaponVisual\").");
-
-            return result;
+                SurfaceName = model.MeshName,
+                ShaderName = model.MaterialName,
+                ResolvedTexturePath = texturePath,
+                Resolved = texturePath != null,
+                FailureReason = texturePath != null ? null : "no texture found for the IQM material name under configured content roots"
+            });
+            string materialAssetPath = GeneratedRoot + "/" + source.Name + "_Material.mat";
+            return Persist(material, materialAssetPath);
         }
 
         static T Persist<T>(T asset, string path) where T : UnityEngine.Object
@@ -378,7 +552,7 @@ namespace MyXonotic.EditorTools
         static string DetectFormat(byte[] bytes)
         {
             if (bytes.Length >= 16 && IsMagic(bytes, "INTERQUAKEMODEL\0")) return "IQM";
-            if (bytes.Length >= 4 && bytes[0] == 'I' && bytes[1] == 'D' && bytes[2] == 'P' && bytes[3] == '3') return "MD3 (unsupported here)";
+            if (MyXonotic.Content.Md3.Md3Reader.IsMd3(bytes)) return "MD3";
             return "unknown";
         }
 

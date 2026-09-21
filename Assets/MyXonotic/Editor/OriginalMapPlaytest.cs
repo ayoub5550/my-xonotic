@@ -90,7 +90,8 @@ namespace MyXonotic.EditorTools
                     foreach (var mat in renderer.sharedMaterials)
                     {
                         Check(mat != null && mat.shader != null && mat.shader.isSupported, "world material shader supported");
-                        if (mat.mainTexture != null) textured++;
+                        if (mat.HasProperty("_MainTex") && mat.GetTexture("_MainTex") != null) textured++;
+                        if (mat.HasProperty("_SkyRt") && mat.GetTexture("_SkyRt") != null) textured++;
                     }
                     Check(textured > 0, "original world textures referenced");
                     Place(player, spawns[spawnIndex]);

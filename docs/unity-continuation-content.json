@@ -1,0 +1,25 @@
+{
+  "date": "2026-09-21",
+  "upstream_release": "Xonotic 0.8.6",
+  "url": "https://dl.xonotic.org/xonotic-0.8.6.zip",
+  "bytes": 1238439495,
+  "sha512_url": "https://dl.xonotic.org/xonotic-0.8.6.sha512",
+  "sha512": "cb39879e96f19abb2877588c2d50c5d3e64dd68153bec3dd1bebedf4d765e506afa419c28381d7005aed664cb1a042571c132b5b319e4308cab67745d996c2a6",
+  "verification": "Complete official archive downloaded and whole-file SHA512 matched, 2026-09-21. Archive retrieval is not full Unity integration.",
+  "selected_content": [
+    "models/weapons/v_laser.md3: IQM despite file extension",
+    "models/weapons/v_rl.md3: genuine MD3, frame 0 only",
+    "scripts/rl.shader: parsed as material data, not executed",
+    "dds/models/weapons/laser.dds: decoded diffuse",
+    "dds/textures/rl_new.dds: decoded diffuse",
+    "dds/textures/rl_trust01.dds: prepared only; not proof of animated thrust support"
+  ],
+  "notices": ["Xonotic/COPYING", "Xonotic/GPL-2", "Xonotic/GPL-3"],
+  "boundaries": [
+    "Complete upstream archive is local only and is not added to Git or embedded wholesale in the APK.",
+    "Only a bounded Boil development slice and selected original weapon visuals are integrated.",
+    "No weapon animation, complete arsenal, character, modes or network parity claim.",
+    "Original artwork licences are unchanged. Unity/upstream aggregate licence compatibility and source correspondence review remain unresolved.",
+    "No DarkPlaces or QuakeC engine implementation copied into independent C#."
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "source_archive": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/staging_pk3/Xonotic/data/xonotic-20230620-data.pk3",
+  "source_archive_sha256": "7602be0d44a4f1ce4f0918c54ceb215c9bc963a103623d6c7874f081330c8505",
+  "entry_name": "models/player/erebus.iqm_0.sounds",
+  "extracted_path": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/characters/erebus/source/models/player/erebus.iqm_0.sounds",
+  "extracted_sha256": "86e73a840489bb4d576d6f4c6482980e605e9aedd9f6934a0cc4eaa5739c0250",
+  "extracted_size_bytes": 1503,
+  "note": "Extracted content is third-party (Xonotic/community) unless proven otherwise; keep out of Git and review licence/distribution terms before shipping."
+}

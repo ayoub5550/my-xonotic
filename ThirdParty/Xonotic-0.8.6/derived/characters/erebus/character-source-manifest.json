@@ -1,0 +1,53 @@
+{
+  "character": "erebus",
+  "sourcePk3": "ExternalContent/staging_pk3/Xonotic/data/xonotic-20230620-data.pk3",
+  "sourcePk3Sha256": "7602be0d44a4f1ce4f0918c54ceb215c9bc963a103623d6c7874f081330c8505",
+  "chosenSkinIndex": 0,
+  "chosenSkinNote": "erebus.iqm_0.skin/.txt/.sounds (index 0) chosen as the default in-game skin; maps surface 'erebus'->shader 'erebusfullbright' and 'erebus.001'->'shadowheadfb' (itself a same-directory pk3 symlink to the real shadowhead.dds; no separate fullbright head texture exists). Index 1 (erebus.iqm_1.skin, plain 'erebus'/'shadowhead' shader names) is an available alternate not used here.",
+  "extractedFiles": {
+    "ExternalContent/characters/erebus/source/dds/textures/erebusfullbright.dds": {
+      "sha256": "2ae15cbf2c46ea21df0a0f8dfaf36d75c8178f53929ba637f0adec0d310b2560",
+      "size": 2796344
+    },
+    "ExternalContent/characters/erebus/source/dds/textures/shadowhead.dds": {
+      "sha256": "fe01983f60e5551c4205347184aaf32e4d92c077aa35fbb81f8aa9cee5d5f6b6",
+      "size": 699192
+    },
+    "ExternalContent/characters/erebus/source/models/player/erebus.iqm": {
+      "sha256": "dba4ba7bc0ce2da0478421d83ac9b48e8623b7fddb3e53296fcde1a1121c052e",
+      "size": 1048528
+    },
+    "ExternalContent/characters/erebus/source/models/player/erebus.iqm.framegroups": {
+      "sha256": "51b0dc23bd3cd81242a3a61bd11a71921324349d571bb72e49b2dfc6b777493e",
+      "size": 1000
+    },
+    "ExternalContent/characters/erebus/source/models/player/erebus.iqm_0.skin": {
+      "sha256": "55b1d3cb715cd737375f8fda69dc7b461c89012ce38c241abab1cc36e01208d9",
+      "size": 48
+    },
+    "ExternalContent/characters/erebus/source/models/player/erebus.iqm_0.sounds": {
+      "sha256": "86e73a840489bb4d576d6f4c6482980e605e9aedd9f6934a0cc4eaa5739c0250",
+      "size": 1503
+    },
+    "ExternalContent/characters/erebus/source/models/player/erebus.iqm_0.txt": {
+      "sha256": "e8484bd3a9a83b56d66b04c6526e85869e1e5dae3378d7cfcac0e4b8144bd79d",
+      "size": 246
+    },
+    "ExternalContent/characters/erebus/source/models/player/erebus.iqm_1.skin": {
+      "sha256": "8fd6fd99221036e9e3f60dfa3de7483c3c21136d91e8629fd7ad2eb6615382a1",
+      "size": 36
+    },
+    "ExternalContent/characters/erebus/source/scripts/player_erebus.shader": {
+      "sha256": "6f0b469497fdf4a729ff9a62da953d936b7532b458df1ff9f91bf1c61ff4c899",
+      "size": 572
+    },
+    "ExternalContent/characters/erebus/textures/erebusfullbright.png": {
+      "sha256": "4befa8f78ec1a696990954edcd67f63fb8b2d735bb25bee1a5605cca9857f2fe",
+      "size": 2098141
+    },
+    "ExternalContent/characters/erebus/textures/shadowhead.png": {
+      "sha256": "31440c9d1af9d232fd74ac1a75990bb9e1d0655a18164615848d20c680bc62fb",
+      "size": 509235
+    }
+  }
+}

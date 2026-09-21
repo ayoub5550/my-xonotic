@@ -2,7 +2,7 @@
 
 ## Read this first: what this is (2026-09-20)
 
-**Current increment: 0.1.1 offline APK.** Owner rejected first-run downloads and requires
+**Current increment: 0.1.2 LibreQuake-style controls, offline APK.** Owner rejected first-run downloads and requires
 one APK with all resources. `tools/bundle_data.py` stages all seven official release PK3s
 (including music, nexcompat, xoncompat) plus the touch PK3 and a SHA-256 manifest.
 Launcher now verifies/copies these assets locally, with atomic replacement, corruption
@@ -28,11 +28,31 @@ This replaces the earlier Unity re-implementation attempt in `ayoub5550/my-xonot
 | Gate | Current result |
 |---|---|
 | Engine + deps cross-compile (arm64-v8a) | PASS: `libmain.so` 5.6 MB, `libSDL2.so`, `libpng.so` |
-| Gradle APK (release, debug-signed) | PASS 0.1.1: 1,191,463,450 bytes, v2 signature verified, same certificate as 0.1.0 |
+| Gradle APK (release, debug-signed) | PASS 0.1.2: 1,188,658,154 bytes, v2 signature verified, same certificate as 0.1.0 |
 | Offline contents / installer | PASS: eight manifest SHA-256 checks on embedded files; 26 Java installer assertions |
 | Host Linux build of the same engine boots Xonotic 0.8.6 data | see CHANGELOG |
 | Run on a real ARM64 phone | NOT VERIFIED — owner must test; report logcat |
-| Touch controls usable | first pass only (engine's built-in `vid_touchscreen` layout) |
+| Touch controls | New reference-style layout; 37 pure-C helper checks PASS, actual Android usability NOT VERIFIED |
+
+### 0.1.2 implementation and review (2026-09-21)
+
+- `touch_layout.h` shares H=720/aspect-aware layout with a standalone C test harness.
+  Large red FIRE, smaller blue JUMP, WPN− above WPN+, pause top-right, utility
+  ALT/CROUCH/ZOOM. Dynamic left joystick, right drag-look, FIRE also drags look.
+- Finger ownership is captured from finger-down coordinates, not later motion.
+  SDL finger IDs stay int64 (previous float storage could lose precision).
+  First movement finger wins; knob displacement is radially clamped.
+- Synthetic touch/mouse duplication disabled. Menu cursor uses real touch coordinates;
+  menu click hit-box corrected to cover the entire viewport. Menu transitions suppress
+  held gameplay owners until lift; focus loss drops stale contacts.
+- Parent review corrected menu positioning, initial-down capture, multi-move selection,
+  knob clamp, equal physical x/y look sensitivity, and transition suppression.
+- Tests: native ARM64 link, Gradle release, 37 pure-C helper assertions, 26 Java
+  installer assertions, eight APK asset size/SHA checks, versionCode=3 and v2 signature.
+  The C harness is NOT a full SDL event-loop/instrumented Android test.
+- `docs/touch-build-receipt-2026-09-21.json` records the APK digest.
+  Preview is packaged icons + shared layout over neutral background, never gameplay.
+  Android execution, multitouch feel, and real-device performance remain unverified.
 
 ## Layout
 
@@ -109,14 +129,15 @@ git checkout d93f9c4 && git apply ../native/darkplaces-android.patch`.
 
 1. Get first device report (does it reach the menu? logcat tag `SDL`, `Xonotic`).
 2. Touch layout now includes weapon switching, zoom and crouch. Verify real multitouch,
-   size and placement on POCO F3. Quake layout still uses fixed console coordinates;
-   the density cvar affects SteelStorm layout, not this one.
+   size and placement on POCO F3. Layout uses physical aspect at virtual height 720;
+   `vid_touchscreen_look_sensitivity` defaults to 180 degrees per screen-width drag.
+   The density cvar affects SteelStorm layout, not this one.
 3. Performance presets for phones (Xonotic "low" preset via `android.cfg`; `r_shadow_*` off).
 4. Single APK is required by owner: do not reintroduce OBB / external downloads.
 5. Keyboard for console/chat: SDL text input already wired via `vid_touchscreen_showkeyboard`.
 6. Consider building for `armeabi-v7a` too if the owner needs old devices (32-bit).
-7. Delivery blocked: Drive upload returned storageQuotaExceeded; Slack upload of the
-   single offline APK returned HTTP 400. Owner asked to free Drive space or create
-   xonotic-android GitHub repo. Do not delete their files or split APK without consent.
-   Artifact `/work/temp/xonotic-android-0.1.1-offline.apk`; receipt in docs/.
-   Private Drive folder already created: `1DshQ0J0SgwfrEteNxZvqxTfTjB8vbKFx`.
+7. Owner approved native Releases in `ayoub5550/my-xonotic`. Published 0.1.1 at
+   `android-v0.1.1-offline`, source on separate `native/android-offline` branch.
+   This native GPL history is separate from Unity/MIT; do not merge the implementations.
+   ZIP asset + source + SHA256SUMS are on GitHub; no APKs in Git.
+   Drive upload failed quota; Slack rejected the large APK. Future delivery: GitHub.

@@ -1,0 +1,11 @@
+{
+  "version": "0.1.2",
+  "versionCode": 3,
+  "apk_bytes": 1188658154,
+  "sha256": "b1d6040fa0a610e95efcffd8f604bef15bdd16ceb5a1ad0388cf5357ecf14dc6",
+  "embedded_resource_count": 8,
+  "embedded_sha256_checks": "all passed",
+  "touch_layout_checks": 37,
+  "android_runtime": "NOT VERIFIED",
+  "preview": "actual packaged icons + shared layout on neutral background, NOT gameplay"
+}

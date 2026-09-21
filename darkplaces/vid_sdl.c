@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "image.h"
 #include "utf8lib.h"
+#include "touch_layout.h"
 
 #ifndef __IPHONEOS__
 #ifdef MACOSX
@@ -443,10 +444,36 @@ static void VID_SetMouse(qbool relative, qbool hidecursor)
 // multitouch[][2]: Y
 // X and Y coordinates are 0-1.
 #define MAXFINGERS 11
+// Degrees of view rotation produced by a finger drag spanning the full
+// virtual screen width, on the drag-look zone and while holding FIRE.
+static cvar_t touch_look_sensitivity = {CF_CLIENT | CF_ARCHIVE, "vid_touchscreen_look_sensitivity", "180", "degrees of view rotation for a full-screen-width drag on the touch look/fire zone"};
+
 float multitouch[MAXFINGERS][3];
 
 // this one stores how many areas this finger has touched
 int multitouchs[MAXFINGERS];
+
+// Real SDL_FingerID storage (fixes multitouch[i][0] previously double-duty as
+// both a boolean "active" flag AND event.tfinger.fingerId+1 crammed into a
+// float; a float's 24-bit mantissa loses precision above 2^24 and Android
+// can hand out large opaque 64-bit finger ids, which made SDL_FINGERUP /
+// SDL_FINGERMOTION silently fail to match their SDL_FINGERDOWN slot).
+// multitouch[i][0] now ONLY ever holds 0.0f/1.0f (active flag) so every
+// existing reader of multitouch[][0] as a boolean keeps working unchanged.
+static SDL_FingerID multitouch_fingerid[MAXFINGERS];
+static qbool multitouch_fingerid_valid[MAXFINGERS];
+
+// Per-slot finger ownership for the Quake mobile touch HUD (see
+// touch_layout.h). Indexed the same as multitouch[]/multitouch_fingerid[]
+// so a slot's identity (and thus its captured control) survives the whole
+// press-drag-release lifetime of one finger, even if the finger slides off
+// the button/zone that first claimed it.
+static touch_owner_t touch_owner[MAXFINGERS];
+static float touch_origin_x[MAXFINGERS], touch_origin_y[MAXFINGERS];
+static float touch_cur_x[MAXFINGERS], touch_cur_y[MAXFINGERS];
+static float touch_prev_x[MAXFINGERS], touch_prev_y[MAXFINGERS];
+static qbool touch_owner_valid[MAXFINGERS]; // false until the first frame after finger-down classifies it
+static float touch_down_x[MAXFINGERS], touch_down_y[MAXFINGERS];
 
 // modified heavily by ELUAN
 static qbool VID_TouchscreenArea(int corner, float px, float py, float pwidth, float pheight, const char *icon, float textheight, const char *text, float *resultmove, qbool *resultbutton, keynum_t key, const char *typedtext, float deadzone, float oversizepixels_x, float oversizepixels_y, qbool iamexclusive)
@@ -864,6 +891,47 @@ static void IN_Move_TouchScreen_SteelStorm(void)
 	cl.viewangles[1] -= aim[0] * cl_yawspeed.value * cl.realframetime;
 }
 
+// Sends Key_Event only on state transitions, exactly like VID_TouchscreenArea
+// used to do internally via its resultbutton parameter -- keeps held buttons
+// (FIRE, JUMP, CROUCH, ...) working as normal engine key binds.
+static void Touch_KeyLevel(qbool *state, qbool newval, keynum_t key)
+{
+	if (*state != newval)
+		Key_Event(key, 0, newval);
+	*state = newval;
+}
+
+// Queues one HUD icon for SCR_DrawTouchscreenOverlay without going through
+// VID_TouchscreenArea's own (now unused, for this layout) per-frame finger
+// hit-test -- ownership/hit-testing for the new layout is already done by
+// TouchLayout_ClassifyDown() in IN_Move_TouchScreen_Quake.
+static void Touch_PushHudArea(float px, float py, float pwidth, float pheight, const char *icon, qbool active)
+{
+	if (scr_numtouchscreenareas < 128)
+	{
+		scr_touchscreenareas[scr_numtouchscreenareas].pic = icon;
+		scr_touchscreenareas[scr_numtouchscreenareas].text = NULL;
+		scr_touchscreenareas[scr_numtouchscreenareas].textheight = 0.0f;
+		scr_touchscreenareas[scr_numtouchscreenareas].rect[0] = px;
+		scr_touchscreenareas[scr_numtouchscreenareas].rect[1] = py;
+		scr_touchscreenareas[scr_numtouchscreenareas].rect[2] = pwidth;
+		scr_touchscreenareas[scr_numtouchscreenareas].rect[3] = pheight;
+		scr_touchscreenareas[scr_numtouchscreenareas].active = active ? 1.0f : 0.0f;
+		scr_touchscreenareas[scr_numtouchscreenareas].activealpha = 1.0f;
+		scr_touchscreenareas[scr_numtouchscreenareas].inactivealpha = 0.95f;
+		scr_numtouchscreenareas++;
+	}
+}
+
+// Draws a circular HUD icon centered at (virtual cx,cy) with the given
+// virtual diameter, converting through the layout's uniform scale.
+static void Touch_PushHudCircle(float scalex, float scaley, const touch_circle_t *c, const char *icon, qbool active)
+{
+	float w = c->diam * scalex;
+	float h = c->diam * scaley;
+	Touch_PushHudArea(c->cx * scalex - w * 0.5f, c->cy * scaley - h * 0.5f, w, h, icon, active);
+}
+
 static void IN_Move_TouchScreen_Quake(void)
 {
 	int x, y;
@@ -899,21 +967,195 @@ static void IN_Move_TouchScreen_Quake(void)
 		VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , 0.0f, NULL, NULL, &buttons[4], K_MOUSE2, NULL, 0, 0, 0, true);
 		break;
 	case key_game:
-		VID_TouchscreenArea( 0,   0,   0,  64,  64, NULL                         , 0.0f, NULL, NULL, &buttons[13], (keynum_t)'`', NULL, 0, 0, 0, true);
-		VID_TouchscreenArea( 0,  64,   0,  64,  64, "gfx/touch_menu.tga"         , 0.0f, NULL, NULL, &buttons[14], K_ESCAPE, NULL, 0, 0, 0, true);
-		VID_TouchscreenArea( 2,   0,-128, 128, 128, "gfx/touch_movebutton.tga"   , 0.0f, NULL, move, &buttons[0], K_MOUSE4, NULL, 0, 0, 0, true);
-		VID_TouchscreenArea( 3,-128,-128, 128, 128, "gfx/touch_aimbutton.tga"    , 0.0f, NULL, aim,  &buttons[1], K_MOUSE5, NULL, 0, 0, 0, true);
-		VID_TouchscreenArea( 2,   0,-160,  64,  32, "gfx/touch_jumpbutton.tga"   , 0.0f, NULL, NULL, &buttons[3], K_SPACE, NULL, 0, 0, 0, true);
-		VID_TouchscreenArea( 3,-128,-160,  64,  32, "gfx/touch_attackbutton.tga" , 0.0f, NULL, NULL, &buttons[2], K_MOUSE1, NULL, 0, 0, 0, true);
-		VID_TouchscreenArea( 3, -64,-160,  64,  32, "gfx/touch_attack2button.tga", 0.0f, NULL, NULL, &buttons[4], K_MOUSE2, NULL, 0, 0, 0, true);
-		// Mobile key bindings are explicitly set by bundled android.cfg.
-		VID_TouchscreenArea( 2,   0,-192,  64,  32, "gfx/touch_crouchbutton.tga"  , 0.0f, NULL, NULL, &buttons[5], K_CTRL, NULL, 0, 0, 0, true);
-		VID_TouchscreenArea( 1, -64,   0,  64,  64, "gfx/touch_zoombutton.tga"    , 0.0f, NULL, NULL, &buttons[6], K_SHIFT, NULL, 0, 0, 0, true);
-		VID_TouchscreenArea( 3,-192,-160,  64,  32, "gfx/touch_weapnextbutton.tga", 0.0f, NULL, NULL, &buttons[7], K_MWHEELUP, NULL, 0, 0, 0, true);
-		VID_TouchscreenArea( 3,-192,-128,  64,  32, "gfx/touch_weapprevbutton.tga", 0.0f, NULL, NULL, &buttons[8], K_MWHEELDOWN, NULL, 0, 0, 0, true);
+	{
+		// LibreQuake/Xonotic touch HUD: dynamic movement joystick (left),
+		// drag-look with no visible stick (right), big red FIRE that also
+		// drags look while held, ALT/JUMP/WPN+-/CROUCH/ZOOM/PAUSE circles.
+		// See darkplaces/touch_layout.h for the exact positions (shared,
+		// engine-independent, unit-tested by tools/test_touch_layout.c).
+		float aspect = (vid.mode.height > 0) ? ((float)vid.mode.width / (float)vid.mode.height) : (vid_conheight.value > 0 ? vid_conwidth.value / vid_conheight.value : 16.0f / 9.0f);
+		touch_layout_t layout;
+		float scalex, scaley;
+		int fi;
+		qbool have_move = false;
+		float movevec[2] = {0.0f, 0.0f};
+		float lookdx = 0.0f, lookdy = 0.0f;
+		qbool firedown = false, altdown = false, jumpdown = false;
+		qbool wpnnext = false, wpnprev = false, crouchdown = false, zoomdown = false, pausedown = false;
+
+		TouchLayout_Compute(aspect, &layout);
+		TouchLayout_Scale(&layout, vid_conwidth.value, vid_conheight.value, &scalex, &scaley);
+
+		// Console toggle hotspot kept at the top-left corner, matching the
+		// other keydest cases (small, invisible, always available).
+		VID_TouchscreenArea( 0,   0,   0,  64,  64, NULL, 0.0f, NULL, NULL, &buttons[13], (keynum_t)'`', NULL, 0, 0, 0, true);
+
+		for (fi = 0; fi < MAXFINGERS - 1; fi++)
+		{
+			float vx, vy;
+
+			if (!multitouch[fi][0])
+			{
+				// Finger already released (SDL_FINGERUP handler already
+				// cleared touch_owner[fi]); nothing to do here.
+				continue;
+			}
+
+			vx = multitouch[fi][1] * layout.virtual_width;
+			vy = multitouch[fi][2] * layout.virtual_height;
+
+			if (!touch_owner_valid[fi])
+			{
+				// New finger this frame (or first frame we see it): capture
+				// its owner ONCE. It keeps this owner until SDL_FINGERUP,
+				// even if it later slides outside the hit-box that granted
+				// it -- this is what prevents controls from switching under
+				// a moving finger.
+				touch_owner[fi] = multitouchs[fi] ? TOUCH_OWNER_NONE :
+					TouchLayout_ClassifyDown(&layout, touch_down_x[fi] * layout.virtual_width,
+						touch_down_y[fi] * layout.virtual_height);
+				touch_owner_valid[fi] = true;
+				touch_origin_x[fi] = touch_prev_x[fi] = touch_down_x[fi] * layout.virtual_width;
+				touch_origin_y[fi] = touch_prev_y[fi] = touch_down_y[fi] * layout.virtual_height;
+				touch_cur_x[fi] = vx;
+				touch_cur_y[fi] = vy;
+			}
+			else
+			{
+				touch_prev_x[fi] = touch_cur_x[fi];
+				touch_prev_y[fi] = touch_cur_y[fi];
+				touch_cur_x[fi] = vx;
+				touch_cur_y[fi] = vy;
+			}
+
+			switch (touch_owner[fi])
+			{
+			case TOUCH_OWNER_MOVE:
+				{
+					touch_slot_t slot;
+					float mx, my;
+					if (have_move)
+						break;
+					memset(&slot, 0, sizeof(slot));
+					slot.origin_x = touch_origin_x[fi]; slot.origin_y = touch_origin_y[fi];
+					slot.cur_x = touch_cur_x[fi]; slot.cur_y = touch_cur_y[fi];
+					TouchLayout_MoveVector(&layout, &slot, &mx, &my);
+					movevec[0] = mx;
+					movevec[1] = my;
+					have_move = true;
+				}
+				break;
+			case TOUCH_OWNER_LOOK:
+			case TOUCH_OWNER_FIRE:
+				{
+					touch_slot_t slot;
+					float dx, dy;
+					memset(&slot, 0, sizeof(slot));
+					slot.prev_x = touch_prev_x[fi]; slot.prev_y = touch_prev_y[fi];
+					slot.cur_x = touch_cur_x[fi]; slot.cur_y = touch_cur_y[fi];
+					TouchLayout_LookDelta(&slot, &dx, &dy);
+					// FIRE finger both fires AND drags look at the same time.
+					lookdx += dx / layout.virtual_width;
+					lookdy += dy / layout.virtual_width;
+					if (touch_owner[fi] == TOUCH_OWNER_FIRE)
+						firedown = true;
+				}
+				break;
+			case TOUCH_OWNER_ALT:      altdown    = true; break;
+			case TOUCH_OWNER_JUMP:     jumpdown   = true; break;
+			case TOUCH_OWNER_WPN_NEXT: wpnnext    = true; break;
+			case TOUCH_OWNER_WPN_PREV: wpnprev    = true; break;
+			case TOUCH_OWNER_CROUCH:   crouchdown = true; break;
+			case TOUCH_OWNER_ZOOM:     zoomdown   = true; break;
+			case TOUCH_OWNER_PAUSE:    pausedown  = true; break;
+			default: break;
+			}
+		}
+
+		move[0] = have_move ? movevec[0] : 0.0f;
+		move[1] = have_move ? movevec[1] : 0.0f;
+		// Applied directly here (not through the shared move[]/aim[] tail
+		// formula at the end of this function, which multiplies by
+		// cl.realframetime -- appropriate for a joystick held at constant
+		// deflection, but wrong for an already-per-frame drag delta).
+		cl.viewangles[1] -= lookdx * touch_look_sensitivity.value;
+		cl.viewangles[0] += lookdy * touch_look_sensitivity.value;
+		aim[0] = 0.0f;
+		aim[1] = 0.0f;
+
+		Touch_KeyLevel(&buttons[2], firedown,    K_MOUSE1);
+		Touch_KeyLevel(&buttons[4], altdown,     K_MOUSE2);
+		Touch_KeyLevel(&buttons[3], jumpdown,    K_SPACE);
+		Touch_KeyLevel(&buttons[7], wpnnext,     K_MWHEELUP);
+		Touch_KeyLevel(&buttons[8], wpnprev,     K_MWHEELDOWN);
+		Touch_KeyLevel(&buttons[5], crouchdown,  K_CTRL);
+		Touch_KeyLevel(&buttons[6], zoomdown,    K_SHIFT);
+		Touch_KeyLevel(&buttons[14], pausedown,  K_ESCAPE);
+		buttons[0] = have_move;
+		buttons[1] = false;
 		buttons[15] = false;
+
+		// HUD icons. FIRE/ALT/JUMP/WPN+-/CROUCH/ZOOM light up while their
+		// finger is captured; MOVE draws a ring + a knob that follows the
+		// finger from its dynamic origin; there is intentionally no LOOK
+		// icon anywhere (no visible aim joystick).
+		Touch_PushHudCircle(scalex, scaley, &layout.fire,     "gfx/touch_attackbutton.tga",     firedown);
+		Touch_PushHudCircle(scalex, scaley, &layout.alt,      "gfx/touch_attack2button.tga",    altdown);
+		Touch_PushHudCircle(scalex, scaley, &layout.jump,     "gfx/touch_jumpbutton.tga",       jumpdown);
+		Touch_PushHudCircle(scalex, scaley, &layout.wpn_next, "gfx/touch_weapnextbutton.tga",   wpnnext);
+		Touch_PushHudCircle(scalex, scaley, &layout.wpn_prev, "gfx/touch_weapprevbutton.tga",   wpnprev);
+		Touch_PushHudCircle(scalex, scaley, &layout.crouch,   "gfx/touch_crouchbutton.tga",     crouchdown);
+		Touch_PushHudCircle(scalex, scaley, &layout.zoom,     "gfx/touch_zoombutton.tga",       zoomdown);
+		Touch_PushHudArea(layout.pause.cx * scalex - layout.pause.w * scalex * 0.5f,
+			layout.pause.cy * scaley - layout.pause.h * scaley * 0.5f,
+			layout.pause.w * scalex, layout.pause.h * scaley,
+			"gfx/touch_menu.tga", pausedown);
+
+		{
+			// Movement ring is drawn centered on wherever the owning finger
+			// went down (dynamic origin); the knob is offset toward the
+			// finger's current position, clamped to the ring's radius.
+			touch_circle_t ring;
+			ring.diam = layout.move_ring_diam;
+			if (have_move)
+			{
+				int mi;
+				ring.cx = ring.cy = 0.0f;
+				for (mi = 0; mi < MAXFINGERS - 1; mi++)
+				{
+					if (multitouch[mi][0] && touch_owner_valid[mi] && touch_owner[mi] == TOUCH_OWNER_MOVE)
+					{
+						touch_circle_t knob;
+						float radius = layout.move_ring_diam * 0.5f;
+						ring.cx = touch_origin_x[mi];
+						ring.cy = touch_origin_y[mi];
+						Touch_PushHudCircle(scalex, scaley, &ring, "gfx/touch_movebutton.tga", true);
+						knob.diam = layout.move_knob_diam;
+						knob.cx = ring.cx + movevec[0] * radius * 0.6f;
+						knob.cy = ring.cy + movevec[1] * radius * 0.6f;
+						Touch_PushHudCircle(scalex, scaley, &knob, "gfx/touch_moveknob.tga", true);
+						break;
+					}
+				}
+			}
+		}
 		break;
+	}
 	default:
+		// With synthetic mouse events disabled, menu hover/click coordinates
+		// must come from the actual finger before dispatching K_MOUSE1.
+		{
+			int mi;
+			for (mi = 0; mi < MAXFINGERS - 1; mi++)
+				if (multitouch[mi][0])
+				{
+					x = (int)(multitouch[mi][1] * vid.mode.width);
+					y = (int)(multitouch[mi][2] * vid.mode.height);
+					in_windowmouse_x = x;
+					in_windowmouse_y = y;
+					break;
+				}
+		}
 		VID_TouchscreenArea( 0,   0,   0,  64,  64, NULL                         , 0.0f, NULL, NULL, &buttons[13], (keynum_t)'`', NULL, 0, 0, 0, true);
 		VID_TouchscreenArea( 0,  64,   0,  64,  64, "gfx/touch_menu.tga"         , 0.0f, NULL, NULL, &buttons[14], K_ESCAPE, NULL, 0, 0, 0, true);
 		// in menus, an icon in the corner activates keyboard
@@ -922,7 +1164,7 @@ static void IN_Move_TouchScreen_Quake(void)
 			VID_ShowKeyboard(true);
 		VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , 0.0f, NULL, move, &buttons[0], K_MOUSE4, NULL, 0, 0, 0, true);
 		VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , 0.0f, NULL, aim,  &buttons[1], K_MOUSE5, NULL, 0, 0, 0, true);
-		VID_TouchscreenArea(16, -320,-480,640, 960, NULL                         , 0.0f, NULL, click,&buttons[2], K_MOUSE1, NULL, 0, 0, 0, true);
+		VID_TouchscreenArea(0, 0, 0, vid_conwidth.value, vid_conheight.value, NULL, 0.0f, NULL, click, &buttons[2], K_MOUSE1, NULL, 0, 0, 0, true);
 		VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , 0.0f, NULL, NULL, &buttons[3], K_SPACE, NULL, 0, 0, 0, true);
 		VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , 0.0f, NULL, NULL, &buttons[4], K_MOUSE2, NULL, 0, 0, 0, true);
 		if (buttons[2])
@@ -940,6 +1182,18 @@ static void IN_Move_TouchScreen_Quake(void)
 		VID_TouchscreenArea(0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &buttons[6], K_SHIFT, NULL, 0, 0, 0, true);
 		VID_TouchscreenArea(0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &buttons[7], K_MWHEELUP, NULL, 0, 0, 0, true);
 		VID_TouchscreenArea(0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &buttons[8], K_MWHEELDOWN, NULL, 0, 0, 0, true);
+
+		// Menu/console/focus-loss: forget every finger's key_game touch
+		// ownership. Keep active slots classified as NONE until lift, so
+		// fingers held across a menu transition cannot resume firing/moving.
+		{
+			int mi;
+			for (mi = 0; mi < MAXFINGERS - 1; mi++)
+			{
+				touch_owner[mi] = TOUCH_OWNER_NONE;
+				touch_owner_valid[mi] = multitouch[mi][0] != 0;
+			}
+		}
 	}
 
 	cl.cmd.forwardmove -= move[1] * cl_forwardspeed.value;
@@ -1223,6 +1477,17 @@ void Sys_SDL_HandleEvents(void)
 						break;
 					case SDL_WINDOWEVENT_FOCUS_LOST:
 						vid_hasfocus = false;
+#ifdef DP_MOBILETOUCH
+						// Android can suspend/resume the activity (task
+						// switch, incoming call, screen lock) without ever
+						// delivering the matching SDL_FINGERUP for fingers
+						// that were down at the time; without this, a
+						// control could stay stuck "held" forever. Drop
+						// every finger and forget all touch ownership.
+						memset(multitouch, 0, sizeof(multitouch));
+						memset(multitouch_fingerid_valid, 0, sizeof(multitouch_fingerid_valid));
+						memset(touch_owner_valid, 0, sizeof(touch_owner_valid));
+#endif
 						break;
 					case SDL_WINDOWEVENT_CLOSE:
 						host.state = host_shutdown;
@@ -1294,9 +1559,14 @@ void Sys_SDL_HandleEvents(void)
 				{
 					if (!multitouch[i][0])
 					{
-						multitouch[i][0] = event.tfinger.fingerId + 1;
+						multitouch[i][0] = 1.0f;
 						multitouch[i][1] = event.tfinger.x;
 						multitouch[i][2] = event.tfinger.y;
+						touch_down_x[i] = event.tfinger.x;
+						touch_down_y[i] = event.tfinger.y;
+						multitouch_fingerid[i] = event.tfinger.fingerId; // stored as SDL_FingerID (int64), never truncated to float
+						multitouch_fingerid_valid[i] = true;
+						touch_owner_valid[i] = false; // classify on first use in IN_Move_TouchScreen_Quake
 						// TODO: use event.tfinger.pressure?
 						break;
 					}
@@ -1310,9 +1580,12 @@ void Sys_SDL_HandleEvents(void)
 #endif
 				for (i = 0;i < MAXFINGERS-1;i++)
 				{
-					if (multitouch[i][0] == event.tfinger.fingerId + 1)
+					if (multitouch_fingerid_valid[i] && multitouch_fingerid[i] == event.tfinger.fingerId)
 					{
 						multitouch[i][0] = 0;
+						multitouch_fingerid_valid[i] = false;
+						touch_owner[i] = TOUCH_OWNER_NONE;
+						touch_owner_valid[i] = false;
 						break;
 					}
 				}
@@ -1325,7 +1598,7 @@ void Sys_SDL_HandleEvents(void)
 #endif
 				for (i = 0;i < MAXFINGERS-1;i++)
 				{
-					if (multitouch[i][0] == event.tfinger.fingerId + 1)
+					if (multitouch_fingerid_valid[i] && multitouch_fingerid[i] == event.tfinger.fingerId)
 					{
 						multitouch[i][1] = event.tfinger.x;
 						multitouch[i][2] = event.tfinger.y;
@@ -1557,8 +1830,18 @@ void VID_Init (void)
 #endif
 #ifdef DP_MOBILETOUCH
 	Cvar_SetValueQuick(&vid_touchscreen, 1);
+	// Android (and other touch backends) can synthesize SDL_MOUSEMOTION /
+	// SDL_MOUSEBUTTON* events from real finger events and vice versa. We
+	// drive everything from SDL_FINGER* + our own touch_layout owner state
+	// machine, so turn both synthesis directions off to avoid double input
+	// (e.g. a FIRE tap also firing a synthetic left-click, or menu clicks
+	// double-processing through both the finger cursor and a synthetic
+	// mouse event). Must be set before SDL_Init.
+	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+	SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
 #endif
 	Cvar_RegisterVariable(&joy_sdl2_trigger_deadzone);
+	Cvar_RegisterVariable(&touch_look_sensitivity);
 
 	Cvar_RegisterCallback(&vid_display,                VID_ApplyDisplayMode_c);
 	Cvar_RegisterCallback(&vid_fullscreen,             VID_ApplyDisplayMode_c);

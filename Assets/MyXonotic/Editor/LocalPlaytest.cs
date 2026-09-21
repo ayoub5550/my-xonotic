@@ -110,7 +110,8 @@ namespace MyXonotic.EditorTools
                     player.ResetForRespawn(0);
                     Place(target.transform, new Vector3(-10, 0.1f, 5));
                     Physics.SyncTransforms();
-                    arena.PlayerWeapons.SwitchTo(WeaponType.Rifle);
+                    arena.PlayerWeapons.GiveWeapon(WeaponType.MachineGun);
+                    arena.PlayerWeapons.SwitchTo(WeaponType.MachineGun);
                     arena.PlayerWeapons.ResetCooldownForTest();
                     targetHealth = target.Health;
                     Check(arena.PlayerWeapons.TryFire(player.transform.position + Vector3.up,

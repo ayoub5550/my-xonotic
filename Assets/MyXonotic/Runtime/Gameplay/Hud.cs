@@ -37,12 +37,32 @@ namespace MyXonotic
         Text _statusText;
         Text _bannerText;
         Text _pauseText;
+        Text _ammoText;
+        Text _notifyText;
+        Text _crosshairText;
+        Image _damageFlash;
         GameObject _pausePanel;
         RectTransform _safeAreaRoot;
 
         Texture2D _discTexture;
         Texture2D _ringTexture;
+        Texture2D _squareTexture;
         GUIStyle _buttonLabelStyle;
+        GUIStyle _slotStyle;
+
+        readonly System.Collections.Generic.List<string> _notifications = new System.Collections.Generic.List<string>();
+        float _notifyTimer;
+        float _damageFlashAlpha;
+        float _hitMarkerTimer;
+        int _lastHealth = -1;
+        Actor _subscribedPlayer;
+
+        static readonly Color HealthColor = new Color32(120, 230, 120, 255);
+        static readonly Color ArmorColor = new Color32(120, 170, 255, 255);
+        static readonly Color AmmoColor = new Color32(255, 210, 120, 255);
+        static readonly Color SlotOwnedColor = new Color32(40, 40, 48, 190);
+        static readonly Color SlotEmptyColor = new Color32(20, 20, 24, 90);
+        static readonly Color SlotCurrentColor = new Color32(255, 200, 80, 230);
 
         public static Hud Build(Transform parent)
         {
@@ -76,9 +96,32 @@ namespace MyXonotic
             _bannerText.text = "my-xonotic " + Application.version + " — development build";
 
             _statusText = CreateText("Status", _safeAreaRoot, new Vector2(0f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(20f, 20f), new Vector2(0f, 90f), 20, TextAnchor.LowerLeft, Color.white);
-            CreateText("Crosshair", _safeAreaRoot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(40, 40), 28, TextAnchor.MiddleCenter, Color.white).text = "+";
+                new Vector2(20f, 20f), new Vector2(0f, 120f), 22, TextAnchor.LowerLeft, Color.white);
+            _statusText.supportRichText = true;
+            _statusText.fontStyle = FontStyle.Bold;
+
+            // Big ammo readout for the weapon in hand, bottom-centre so it sits
+            // between the joystick zone and the FIRE cluster.
+            _ammoText = CreateText("Ammo", _safeAreaRoot, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 24f), new Vector2(420f, 80f), 40, TextAnchor.LowerCenter, AmmoColor);
+            _ammoText.supportRichText = true;
+            _ammoText.fontStyle = FontStyle.Bold;
+
+            _notifyText = CreateText("Notify", _safeAreaRoot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(0f, 110f), new Vector2(900f, 120f), 22, TextAnchor.LowerCenter, Color.white);
+            _notifyText.supportRichText = true;
+
+            _crosshairText = CreateText("Crosshair", _safeAreaRoot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(40, 40), 28, TextAnchor.MiddleCenter, Color.white);
+            _crosshairText.text = "+";
+
+            var flashGO = new GameObject("DamageFlash", typeof(RectTransform), typeof(Image));
+            flashGO.transform.SetParent(_safeAreaRoot, false);
+            _damageFlash = flashGO.GetComponent<Image>();
+            _damageFlash.color = new Color(0.8f, 0f, 0f, 0f);
+            _damageFlash.raycastTarget = false;
+            var frt = flashGO.GetComponent<RectTransform>();
+            frt.anchorMin = Vector2.zero; frt.anchorMax = Vector2.one; frt.offsetMin = Vector2.zero; frt.offsetMax = Vector2.zero;
 
             _pausePanel = new GameObject("PausePanel", typeof(RectTransform), typeof(Image));
             _pausePanel.transform.SetParent(_safeAreaRoot, false);
@@ -130,15 +173,108 @@ namespace MyXonotic
             _safeAreaRoot.anchorMax = anchorMax;
         }
 
+        /// <summary>Queues a short centre-screen message (pickups, frags, weapon changes).</summary>
+        public void Notify(string message)
+        {
+            if (string.IsNullOrEmpty(message)) return;
+            _notifications.Add(message);
+            if (_notifications.Count > 3) _notifications.RemoveAt(0);
+            _notifyTimer = 2.6f;
+            if (_notifyText != null) { var c = _notifyText.color; c.a = 1f; _notifyText.color = c; }
+        }
+
+        void OnEnable()
+        {
+            Pickup.AnyCollected += OnPickupCollected;
+            GameState.AnyDeath += OnAnyDeath;
+            Actor.AnyDamage += OnAnyDamage;
+        }
+
+        void OnDisable()
+        {
+            Pickup.AnyCollected -= OnPickupCollected;
+            GameState.AnyDeath -= OnAnyDeath;
+            Actor.AnyDamage -= OnAnyDamage;
+            if (_subscribedPlayer != null && Weapons != null) Weapons.WeaponAcquired -= OnWeaponAcquired;
+        }
+
+        void OnPickupCollected(Pickup pickup, Actor collector)
+        {
+            if (collector != Player || pickup == null) return;
+            Notify("<color=#ffd280>" + pickup.Label + "</color>");
+            AudioClip clip = pickup.Type == PickupType.Weapon ? WeaponAudio.Common("weaponpickup")
+                : pickup.Type == PickupType.Health && pickup.Amount >= 100 ? WeaponAudio.Misc("megahealth")
+                : pickup.Type == PickupType.Health && pickup.Amount >= 25 ? WeaponAudio.Misc("mediumhealth")
+                : WeaponAudio.Misc("itempickup");
+            WeaponAudio.PlayAt(clip, Vector3.zero, 0.9f, spatial: false);
+        }
+
+        void OnWeaponAcquired(WeaponType weapon)
+        {
+            // Pickup label already covers the name; nothing extra needed here.
+        }
+
+        void OnAnyDeath(Actor victim, Actor killer)
+        {
+            if (victim == null) return;
+            if (killer == Player && victim != Player)
+            {
+                Notify("<color=#ff8c5a>You fragged " + victim.DisplayName + "</color>");
+                WeaponAudio.PlayAt(WeaponAudio.Misc("kill"), Vector3.zero, 0.8f, spatial: false);
+            }
+            else if (victim == Player)
+                Notify(killer != null && killer != Player ? "<color=#ff5a5a>" + killer.DisplayName + " fragged you</color>" : "<color=#ff5a5a>You died</color>");
+            else if (killer != null && killer != victim)
+                Notify(killer.DisplayName + " fragged " + victim.DisplayName);
+        }
+
+        void OnAnyDamage(Actor victim, Actor attacker, int damage)
+        {
+            if (victim == Player && damage > 0) _damageFlashAlpha = Mathf.Min(0.55f, _damageFlashAlpha + damage / 120f);
+            if (attacker == Player && victim != Player && damage > 0)
+            {
+                _hitMarkerTimer = 0.12f;
+                WeaponAudio.PlayAt(WeaponAudio.Misc("hit"), Vector3.zero, 0.5f, spatial: false);
+            }
+        }
+
         void Update()
         {
             ApplySafeArea();
             if (Player == null || _statusText == null) return;
-            string weaponName = Weapons != null ? Weapons.GetDef(Weapons.Current).Name : "-";
+            if (_subscribedPlayer != Player && Weapons != null)
+            {
+                _subscribedPlayer = Player;
+                Weapons.WeaponAcquired += OnWeaponAcquired;
+            }
+
+            float dt = Time.unscaledDeltaTime;
+            var def = Weapons != null ? Weapons.CurrentDef : WeaponController.GetDef(WeaponType.Blaster);
             int ammo = Weapons != null ? Weapons.GetAmmo(Weapons.Current) : 0;
+            string hp = "<color=#" + ColorUtility.ToHtmlStringRGB(Player.Health <= 25 ? Color.red : HealthColor) + ">" + Player.Health + "</color>";
+            string ar = "<color=#" + ColorUtility.ToHtmlStringRGB(ArmorColor) + ">" + Player.Armor + "</color>";
             _statusText.text =
-                $"HP {Player.Health}  AR {Player.Armor}  AMMO {ammo}  [{weaponName}]\n" +
-                $"FRAGS {Player.Frags}  DEATHS {Player.Deaths}";
+                $"HEALTH {hp}   ARMOR {ar}\n" +
+                $"FRAGS {Player.Frags}   DEATHS {Player.Deaths}";
+            string ammoStr = ammo < 0 ? "∞" : ammo.ToString();
+            string ammoColor = ammo >= 0 && ammo < Mathf.Max(1, def.Primary.AmmoCost) * 3 ? "#ff5a5a" : "#ffd278";
+            _ammoText.text = "<size=22>" + def.Name.ToUpperInvariant() + "</size>\n<color=" + ammoColor + ">" + ammoStr + "</color>";
+
+            if (_notifyTimer > 0f)
+            {
+                _notifyTimer -= dt;
+                _notifyText.text = string.Join("\n", _notifications);
+                var c = _notifyText.color; c.a = Mathf.Clamp01(_notifyTimer / 0.6f); _notifyText.color = c;
+                if (_notifyTimer <= 0f) _notifications.Clear();
+            }
+            else _notifyText.text = string.Empty;
+
+            _damageFlashAlpha = Mathf.MoveTowards(_damageFlashAlpha, 0f, dt * 1.4f);
+            _damageFlash.color = new Color(0.8f, 0f, 0f, _damageFlashAlpha);
+
+            _hitMarkerTimer -= dt;
+            _crosshairText.color = _hitMarkerTimer > 0f ? new Color(1f, 0.3f, 0.2f) : Color.white;
+            _crosshairText.text = Weapons != null && Weapons.IsZooming ? "◎" : "+";
             var arena = ArenaBootstrap.Instance;
             if (arena != null && arena.Match != null)
             {
@@ -196,6 +332,55 @@ namespace MyXonotic
             tex.SetPixels32(px);
             tex.Apply();
             return tex;
+        }
+
+        Texture2D SquareTexture()
+        {
+            if (_squareTexture != null) return _squareTexture;
+            _squareTexture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            _squareTexture.SetPixels32(new[] { new Color32(255, 255, 255, 255), new Color32(255, 255, 255, 255), new Color32(255, 255, 255, 255), new Color32(255, 255, 255, 255) });
+            _squareTexture.Apply();
+            return _squareTexture;
+        }
+
+        /// Nine weapon slots along the top: number, short name and ammo; owned
+        /// slots are solid, the current one is outlined in the accent colour,
+        /// unowned ones are faint. Tap handling lives in Player.ReadTouch.
+        void DrawWeaponBar()
+        {
+            if (Weapons == null) return;
+            if (_slotStyle == null)
+                _slotStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, richText = true, wordWrap = false };
+            float slotSize = TouchLayout.WeaponSlotSize;
+            _slotStyle.fontSize = Mathf.Max(9, Mathf.RoundToInt(slotSize * 0.22f));
+            var prev = GUI.color;
+            for (int i = 0; i < WeaponController.WeaponCount; i++)
+            {
+                var rect = GuiRect(TouchLayout.WeaponSlot(i));
+                var w = (WeaponType)i;
+                bool owned = Weapons.Has(w);
+                bool current = Weapons.Current == w;
+                var def = WeaponController.GetDef(w);
+                if (current)
+                {
+                    GUI.color = SlotCurrentColor;
+                    GUI.DrawTexture(new Rect(rect.x - 2f, rect.y - 2f, rect.width + 4f, rect.height + 4f), SquareTexture());
+                }
+                GUI.color = owned ? SlotOwnedColor : SlotEmptyColor;
+                GUI.DrawTexture(rect, SquareTexture());
+                if (owned)
+                {
+                    GUI.color = def.Tint;
+                    GUI.DrawTexture(new Rect(rect.x + 3f, rect.yMax - 5f, rect.width - 6f, 3f), SquareTexture());
+                }
+                GUI.color = Color.white;
+                int ammo = Weapons.GetAmmo(w);
+                string ammoStr = ammo < 0 ? "∞" : ammo.ToString();
+                string tint = owned ? (Weapons.CanFire(w) ? "#ffffff" : "#ff7a7a") : "#6a6a72";
+                _slotStyle.normal.textColor = Color.white;
+                GUI.Label(rect, "<color=#8a8a95><size=" + Mathf.Max(8, _slotStyle.fontSize - 3) + ">" + (i + 1) + "</size></color>\n<color=" + tint + "><b>" + def.ShortName + "</b></color>\n<color=" + tint + ">" + (owned ? ammoStr : "-") + "</color>", _slotStyle);
+            }
+            GUI.color = prev;
         }
 
         static Rect CenterRect(Vector2 centerScreen, float diameter) => new Rect(
@@ -270,6 +455,8 @@ namespace MyXonotic
                 }
                 return;
             }
+
+            DrawWeaponBar();
 
             if (!Application.isMobilePlatform && !Application.isEditor) return;
 

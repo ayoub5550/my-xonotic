@@ -32,6 +32,9 @@ namespace MyXonotic
         public event Action<Actor, Actor> Died;
         public event Action<Actor> Respawned;
 
+        /// Global damage feed: (victim, attacker, rawDamage). Used by the HUD for hit markers/flash.
+        public static event Action<Actor, Actor, int> AnyDamage;
+
         float _respawnTimer;
 
         public void ResetForSpawn()
@@ -60,6 +63,7 @@ namespace MyXonotic
             int toHealth = ArenaMath.ApplyArmor(rawDamage, ref armor, ArmorAbsorbRatio);
             Armor = armor;
             Health -= toHealth;
+            AnyDamage?.Invoke(this, instigator, rawDamage);
 
             if (knockback.sqrMagnitude > 0f)
             {

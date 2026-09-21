@@ -47,6 +47,7 @@ namespace MyXonotic.EditorTools
                 Armor_GrantsWhenNotFull_RejectsWhenFull();
                 Ammo_RejectsWithoutWeaponController();
                 Ammo_GrantsThenRejectsWhenCapped();
+            Weapon_GrantsOnceThenOnlyAmmo_AndArsenalRules();
                 DeadActor_IsRejected();
                 NullActor_IsRejected();
                 Paused_IsRejected_ThenUnpausedSucceeds();
@@ -143,7 +144,7 @@ namespace MyXonotic.EditorTools
         static void Ammo_RejectsWithoutWeaponController()
         {
             var actor = NewActor("NoWeaponsActor"); // deliberately no WeaponController component
-            var pickup = NewPickup(PickupType.AmmoRifle, 20);
+            var pickup = NewPickup(PickupType.AmmoBullets, 20);
             Check(!pickup.TryCollect(actor), "ammo pickup rejected: actor has no WeaponController");
             Check(pickup.IsAvailable, "rejected ammo pickup (missing receiver) remains available, not silently consumed");
         }
@@ -155,19 +156,63 @@ namespace MyXonotic.EditorTools
             var actor = go.AddComponent<Actor>();
             var wc = go.AddComponent<WeaponController>();
             wc.ResetLoadout();
-            int startAmmo = wc.GetAmmo(WeaponType.Rifle);
-            int maxAmmo = wc.GetDef(WeaponType.Rifle).MaxAmmo;
-            Check(startAmmo < maxAmmo, "rifle StartAmmo must be below MaxAmmo for this test to mean anything");
+            int startAmmo = wc.GetAmmo(AmmoType.Bullets);
+            int maxAmmo = WeaponController.MaxAmmo[(int)AmmoType.Bullets];
+            Check(startAmmo < maxAmmo, "bullets StartAmmo must be below MaxAmmo for this test to mean anything");
 
-            var pickup = NewPickup(PickupType.AmmoRifle, 20);
+            var pickup = NewPickup(PickupType.AmmoBullets, 20);
             Check(pickup.TryCollect(actor), "ammo pickup collected while below max");
-            Check(wc.GetAmmo(WeaponType.Rifle) == Mathf.Min(startAmmo + 20, maxAmmo), "ammo pickup granted the exact (clamped) amount");
+            Check(wc.GetAmmo(AmmoType.Bullets) == Mathf.Min(startAmmo + 20, maxAmmo), "ammo pickup granted the exact (clamped) amount");
 
-            wc.AddAmmo(WeaponType.Rifle, 10_000); // push to the hard cap via the existing public API
-            Check(wc.GetAmmo(WeaponType.Rifle) == maxAmmo, "ammo pool is now at MaxAmmo");
-            var pickup2 = NewPickup(PickupType.AmmoRifle, 20);
+            wc.AddAmmo(AmmoType.Bullets, 10_000); // push to the hard cap via the existing public API
+            Check(wc.GetAmmo(AmmoType.Bullets) == maxAmmo, "ammo pool is now at MaxAmmo");
+            var pickup2 = NewPickup(PickupType.AmmoBullets, 20);
             Check(!pickup2.TryCollect(actor), "ammo pickup rejected once the pool is already at MaxAmmo");
             Check(pickup2.IsAvailable, "rejected ammo pickup (capped) remains available");
+        }
+
+        static void Weapon_GrantsOnceThenOnlyAmmo_AndArsenalRules()
+        {
+            var go = new GameObject("WeaponPickupActor");
+            _spawned.Add(go);
+            var actor = go.AddComponent<Actor>();
+            var wc = go.AddComponent<WeaponController>();
+            wc.ResetLoadout();
+            Check(wc.Has(WeaponType.Blaster) && wc.Has(WeaponType.Shotgun) && !wc.Has(WeaponType.Vortex), "spawn loadout is Blaster + Shotgun only");
+            Check(wc.Current == WeaponType.Shotgun, "spawns holding the Shotgun");
+            Check(wc.GetAmmo(AmmoType.Shells) == 15 && wc.GetAmmo(AmmoType.Cells) == 0, "spawn ammo: 15 shells, no cells");
+
+            var pickup = NewPickup(PickupType.Weapon, 0);
+            pickup.Weapon = WeaponType.Vortex;
+            Check(pickup.TryCollect(actor), "weapon pickup collected");
+            Check(wc.Has(WeaponType.Vortex), "weapon pickup grants the weapon");
+            Check(wc.Current == WeaponType.Vortex, "auto-switch to the newly acquired higher-ranked weapon");
+            Check(wc.GetAmmo(AmmoType.Cells) == WeaponController.GetDef(WeaponType.Vortex).PickupAmmo, "weapon pickup grants its pickup ammo");
+            Check(!pickup.IsAvailable, "collected weapon pickup deactivates");
+
+            int cells = wc.GetAmmo(AmmoType.Cells);
+            var again = NewPickup(PickupType.Weapon, 0);
+            again.Weapon = WeaponType.Vortex;
+            Check(again.TryCollect(actor), "second pickup of an owned weapon still grants ammo");
+            Check(wc.GetAmmo(AmmoType.Cells) == cells + WeaponController.GetDef(WeaponType.Vortex).PickupAmmo, "owned-weapon pickup adds ammo only");
+
+            wc.AddAmmo(AmmoType.Cells, 10_000);
+            var capped = NewPickup(PickupType.Weapon, 0);
+            capped.Weapon = WeaponType.Vortex;
+            Check(!capped.TryCollect(actor), "owned weapon with full ammo pool is rejected (pickup stays)");
+
+            Check(!wc.SwitchTo(WeaponType.Hagar), "cannot switch to an unowned weapon");
+            Check(wc.SwitchCycle(+1) && wc.Has(wc.Current), "cycling lands on an owned weapon");
+            Check(wc.SwitchTo(WeaponType.Blaster) && wc.GetAmmo(WeaponType.Blaster) == -1, "Blaster reports infinite ammo");
+            Check(WeaponController.GetDef(WeaponType.Devastator).Secondary.Mode == FireMode.Detonate, "Devastator secondary is remote detonation");
+            Check(WeaponController.GetDef(WeaponType.Vortex).Secondary.Mode == FireMode.Zoom, "Vortex secondary is zoom");
+            for (int i = 0; i < WeaponController.WeaponCount; i++)
+            {
+                var def = WeaponController.GetDef((WeaponType)i);
+                Check(def.Type == (WeaponType)i && !string.IsNullOrEmpty(def.Name) && def.Primary.Refire > 0f, def.Name + " definition is well-formed");
+            }
+            wc.ResetLoadout();
+            Check(!wc.Has(WeaponType.Vortex) && wc.Current == WeaponType.Shotgun, "ResetLoadout drops picked-up weapons (respawn rule)");
         }
 
         static void DeadActor_IsRejected()
@@ -337,22 +382,22 @@ namespace MyXonotic.EditorTools
                 actualByType.TryGetValue(kv.Key, out int actual);
                 Check(actual == kv.Value, kv.Value + " real Boil entities of PickupType " + kv.Key + " expected, got " + actual);
             }
-            Check(!actualByType.ContainsKey(PickupType.AmmoRifle),
-                "no AmmoRifle pickups are created from the real map (item_bullets must stay unmapped)");
+            Check(actualByType.ContainsKey(PickupType.Weapon) && actualByType[PickupType.Weapon] == 7,
+                "real Boil yields its 7 weapon pickups (machinegun/vortex/mortar/crylink/devastator/electro/hagar)");
+            Check(actualByType.ContainsKey(PickupType.AmmoBullets) && actualByType.ContainsKey(PickupType.AmmoCells),
+                "real Boil yields bullet and cell ammo pickups");
+            foreach (var p in created)
+                if (p.Type == PickupType.Weapon) Check(p.Weapon != WeaponType.Blaster && p.Weapon != WeaponType.Shotgun, "map weapon pickups are never the spawn weapons");
             Check(positions.Count == created.Count, "every mapped pickup got a distinct real-map position (no collapsed/fake placement)");
 
-            bool warnedWeapon = false, warnedCells = false, warnedStrength = false, warnedBullets = false;
+            bool warnedStrength = false, wronglyUnsupported = false;
             foreach (var w in warnings)
             {
-                if (w.Contains("weapon_") && w.Contains("not instantiated as a pickup")) warnedWeapon = true;
-                if (w.Contains("item_cells") && w.Contains("not instantiated as a pickup")) warnedCells = true;
                 if (w.Contains("item_strength") && w.Contains("not instantiated as a pickup")) warnedStrength = true;
-                if (w.Contains("item_bullets") && w.Contains("not instantiated as a pickup")) warnedBullets = true;
+                if ((w.Contains("item_cells") || w.Contains("item_bullets") || w.Contains("weapon_vortex")) && w.Contains("not instantiated as a pickup")) wronglyUnsupported = true;
             }
-            Check(warnedWeapon, "importer explicitly reports at least one unsupported weapon_* class, never silently mapped");
-            Check(warnedCells, "importer explicitly reports item_cells as unsupported");
             Check(warnedStrength, "importer explicitly reports item_strength as unsupported");
-            Check(warnedBullets, "importer explicitly reports item_bullets as unsupported (no ammo/weapon correspondence claimed)");
+            Check(!wronglyUnsupported, "ammo and core weapons are no longer reported as unsupported");
         }
     }
 }

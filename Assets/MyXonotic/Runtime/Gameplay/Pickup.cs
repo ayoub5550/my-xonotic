@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace MyXonotic
 {
-    public enum PickupType { Health, Armor, AmmoBlaster, AmmoRifle, AmmoRocket }
+    public enum PickupType { Health, Armor, AmmoShells, AmmoBullets, AmmoRockets, AmmoCells, Weapon }
 
     /// <summary>
     /// World pickup with a respawn timer; grants health/armor/ammo on touch.
@@ -32,6 +32,30 @@ namespace MyXonotic
         public PickupType Type;
         public int Amount = 25;
         public float RespawnTime = 12f;
+        /// Which weapon a <see cref="PickupType.Weapon"/> pickup grants.
+        public WeaponType Weapon = WeaponType.Shotgun;
+
+        /// Raised after a successful grant: (pickup, collector).
+        public static event System.Action<Pickup, Actor> AnyCollected;
+
+        /// Human-readable label for HUD notifications.
+        public string Label
+        {
+            get
+            {
+                switch (Type)
+                {
+                    case PickupType.Health: return Amount + " Health";
+                    case PickupType.Armor: return Amount + " Armor";
+                    case PickupType.AmmoShells: return Amount + " Shells";
+                    case PickupType.AmmoBullets: return Amount + " Bullets";
+                    case PickupType.AmmoRockets: return Amount + " Rockets";
+                    case PickupType.AmmoCells: return Amount + " Cells";
+                    case PickupType.Weapon: return WeaponController.GetDef(Weapon).Name;
+                    default: return Type.ToString();
+                }
+            }
+        }
 
         MeshRenderer _renderer;
         Collider _collider;
@@ -93,7 +117,7 @@ namespace MyXonotic
             EnsureCached();
             if (!_active || ArenaBootstrap.IsPaused) return false;
             if (actor == null || actor.IsDead) return false;
-            if (Amount <= 0) return false;
+            if (Amount <= 0 && Type != PickupType.Weapon) return false;
 
             switch (Type)
             {
@@ -105,21 +129,31 @@ namespace MyXonotic
                     if (actor.Armor >= Actor.MaxArmor) return false;
                     actor.AddArmor(Amount);
                     break;
-                case PickupType.AmmoBlaster:
-                    if (!TryGrantAmmo(actor, WeaponType.Blaster)) return false;
+                case PickupType.AmmoShells:
+                    if (!TryGrantAmmo(actor, AmmoType.Shells)) return false;
                     break;
-                case PickupType.AmmoRifle:
-                    if (!TryGrantAmmo(actor, WeaponType.Rifle)) return false;
+                case PickupType.AmmoBullets:
+                    if (!TryGrantAmmo(actor, AmmoType.Bullets)) return false;
                     break;
-                case PickupType.AmmoRocket:
-                    if (!TryGrantAmmo(actor, WeaponType.Rocket)) return false;
+                case PickupType.AmmoRockets:
+                    if (!TryGrantAmmo(actor, AmmoType.Rockets)) return false;
                     break;
+                case PickupType.AmmoCells:
+                    if (!TryGrantAmmo(actor, AmmoType.Cells)) return false;
+                    break;
+                case PickupType.Weapon:
+                {
+                    var wc = actor.GetComponent<WeaponController>();
+                    if (wc == null || !wc.GiveWeapon(Weapon)) return false;
+                    break;
+                }
                 default:
                     return false;
             }
 
             SetActive(false);
             _respawnTimer = RespawnTime;
+            AnyCollected?.Invoke(this, actor);
             return true;
         }
 
@@ -128,13 +162,11 @@ namespace MyXonotic
         /// returns false (no state change on either side) otherwise so the
         /// caller does not consume the pickup for nothing.
         /// </summary>
-        bool TryGrantAmmo(Actor actor, WeaponType type)
+        bool TryGrantAmmo(Actor actor, AmmoType type)
         {
             var wc = actor.GetComponent<WeaponController>();
             if (wc == null) return false;
-            if (wc.GetAmmo(type) >= wc.GetDef(type).MaxAmmo) return false;
-            wc.AddAmmo(type, Amount);
-            return true;
+            return wc.AddAmmo(type, Amount);
         }
 
         void SetActive(bool active)

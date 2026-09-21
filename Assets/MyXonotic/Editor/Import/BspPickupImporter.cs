@@ -9,8 +9,8 @@ namespace MyXonotic.EditorTools
     /// <summary>
     /// Additive gameplay pass over an already-parsed BspDocument, parallel to
     /// <see cref="BspGameplayImporter"/>'s trigger_push/teleport/hurt pass:
-    /// builds one runtime <see cref="Pickup"/> per SUPPORTED item_* point
-    /// entity (health/armor/rocket-ammo) at its real map position.
+    /// builds one runtime <see cref="Pickup"/> per SUPPORTED item_*/weapon_*
+    /// point entity (health/armor/ammo/weapons) at its real map position.
     ///
     /// Verified against Boil's actual entities lump (data only, key/value
     /// text; no QuakeC/engine source read):
@@ -24,51 +24,18 @@ namespace MyXonotic.EditorTools
     /// authoritative table -- tests read it directly, they do not duplicate it):
     ///   item_health_small/medium/big/mega -> Health   (5 / 25 / 50 / 100)
     ///   item_armor_small/medium/big/mega  -> Armor    (5 / 25 / 50 / 100)
-    ///   item_rockets                  -> AmmoRocket (5, provisional -- see below);
-    ///                                     our Rocket weapon genuinely fires rockets.
-    ///   item_bullets   -> UNSUPPORTED. Explicit instruction: do not map an
-    ///                       ammo pickup onto a weapon it does not actually
-    ///                       belong to. Our Rifle is an original prototype,
-    ///                       not a stand-in for the machinegun that
-    ///                       item_bullets refills in Xonotic.
-    ///   item_cells     -> UNSUPPORTED. No supported weapon uses cell ammo.
-    ///   item_strength  -> UNSUPPORTED. Power-up; Actor/WeaponController have
-    ///                       no such stat.
-    ///   weapon_*       -> UNSUPPORTED, all of them. WeaponController has no
-    ///                       pickup/unlock mechanic (every actor always has
-    ///                       Blaster+Rifle+Rocket), and none of our 3
-    ///                       prototypes claims to BE any specific original
-    ///                       weapon. Never remapped onto one.
-    /// item_health_big and item_armor_medium are supported for completeness
-    /// (a future map may use them) even though Boil's own entities lump has
-    /// neither -- Boil's supported-entity count is therefore unchanged at 25.
+    ///   item_shells/bullets/rockets/cells -> shared ammo pools (15 / 80 / 25 / 25)
+    ///   weapon_* for the nine core weapons -> Weapon pickup (grants the weapon
+    ///                       plus WeaponDef.PickupAmmo of its ammo type).
+    ///   item_strength/invincible/jetpack/fuel, exotic weapon_* (arc, minelayer,
+    ///                       rifle, seeker, ...) -> UNSUPPORTED, visual-only decoration.
     ///
-    /// Health/Armor amounts are PUBLIC NUMERIC CONFIG FACTS, not copied
-    /// GPL/QuakeC code: read directly from the "set g_pickup_&lt;name&gt; &lt;n&gt;"
-    /// cvar-default lines in balance-xonotic.cfg, a plain-text data/config
-    /// file (no compiled logic) inside the official
-    /// xonotic-20230620-data.pk3 (sha256
-    /// 7602be0d44a4f1ce4f0918c54ceb215c9bc963a103623d6c7874f081330c8505;
-    /// balance-xonotic.cfg itself sha256
-    /// e5544d2dbd3873693d28ba21473f3bed13e50dcd6b68006829da462055e5f839):
-    ///   g_pickup_healthsmall 5, g_pickup_healthmedium 25,
-    ///   g_pickup_healthbig 50, g_pickup_healthmega 100,
-    ///   g_pickup_armorsmall 5, g_pickup_armormedium 25,
-    ///   g_pickup_armorbig 50, g_pickup_armormega 100.
-    /// (Reading these numeric defaults is fine; copying the QC code that
-    /// applies/clamps them is not, and none of that code was read.)
-    ///
-    /// AmmoRocket stays PROVISIONAL at 5, NOT the config's
-    /// g_pickup_rockets/g_pickup_rockets_weapon value (40, max 160): our
-    /// WeaponController.Rocket().MaxAmmo is only 20 (an independent,
-    /// unrelated tuning choice already in this repo), so reusing the
-    /// official 40 would over-fill or exceed that cap on a single pickup.
-    /// Revisiting this needs a WeaponController change, out of scope here.
-    /// Respawn timers also have public cvars (g_pickup_respawntime_short 15,
-    /// _medium 20, _long 30, _ammo 10) but which tier applies to which item
-    /// class is not itself a plain 1:1 name match the way the amount cvars
-    /// are, so Pickup.RespawnTime is left at its existing default here --
-    /// still explicitly provisional, not wired to a tier.
+    /// Amounts are PUBLIC NUMERIC CONFIG FACTS, not copied GPL/QuakeC code:
+    /// read from the "set g_pickup_<name> <n>" cvar-default lines in
+    /// balance-xonotic.cfg (sha256
+    /// e5544d2dbd3873693d28ba21473f3bed13e50dcd6b68006829da462055e5f839).
+    /// Respawn timers follow the same file's tiers: weapons/ammo 15 s,
+    /// health 20 s, armor 30 s (approximate mapping of short/medium/long).
     ///
     /// Visual: an explicit DEVELOPMENT PLACEHOLDER sphere (ArenaPrimitives +
     /// an ArenaMaterials debug tint), matching ArenaBootstrap.AddPickup's
@@ -102,7 +69,9 @@ namespace MyXonotic.EditorTools
         {
             public readonly PickupType Type;
             public readonly int Amount;
-            public PickupPlan(PickupType type, int amount) { Type = type; Amount = amount; }
+            public readonly WeaponType Weapon;
+            public PickupPlan(PickupType type, int amount) { Type = type; Amount = amount; Weapon = WeaponType.Blaster; }
+            public PickupPlan(WeaponType weapon) { Type = PickupType.Weapon; Amount = 0; Weapon = weapon; }
         }
 
         /// <summary>Authoritative supported classname -> (PickupType, Amount) table. See class doc.</summary>
@@ -116,7 +85,26 @@ namespace MyXonotic.EditorTools
             ["item_armor_medium"] = new PickupPlan(PickupType.Armor, 25),
             ["item_armor_big"] = new PickupPlan(PickupType.Armor, 50),
             ["item_armor_mega"] = new PickupPlan(PickupType.Armor, 100),
-            ["item_rockets"] = new PickupPlan(PickupType.AmmoRocket, 5),
+            // Ammo amounts: g_pickup_shells/nails/rockets/cells defaults (15/80/25/25).
+            ["item_shells"] = new PickupPlan(PickupType.AmmoShells, 15),
+            ["item_bullets"] = new PickupPlan(PickupType.AmmoBullets, 80),
+            ["item_rockets"] = new PickupPlan(PickupType.AmmoRockets, 25),
+            ["item_cells"] = new PickupPlan(PickupType.AmmoCells, 25),
+            // The nine core weapons (current and legacy entity class names).
+            ["weapon_blaster"] = new PickupPlan(WeaponType.Blaster),
+            ["weapon_laser"] = new PickupPlan(WeaponType.Blaster),
+            ["weapon_shotgun"] = new PickupPlan(WeaponType.Shotgun),
+            ["weapon_machinegun"] = new PickupPlan(WeaponType.MachineGun),
+            ["weapon_uzi"] = new PickupPlan(WeaponType.MachineGun),
+            ["weapon_mortar"] = new PickupPlan(WeaponType.Mortar),
+            ["weapon_grenadelauncher"] = new PickupPlan(WeaponType.Mortar),
+            ["weapon_electro"] = new PickupPlan(WeaponType.Electro),
+            ["weapon_crylink"] = new PickupPlan(WeaponType.Crylink),
+            ["weapon_vortex"] = new PickupPlan(WeaponType.Vortex),
+            ["weapon_nex"] = new PickupPlan(WeaponType.Vortex),
+            ["weapon_hagar"] = new PickupPlan(WeaponType.Hagar),
+            ["weapon_devastator"] = new PickupPlan(WeaponType.Devastator),
+            ["weapon_rocketlauncher"] = new PickupPlan(WeaponType.Devastator),
         };
 
         /// <summary>
@@ -208,6 +196,11 @@ namespace MyXonotic.EditorTools
                 var pickup = go.AddComponent<Pickup>();
                 pickup.Type = plan.Type;
                 pickup.Amount = plan.Amount;
+                pickup.Weapon = plan.Weapon;
+                // Xonotic defaults: weapons/ammo respawn after 15 s, health/armor after 20/30 s.
+                pickup.RespawnTime = plan.Type == PickupType.Weapon ? 15f
+                    : plan.Type == PickupType.Health ? 20f
+                    : plan.Type == PickupType.Armor ? 30f : 15f;
 
                 createdPickups.Add(pickup);
                 importedCount++;
@@ -227,7 +220,7 @@ namespace MyXonotic.EditorTools
 
             if (importedCount == 0)
             {
-                warnings.Add("BspPickupImporter: no supported item_health_*/item_armor_*/item_rockets entities were found.");
+                warnings.Add("BspPickupImporter: no supported item_*/weapon_* entities were found.");
             }
 
             return warnings;
@@ -237,21 +230,17 @@ namespace MyXonotic.EditorTools
         {
             if (classname.StartsWith("weapon_", StringComparison.Ordinal))
             {
-                return "weapon pickups are out of scope for this slice (WeaponController has no weapon-unlock mechanic; every actor always has Blaster+Rifle+Rocket) -- never remapped onto one of the 3 supported WeaponTypes.";
+                return "weapon outside the nine core weapons implemented by WeaponController (visual-only decoration).";
             }
-            if (classname == "item_bullets")
-            {
-                return "our Rifle is an original prototype, not the machinegun item_bullets refills in Xonotic -- not mapped to avoid claiming an unsupported ammo/weapon correspondence.";
-            }
-            if (classname == "item_cells")
-            {
-                return "no supported weapon uses a cell-type ammo pool.";
-            }
-            if (classname == "item_strength")
+            if (classname == "item_strength" || classname == "item_invincible" || classname == "item_shield")
             {
                 return "power-up items are out of scope; Actor/WeaponController expose no such stat.";
             }
-            return "unrecognized item_* class outside the mapped health/armor/rocket-ammo subset.";
+            if (classname == "item_fuel" || classname == "item_fuel_regen" || classname == "item_jetpack")
+            {
+                return "jetpack/fuel items are out of scope (no jetpack mechanic).";
+            }
+            return "unrecognized item_* class outside the mapped health/armor/ammo/weapon subset.";
         }
 
         /// <summary>
@@ -362,8 +351,11 @@ namespace MyXonotic.EditorTools
             {
                 case PickupType.Health: return new Color(0.2f, 0.9f, 0.3f);
                 case PickupType.Armor: return new Color(0.3f, 0.5f, 0.9f);
-                case PickupType.AmmoRifle: return new Color(0.9f, 0.9f, 0.2f);
-                case PickupType.AmmoRocket: return new Color(0.9f, 0.3f, 0.2f);
+                case PickupType.AmmoBullets: return new Color(0.9f, 0.9f, 0.2f);
+                case PickupType.AmmoRockets: return new Color(0.9f, 0.3f, 0.2f);
+                case PickupType.AmmoCells: return new Color(0.3f, 0.6f, 1f);
+                case PickupType.AmmoShells: return new Color(0.85f, 0.8f, 0.6f);
+                case PickupType.Weapon: return new Color(1f, 0.8f, 0.3f);
                 default: return Color.white;
             }
         }
@@ -419,16 +411,27 @@ namespace MyXonotic.EditorTools
                 "item_armor_big maps to Armor/50 (g_pickup_armorbig)");
             Expect(ClassToPlan.TryGetValue("item_armor_mega", out PickupPlan am) && am.Type == PickupType.Armor && am.Amount == 100,
                 "item_armor_mega maps to Armor/100 (g_pickup_armormega)");
-            Expect(ClassToPlan.TryGetValue("item_rockets", out PickupPlan ro) && ro.Type == PickupType.AmmoRocket && ro.Amount == 5,
-                "item_rockets maps to AmmoRocket/5 (provisional, NOT the config's 40 -- our Rocket MaxAmmo is only 20)");
+            Expect(ClassToPlan.TryGetValue("item_rockets", out PickupPlan ro) && ro.Type == PickupType.AmmoRockets && ro.Amount == 25,
+                "item_rockets maps to AmmoRockets/25 (g_pickup_rockets)");
+            Expect(ClassToPlan.TryGetValue("item_bullets", out PickupPlan bu) && bu.Type == PickupType.AmmoBullets && bu.Amount == 80,
+                "item_bullets maps to AmmoBullets/80 (g_pickup_nails)");
+            Expect(ClassToPlan.TryGetValue("item_cells", out PickupPlan ce) && ce.Type == PickupType.AmmoCells && ce.Amount == 25,
+                "item_cells maps to AmmoCells/25 (g_pickup_cells)");
+            Expect(ClassToPlan.TryGetValue("item_shells", out PickupPlan sh) && sh.Type == PickupType.AmmoShells && sh.Amount == 15,
+                "item_shells maps to AmmoShells/15 (g_pickup_shells)");
+            Expect(ClassToPlan.TryGetValue("weapon_vortex", out PickupPlan wv) && wv.Type == PickupType.Weapon && wv.Weapon == WeaponType.Vortex,
+                "weapon_vortex maps to the Vortex weapon pickup");
+            Expect(ClassToPlan.TryGetValue("weapon_devastator", out PickupPlan wd) && wd.Type == PickupType.Weapon && wd.Weapon == WeaponType.Devastator,
+                "weapon_devastator maps to the Devastator weapon pickup");
+            int weaponClasses = 0;
+            foreach (var kv in ClassToPlan) if (kv.Value.Type == PickupType.Weapon) weaponClasses++;
+            Expect(weaponClasses >= WeaponController.WeaponCount, "every one of the nine weapons has at least one entity classname");
 
-            // item_bullets must stay unmapped (explicit parent instruction: no
-            // unsupported ammo->weapon correspondence).
+            // Power-ups and exotic weapons stay visual-only.
             string[] mustStayUnsupported =
             {
-                "item_bullets", "item_cells", "item_strength",
-                "weapon_vortex", "weapon_mortar", "weapon_machinegun",
-                "weapon_hagar", "weapon_electro", "weapon_devastator", "weapon_crylink",
+                "item_strength", "item_invincible", "item_jetpack", "item_fuel",
+                "weapon_arc", "weapon_minelayer", "weapon_rifle", "weapon_seeker", "weapon_fireball", "weapon_hlac", "weapon_hook", "weapon_porto", "weapon_tuba", "weapon_vaporizer",
             };
             foreach (var c in mustStayUnsupported)
             {

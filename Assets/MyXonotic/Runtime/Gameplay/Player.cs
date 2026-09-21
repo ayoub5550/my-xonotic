@@ -27,9 +27,9 @@ namespace MyXonotic
         public const float LookSensitivityMouse = 3.5f;
         public const float LookSensitivityTouch = 3.2f;
 
-        // Cached once instead of System.Enum.GetValues(typeof(WeaponType)).Length
-        // every Update() (that call allocates a new array each time).
-        static readonly int WeaponCount = System.Enum.GetValues(typeof(WeaponType)).Length;
+        public const float DefaultFieldOfView = 85f;
+        public const float ZoomFieldOfView = 30f;
+        public const float ZoomLookScale = 0.4f;
 
         public Camera ViewCamera;
         public WeaponController Weapons;
@@ -167,6 +167,7 @@ namespace MyXonotic
             float dt = Mathf.Min(Time.deltaTime, 0.05f);
             moveInput = Vector2.ClampMagnitude(moveInput, 1f);
 
+            if (Weapons != null && Weapons.IsZooming) lookDelta *= ZoomLookScale;
             _yaw += lookDelta.x;
             _pitch = Mathf.Clamp(_pitch - lookDelta.y, -85f, 85f);
             transform.rotation = Quaternion.Euler(0f, _yaw, 0f);
@@ -206,27 +207,30 @@ namespace MyXonotic
             {
                 Vector3 origin = ViewCamera.transform.position;
                 Vector3 dir = ViewCamera.transform.forward;
+                Weapons.SetSecondaryHeld(fireAlt);
                 if (firePrimary) Weapons.TryFire(origin, dir, false);
                 else if (fireAlt) Weapons.TryFire(origin, dir, true);
+
+                // Vortex zoom: narrow the FOV while the secondary is held.
+                float targetFov = Weapons.IsZooming ? ZoomFieldOfView : DefaultFieldOfView;
+                ViewCamera.fieldOfView = Mathf.Lerp(ViewCamera.fieldOfView, targetFov, 1f - Mathf.Exp(-14f * dt));
             }
 
             if (Weapons != null)
             {
-                if (switchNext || Input.GetKeyDown(KeyCode.Q))
+                if (switchNext || Input.GetKeyDown(KeyCode.Q) || Input.mouseScrollDelta.y < 0f) Weapons.SwitchCycle(+1);
+                if (switchPrev || Input.GetKeyDown(KeyCode.E) || Input.mouseScrollDelta.y > 0f) Weapons.SwitchCycle(-1);
+                if (_tappedWeaponSlot >= 0)
                 {
-                    int next = ((int)Weapons.Current + 1) % WeaponCount;
-                    Weapons.SwitchTo((WeaponType)next);
+                    Weapons.SwitchTo((WeaponType)_tappedWeaponSlot);
+                    _tappedWeaponSlot = -1;
                 }
-                if (switchPrev || Input.GetKeyDown(KeyCode.E))
-                {
-                    int prev = ((int)Weapons.Current - 1 + WeaponCount) % WeaponCount;
-                    Weapons.SwitchTo((WeaponType)prev);
-                }
-                if (Input.GetKeyDown(KeyCode.Alpha1)) Weapons.SwitchTo(WeaponType.Blaster);
-                if (Input.GetKeyDown(KeyCode.Alpha2)) Weapons.SwitchTo(WeaponType.Rifle);
-                if (Input.GetKeyDown(KeyCode.Alpha3)) Weapons.SwitchTo(WeaponType.Rocket);
+                for (int i = 0; i < WeaponController.WeaponCount; i++)
+                    if (Input.GetKeyDown(KeyCode.Alpha1 + i)) Weapons.SwitchTo((WeaponType)i);
             }
         }
+
+        int _tappedWeaponSlot = -1;
 
         public void ApplyExternalImpulse(Vector3 impulse) => _externalImpulse += impulse;
 
@@ -318,6 +322,10 @@ namespace MyXonotic
                 if (t.phase != TouchPhase.Began) continue;
                 Vector2 pos = t.position;
                 if (!safe.Contains(pos) || pauseRect.Contains(pos)) continue;
+
+                int slot = TouchLayout.WeaponSlotAt(pos);
+                if (slot >= 0) { _tappedWeaponSlot = slot; continue; }
+                if (TouchLayout.WeaponBar.Contains(pos)) continue;
 
                 if (fireRect.Contains(pos) && _fireFingerId == -1) { _fireFingerId = t.fingerId; continue; }
                 if (altRect.Contains(pos) && _altFingerId == -1) { _altFingerId = t.fingerId; continue; }

@@ -108,30 +108,47 @@ namespace MyXonotic.EditorTools
             public string[] AudioPaths;
         }
 
-        static readonly WeaponSource[] Sources =
+        /// <summary>
+        /// One entry per <see cref="WeaponType"/>. Model/audio paths are
+        /// content-relative (resolved through XonoticContentResolver roots:
+        /// XONOTIC_CONTENT_ROOTS / ExternalContent / ThirdParty). The first
+        /// existing view-model path wins; the world model is the fallback.
+        /// Sounds come from <see cref="WeaponAudio.Sources"/> so runtime and
+        /// importer can never disagree about file names.
+        /// </summary>
+        static WeaponSource[] BuildSources()
         {
-            new WeaponSource
+            var worldModels = new Dictionary<WeaponType, string>
             {
-                Name = "Blaster",
-                ModelPath = "ThirdParty/Xonotic/data/models/weapons/g_laser.md3",
-                ViewModelContentPaths = new[] { "models/weapons/v_laser.md3", "models/weapons/v_laser.iqm" },
-                FallbackIconPath = "ThirdParty/Xonotic/data/models/weapons/g_laser_simple.tga",
-                AudioPaths = new[] { "ThirdParty/Xonotic/data/sound/weapons/lasergun_fire.ogg" }
-            },
-            new WeaponSource
+                [WeaponType.Blaster] = "g_laser", [WeaponType.Shotgun] = "g_shotgun", [WeaponType.MachineGun] = "g_uzi",
+                [WeaponType.Mortar] = "g_gl", [WeaponType.Electro] = "g_electro", [WeaponType.Crylink] = "g_crylink",
+                [WeaponType.Vortex] = "g_nex", [WeaponType.Hagar] = "g_hagar", [WeaponType.Devastator] = "g_rl"
+            };
+            var list = new List<WeaponSource>();
+            for (int i = 0; i < WeaponController.WeaponCount; i++)
             {
-                Name = "Rocket",
-                ModelPath = "ThirdParty/Xonotic/data/models/weapons/g_rl.md3",
-                ViewModelContentPaths = new[] { "models/weapons/v_rl.md3", "models/weapons/v_rl.iqm" },
-                FallbackIconPath = "ThirdParty/Xonotic/data/models/weapons/g_rl_simple.tga",
-                AudioPaths = new[]
+                var type = (WeaponType)i;
+                string g = worldModels[type];
+                string v = "v_" + g.Substring(2);
+                var audio = new List<string>();
+                if (WeaponAudio.Sources.TryGetValue(type, out var set))
                 {
-                    "ThirdParty/Xonotic/data/sound/weapons/rocket_fire.ogg",
-                    "ThirdParty/Xonotic/data/sound/weapons/rocket_fly.ogg",
-                    "ThirdParty/Xonotic/data/sound/weapons/rocket_impact.ogg"
+                    foreach (var arr in new[] { set.Fire, set.AltFire, set.Impact })
+                        if (arr != null) foreach (var f in arr) if (!audio.Contains(f)) audio.Add(f);
                 }
+                list.Add(new WeaponSource
+                {
+                    Name = type.ToString(),
+                    ModelPath = "models/weapons/" + g + ".md3",
+                    ViewModelContentPaths = new[] { "models/weapons/" + v + ".md3", "models/weapons/" + v + ".iqm" },
+                    FallbackIconPath = "models/weapons/" + g + "_simple.tga",
+                    AudioPaths = audio.ConvertAll(f => "sound/weapons/" + f + ".ogg").ToArray()
+                });
             }
-        };
+            return list.ToArray();
+        }
+
+        static readonly WeaponSource[] Sources = BuildSources();
 
         /// <summary>
         /// Looks for <paramref name="relativePath"/> under each of the resolver's
@@ -151,7 +168,7 @@ namespace MyXonotic.EditorTools
             return null;
         }
 
-        [MenuItem("MyXonotic/Import/Generate Weapon Visuals (Blaster + Rocket)")]
+        [MenuItem("MyXonotic/Import/Generate Weapon Visuals (all 9 weapons)")]
         public static void GenerateWeaponAssetsMenu()
         {
             var results = GenerateWeaponAssets();
@@ -178,6 +195,10 @@ namespace MyXonotic.EditorTools
             var results = new List<WeaponAssetResult>();
             foreach (var source in Sources)
                 results.Add(GenerateOne(source, resolver));
+            foreach (var common in WeaponAudio.CommonSources)
+                CopyContentAudio(resolver, "sound/weapons/" + common + ".ogg", "Common_" + common + ".ogg");
+            foreach (var misc in WeaponAudio.MiscSources)
+                CopyContentAudio(resolver, "sound/misc/" + misc + ".ogg", "Misc_" + misc + ".ogg");
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             WriteWeaponManifest(results);
@@ -315,7 +336,7 @@ namespace MyXonotic.EditorTools
                 }
             }
 
-            string activeModelPath = source.ModelPath;
+            string activeModelPath = FindContentFile(resolver, source.ModelPath) ?? source.ModelPath;
             bool wantViewModel = viewModelPath != null;
             if (wantViewModel)
             {
@@ -363,10 +384,10 @@ namespace MyXonotic.EditorTools
 
             if (format == "IQM")
             {
-                IqmStaticModel model;
+                IqmStaticModel[] meshes;
                 try
                 {
-                    model = IqmReader.ReadStatic(bytes, activeModelPath);
+                    meshes = IqmReader.ReadStaticAll(bytes, activeModelPath, allowAnimated: false);
                 }
                 catch (Exception e)
                 {
@@ -374,16 +395,41 @@ namespace MyXonotic.EditorTools
                     return result;
                 }
 
-                mesh = BuildUnityMesh(model);
-                string meshAssetPath = GeneratedRoot + "/" + source.Name + "_Mesh.asset";
-                mesh = Persist(mesh, meshAssetPath);
+                // Reuse the MD3 surface builder (multi-surface mesh + script-based
+                // texture resolution) by presenting every IQM mesh as a surface.
+                var asMd3 = new MyXonotic.Content.Md3.Md3StaticModel
+                {
+                    Name = Path.GetFileNameWithoutExtension(activeModelPath),
+                    Surfaces = new MyXonotic.Content.Md3.Md3Surface[meshes.Length]
+                };
+                int totalJoints = 0;
+                for (int m = 0; m < meshes.Length; m++)
+                {
+                    var im = meshes[m];
+                    totalJoints = im.JointCount;
+                    var surf = new MyXonotic.Content.Md3.Md3Surface
+                    {
+                        Name = im.MeshName,
+                        ShaderNames = new[] { IqmMaterialToShaderName(im.MaterialName) },
+                        Positions = new MyXonotic.Content.Bsp.BspVec3[im.Positions.Length],
+                        Normals = new MyXonotic.Content.Bsp.BspVec3[im.Normals.Length],
+                        TexCoords = new MyXonotic.Content.Bsp.BspVec2[im.TexCoords.Length],
+                        Triangles = im.Triangles
+                    };
+                    for (int v = 0; v < im.Positions.Length; v++) surf.Positions[v] = new MyXonotic.Content.Bsp.BspVec3(im.Positions[v].x, im.Positions[v].y, im.Positions[v].z);
+                    for (int v = 0; v < im.Normals.Length; v++) surf.Normals[v] = new MyXonotic.Content.Bsp.BspVec3(im.Normals[v].x, im.Normals[v].y, im.Normals[v].z);
+                    for (int v = 0; v < im.TexCoords.Length; v++) surf.TexCoords[v] = new MyXonotic.Content.Bsp.BspVec2(im.TexCoords[v].x, im.TexCoords[v].y);
+                    asMd3.Surfaces[m] = surf;
+                }
+                var built = Md3WeaponModelBuilder.Build(asMd3, resolver, source.Name, GeneratedRoot, WeaponModelShaderName);
+                mesh = built.Mesh;
+                materials = built.Materials;
                 result.MeshImported = true;
-                result.Notes.Add(string.Format(
-                    "Imported {0} vertices / {1} triangles from mesh \"{2}\" (material name in file: \"{3}\"); " +
-                    "{4} joint(s) present but unused (bind pose only, no pose/animation frames in this file).",
-                    model.Positions.Length, model.Triangles.Length / 3, model.MeshName, model.MaterialName, model.JointCount));
-
-                materials = new[] { BuildIqmMaterial(model, resolver, source, result) };
+                result.Notes.AddRange(built.Notes);
+                result.Textures.AddRange(built.Textures);
+                result.TextureSourcePath = built.Textures.Count == 1 ? built.Textures[0].ResolvedTexturePath : null;
+                result.Notes.Add(string.Format("IQM: {0} mesh(es); {1} joint(s) present but unused (bind pose only, no pose/animation frames in this file).",
+                    meshes.Length, totalJoints));
             }
             else if (format == "MD3")
             {
@@ -421,17 +467,11 @@ namespace MyXonotic.EditorTools
 
             // Audio: copy each available bounded .ogg into Resources/Weapons so
             // runtime code can Resources.Load<AudioClip> it by weapon name.
-            foreach (var audioPath in source.AudioPaths)
+            foreach (var audioRel in source.AudioPaths)
             {
-                if (!File.Exists(audioPath))
-                {
-                    result.Notes.Add("Expected sound missing: " + audioPath);
-                    continue;
-                }
-                string destName = source.Name + "_" + Path.GetFileName(audioPath);
-                string destPath = ResourcesRoot + "/" + destName;
-                CopyIfChanged(audioPath, destPath);
-                result.AudioClipsImported.Add(destPath);
+                string dest = CopyContentAudio(resolver, audioRel, source.Name + "_" + Path.GetFileName(audioRel));
+                if (dest == null) result.Notes.Add("Expected sound missing under content roots: " + audioRel);
+                else result.AudioClipsImported.Add(dest);
             }
 
             // Prefab: a plain MeshFilter/MeshRenderer under a root transform.
@@ -453,6 +493,31 @@ namespace MyXonotic.EditorTools
             result.Notes.Add("Wrote prefab " + prefabPath + " (Resources-loadable as \"Weapons/" + source.Name + "WeaponVisual\").");
 
             return result;
+        }
+
+        /// <summary>
+        /// IQM material strings are either a bare Q3 shader name ("electro",
+        /// "grenadelauncher") or a texture path ("models/weapons/laser.tga",
+        /// "crylink_new.tga"). Strip the extension so ResolveDiffuse can match
+        /// scripts/*.shader by name, then fall back to a direct image lookup.
+        /// </summary>
+        static string IqmMaterialToShaderName(string material)
+        {
+            if (string.IsNullOrEmpty(material)) return material;
+            string ext = Path.GetExtension(material);
+            if (ext == ".tga" || ext == ".png" || ext == ".jpg" || ext == ".dds") material = material.Substring(0, material.Length - ext.Length);
+            return material;
+        }
+
+        /// Copies a content-relative .ogg into Resources/Weapons under <paramref name="destName"/>; returns the asset path or null.
+        static string CopyContentAudio(XonoticContentResolver resolver, string contentRelative, string destName)
+        {
+            string src = FindContentFile(resolver, contentRelative) ?? FindContentFile(resolver, Path.GetFileName(contentRelative));
+            if (src == null && File.Exists("ThirdParty/Xonotic/data/" + contentRelative)) src = "ThirdParty/Xonotic/data/" + contentRelative;
+            if (src == null) return null;
+            string destPath = ResourcesRoot + "/" + destName;
+            CopyIfChanged(src, destPath);
+            return destPath;
         }
 
         /// <summary>

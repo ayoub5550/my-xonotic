@@ -54,6 +54,7 @@ namespace MyXonotic
         readonly List<Pickup> _pickups = new List<Pickup>();
         readonly List<SpawnRuntime> _spawns = new List<SpawnRuntime>();
         Hud _hud;
+        public Hud Hud => _hud;
 
         struct SpawnRuntime
         {
@@ -399,6 +400,13 @@ namespace MyXonotic
                 var bot = go.AddComponent<Bot>();
                 bot.Weapons = weapons;
                 bot.Target = PlayerObject != null ? PlayerObject.transform : null;
+                bot.AimErrorDegrees = 2.5f + i * 1.5f;
+                if (!TestMode)
+                {
+                    // One random extra weapon per bot at start; the rest comes from map pickups.
+                    var extra = (WeaponType)Random.Range((int)WeaponType.MachineGun, WeaponController.WeaponCount);
+                    weapons.GiveWeapon(extra);
+                }
 
                 PlaceAtSpawn(go.transform);
 
@@ -420,12 +428,16 @@ namespace MyXonotic
             }
             AddPickup(new Vector3(15f, 1f, 5f), PickupType.Health, 25, new Color(0.2f, 0.9f, 0.3f));
             AddPickup(new Vector3(-15f, 1f, -5f), PickupType.Armor, 25, new Color(0.3f, 0.5f, 0.9f));
-            AddPickup(new Vector3(5f, 1f, -15f), PickupType.AmmoRifle, 20, new Color(0.9f, 0.9f, 0.2f));
-            AddPickup(new Vector3(-5f, 1f, 15f), PickupType.AmmoRocket, 5, new Color(0.9f, 0.3f, 0.2f));
+            AddPickup(new Vector3(5f, 1f, -15f), PickupType.AmmoBullets, 40, new Color(0.9f, 0.9f, 0.2f));
+            AddPickup(new Vector3(-5f, 1f, 15f), PickupType.AmmoRockets, 15, new Color(0.9f, 0.3f, 0.2f));
             AddPickup(new Vector3(0f, 1f, 5f), PickupType.Health, 50, new Color(0.1f, 1f, 0.5f));
+            AddPickup(new Vector3(8f, 2.5f, 8f), PickupType.Weapon, 0, WeaponController.GetDef(WeaponType.MachineGun).Tint, WeaponType.MachineGun);
+            AddPickup(new Vector3(-8f, 2.5f, -8f), PickupType.Weapon, 0, WeaponController.GetDef(WeaponType.Devastator).Tint, WeaponType.Devastator);
+            AddPickup(new Vector3(12f, 1f, -12f), PickupType.Weapon, 0, WeaponController.GetDef(WeaponType.Vortex).Tint, WeaponType.Vortex);
+            AddPickup(new Vector3(-12f, 1f, 12f), PickupType.AmmoCells, 25, new Color(0.3f, 0.6f, 1f));
         }
 
-        void AddPickup(Vector3 position, PickupType type, int amount, Color color)
+        void AddPickup(Vector3 position, PickupType type, int amount, Color color, WeaponType weapon = WeaponType.Shotgun)
         {
             var go = new GameObject($"Pickup_{type}");
             go.transform.SetParent(transform, false);
@@ -445,6 +457,7 @@ namespace MyXonotic
             var pickup = go.AddComponent<Pickup>();
             pickup.Type = type;
             pickup.Amount = amount;
+            pickup.Weapon = weapon;
 
             _pickups.Add(pickup);
         }

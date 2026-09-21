@@ -47,16 +47,35 @@ namespace MyXonotic.EditorTools
         readonly Dictionary<string, MaterialScript> _scripts = new Dictionary<string, MaterialScript>(StringComparer.OrdinalIgnoreCase);
         public IReadOnlyDictionary<string, MaterialScript> Scripts => _scripts;
 
+        static readonly string[] DefaultCandidates =
+            { "ExternalContent/maps", "ExternalContent/data", "ThirdParty/Xonotic/maps-pk3", "ThirdParty/Xonotic/data" };
+
         public XonoticContentResolver()
         {
+            // XONOTIC_CONTENT_ROOTS, when set, is searched FIRST (it is
+            // normally a full/unbounded local extraction of the upstream
+            // packs, e.g. a downloaded xonotic-data pk3), but the default
+            // candidates are always appended after it rather than replaced.
+            // ThirdParty/Xonotic/maps-pk3 is the bounded set actually
+            // committed to this repo, so a machine with no env var set (or
+            // one that only points at a partial extraction) still resolves
+            // whatever the committed pack covers instead of silently
+            // finding nothing.
             var env = Environment.GetEnvironmentVariable("XONOTIC_CONTENT_ROOTS");
-            var candidates = string.IsNullOrWhiteSpace(env)
-                ? new[] { "ExternalContent/maps", "ExternalContent/data", "ThirdParty/Xonotic/maps-pk3", "ThirdParty/Xonotic/data" }
-                : env.Split(Path.PathSeparator);
+            var candidates = new List<string>();
+            if (!string.IsNullOrWhiteSpace(env))
+            {
+                candidates.AddRange(env.Split(Path.PathSeparator));
+            }
+            foreach (var d in DefaultCandidates)
+            {
+                if (!candidates.Contains(d, StringComparer.OrdinalIgnoreCase)) candidates.Add(d);
+            }
             foreach (var c in candidates)
             {
+                if (string.IsNullOrWhiteSpace(c)) continue;
                 var full = Path.GetFullPath(c.Trim());
-                if (Directory.Exists(full)) Roots.Add(full);
+                if (Directory.Exists(full) && !Roots.Contains(full)) Roots.Add(full);
             }
             LoadScripts();
         }
@@ -161,7 +180,17 @@ namespace MyXonotic.EditorTools
             while (i < tokens.Count)
             {
                 var name = tokens[i++];
-                if (name == "{" || name == "}") continue;
+                // A bare newline at top level (blank line between shader
+                // blocks, or the near-universal style where the shader name
+                // is on its own line and "{" is on the next one) is not a
+                // candidate name — skip it instead of letting it become one
+                // (which previously made every such shader's Name literally
+                // "\n", so real lookups by content path never matched and
+                // every subsequent same-name definition silently overwrote
+                // the dictionary slot: this made essentially all real
+                // Xonotic material scripts unresolvable).
+                if (name == "{" || name == "}" || name == "\n") continue;
+                while (i < tokens.Count && tokens[i] == "\n") i++;
                 if (i >= tokens.Count || tokens[i] != "{") continue;
                 i++; // consume {
                 var script = new MaterialScript { Name = name };

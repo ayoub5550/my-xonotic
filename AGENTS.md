@@ -1,5 +1,70 @@
 # my-xonotic — developer and agent handoff
 
+## Current direction — 2026-09-21
+
+Owner explicitly rejected the native/DarkPlaces approach and requested returning
+to Unity. Resume the original C# implementation here; native/offline release
+history is retained separately, not the current delivery path.
+
+Active task branch: `feat/unity-original-map`, based on
+`wip/textured-bsp-import` (`59b3d5c`). First milestone is original Boil geometry,
+textures/lightmaps, integrated LibreQuake-style touch, original weapon visuals
+where supported, and basic traversal. This is a staged reimplementation, NOT
+full Xonotic; retain explicit missing-feature lists.
+
+Parent owns LocalBuild/bootstrap/playtests/docs. Parallel workers currently own
+importer/content BSP, touch Player/Hud/Layout, new IQM weapon importer/view, and
+new BSP trigger importer/runtime. Only parent launches Unity.
+
+All builds remain LOCAL. A single APK must contain its required content with
+no resource download at runtime. Original-art distribution is owner-authorized,
+but attribution/source correspondence and Unity/GPL compatibility are separate
+review matters, not magically solved by that permission. Preserve notices and
+source provenance. No DarkPlaces/QuakeC code is copied into original C#.
+
+Use `XONOTIC_INCLUDE_EXTERNAL=1` and `XONOTIC_BSP=<boil.bsp>` for the imported-map
+APK; the default remains a clearly named synthetic development fixture.
+Original content roots can be provided through `XONOTIC_CONTENT_ROOTS`.
+`LocalBuild.BuildAndroid` must NOT replace a requested imported scene with the
+plain development arena (the previous method always did).
+
+### Verified checkpoint: Unity 0.1.0-dev.2 (2026-09-21)
+- Local ARM64/IL2CPP/GLES3 APK built, 51,114,182 bytes, versionCode 2,
+  `com.ayoub.myxonotic` (distinct from native `com.ayoub.xonotic`).
+- SHA256 `3f82420161a2b23388b46eb8a4d283e721ff16321681830cd11d30bf98f1d753`.
+- v2 debug signature verified; SDK26 minimum / target36. APK includes
+  Boil assets, 2 weapon prefabs, audio and upstream notices; no runtime download.
+- 55 standalone C# checks (real-map winding regression), 68 Python tests,
+  22 real Unity Editor checks; original resource index 207 files verified.
+- Actual Unity Play Mode synthetic mechanics smoke: 12 checks passed.
+- Actual imported Boil headless Play Mode: all 7 spawn points grounded, movement,
+  jump, weapon firing and pause passed. World textures/materials referenced.
+- Graphical host Camera.Render capture hung in llvmpipe and timed out, followed
+  by shutdown crash. No usable visual capture; headless simulation passed.
+- **Android installation, touch input, visuals, thermals and gameplay UNTESTED.**
+
+Critical corrections:
+- Shader parser must skip newline tokens between a material name and `{`;
+  without this, real exomorphx scripts were ignored and textures fell back.
+- Real BSP polygon meshverts already have native cross-product opposite vertex
+  normals; Y/Z axis swap makes source a,b,c face correctly in Unity. Earlier
+  blanket a,c,b reversal made players fall through floors. Patch grid triangles
+  are separate and retain their existing winding. Synthetic fixture was corrected
+  to represent actual compiled data; real-map cross/normal checks prevent regression.
+- Weapon IQM triangles had the same inherited winding mistake; fixed separately.
+  Blaster uses original static v_laser IQM + decoded laser DDS skin. Rocket uses
+  a world-model fallback, currently without resolved full skin; real v_rl is MD3
+  and unsupported. Rifle remains a prototype with no visible model. No animation
+  parity or original full weapon mechanics claim.
+- Trigger push/teleport/hurt imported as source model AABBs, not exact brush
+  shapes; independent approximate logic, not full original rules. Actual trigger
+  traversal has not been comprehensively tested. Pickups, other weapons, proper
+  character art, sophisticated bots, menus/modes/networking remain incomplete.
+- `tools/content/prepare_unity_textures.py <extracted-data>` decodes selected DDS
+  to `ExternalContent/decoded`; put that root first in XONOTIC_CONTENT_ROOTS,
+  followed by extracted maps/data and ThirdParty/Xonotic/maps-pk3.
+- Only parent launches Unity. Worker tasks are now complete; no ongoing ownership.
+
 ## Read this first: current evidence, 2026-09-20
 
 **Goal:** genuinely bring Xonotic to Unity/Android, not a renamed LibreQuake game.

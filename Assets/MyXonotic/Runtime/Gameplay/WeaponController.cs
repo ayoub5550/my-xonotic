@@ -59,6 +59,7 @@ namespace MyXonotic
     public sealed class WeaponController : MonoBehaviour
     {
         public Actor Owner;
+        public WeaponView View;
 
         public WeaponType Current = WeaponType.Blaster;
 
@@ -123,6 +124,7 @@ namespace MyXonotic
                         def.KnockbackForce, radius, Owner, true);
                     break;
             }
+            if (View != null) { View.Kick(); View.PlayFireSound(); }
             return true;
         }
 

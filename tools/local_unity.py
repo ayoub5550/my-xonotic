@@ -19,6 +19,7 @@ METHODS = {
     "linux": "MyXonotic.EditorTools.LocalBuild.BuildLinux",
     "test": "MyXonotic.EditorTools.LocalTests.Run",
     "playtest": "MyXonotic.EditorTools.LocalPlaytest.Run",
+    "original-playtest": "MyXonotic.EditorTools.OriginalMapPlaytest.Run",
 }
 
 
@@ -47,7 +48,7 @@ def main():
     log = artifacts / (args.task + ".log")
     command = [args.unity, "-batchmode", "-projectPath", str(ROOT), "-logFile", str(log)]
     command += ["-force-glcore"] if args.graphics else ["-nographics"]
-    if args.task != "playtest":
+    if args.task not in ("playtest", "original-playtest"):
         command += ["-quit"]
     if args.task == "android":
         command += ["-buildTarget", "Android"]
@@ -65,9 +66,9 @@ def main():
     started = time.monotonic()
     code = 1
     try:
-        if args.task == "playtest":
+        if args.task in ("playtest", "original-playtest"):
             # A previous successful run must not mask an early zero-exit failure.
-            (artifacts / "playtest-result.json").unlink(missing_ok=True)
+            (artifacts / ("original-playtest.json" if args.task == "original-playtest" else "playtest-result.json")).unlink(missing_ok=True)
         # Account/licensing diagnostics must remain local and private.
         log_fd = os.open(log, os.O_CREAT | os.O_TRUNC | os.O_WRONLY |
                          getattr(os, "O_NOFOLLOW", 0), 0o600)
@@ -93,8 +94,8 @@ def main():
                     process.kill()
                 process.wait()
             code = 124
-        if code == 0 and args.task == "playtest":
-            result = artifacts / "playtest-result.json"
+        if code == 0 and args.task in ("playtest", "original-playtest"):
+            result = artifacts / ("original-playtest.json" if args.task == "original-playtest" else "playtest-result.json")
             if not result.exists() or not json.loads(result.read_text()).get("passed"):
                 code = 1
         print(f"Local {args.task}: exit {code}, {time.monotonic()-started:.1f}s", flush=True)

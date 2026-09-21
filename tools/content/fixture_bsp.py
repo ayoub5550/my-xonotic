@@ -87,7 +87,16 @@ def build_fixture_bsp(*, solid: bool = True) -> bytes:
         _pack_vertex((64.0, 64.0, 0.0)),
         _pack_vertex((0.0, 64.0, 0.0)),
     ]
-    quad_meshverts = struct.pack("<6i", 0, 1, 2, 0, 2, 3)
+    # Index order (0,2,1) / (0,3,2), not the "obvious" (0,1,2)/(0,2,3): this
+    # matches the winding convention real compiled Xonotic maps actually use
+    # (meshvert order whose *native-space* cross product is ANTI-aligned
+    # with the face's own stored normal — verified numerically against
+    # boil.bsp/_hudsetup.bsp; see BspCoordinateSpace.cs and
+    # BspGeometryBuilder.AppendIndexedFace). A synthetic fixture using the
+    # "intuitive" opposite order previously let a winding-direction bug ship
+    # undetected because it happened to pass this fixture's own (wrong)
+    # self-check while failing on ~99.9% of a real map's faces.
+    quad_meshverts = struct.pack("<6i", 0, 2, 1, 0, 3, 2)
     quad_face = _pack_face(texture=0, effect=-1, ftype=1, vertex=0, n_vertexes=4, meshvert=0, n_meshverts=6)
 
     # --- Patch face (3x3 flat control grid, model 0) ---

@@ -22,7 +22,7 @@ namespace MyXonotic.EditorTools
             PlayerSettings.productName = "my-xonotic Development";
             PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, "com.ayoub.myxonotic");
             PlayerSettings.bundleVersion = File.ReadAllText("VERSION").Trim();
-            PlayerSettings.Android.bundleVersionCode = 1;
+            PlayerSettings.Android.bundleVersionCode = 2;
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel26;
             PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevel36;
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
@@ -47,6 +47,7 @@ namespace MyXonotic.EditorTools
             QualitySettings.shadows = ShadowQuality.Disable;
             Time.fixedDeltaTime = 1f / 60f;
             PinShader("MyXonotic/VertexColor");
+            PinShader("MyXonotic/Lightmapped");
             UnpinShader("Standard"); // fallback only; pinning it forces ~24k variants through the shader compiler
             AssetDatabase.SaveAssets();
             Debug.Log("[my-xonotic] Local settings configured: Android ARM64 IL2CPP, no cloud build.");
@@ -122,18 +123,45 @@ namespace MyXonotic.EditorTools
             if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
                 throw new BuildFailedException("Select Android before invoking this method (CLI: -buildTarget Android).");
             Configure();
-            // Public development APK must contain only our original fixture.
-            if (Environment.GetEnvironmentVariable("XONOTIC_INCLUDE_EXTERNAL") == "1")
-                throw new BuildFailedException("External-content APK distribution is gated pending per-asset licence review.");
-            CreateDevelopmentScene();
-            Build(BuildTarget.Android, "my-xonotic-development.apk");
+            bool imported = Environment.GetEnvironmentVariable("XONOTIC_INCLUDE_EXTERNAL") == "1";
+            if (imported) PrepareOriginalMap();
+            else CreateDevelopmentScene();
+            Build(BuildTarget.Android, imported ? "my-xonotic-unity-boil.apk" : "my-xonotic-development.apk");
+        }
+
+        public static void PrepareOriginalMap()
+        {
+            // Explicit owner-authorized content build; upstream art retains its licences.
+            // This is not an assertion that Unity/upstream-content legal review is complete.
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("XONOTIC_BSP")))
+                Environment.SetEnvironmentVariable("XONOTIC_BSP", Path.GetFullPath(
+                    "ThirdParty/Xonotic/maps-pk3/maps/boil.bsp"));
+            ImportExternalBsp();
+            IqmWeaponImporter.GenerateWeaponAssets();
+            string notices = "Assets/StreamingAssets/Xonotic/Notices";
+            Directory.CreateDirectory(notices);
+            foreach (var file in Directory.GetFiles("ThirdParty/Xonotic/LICENSES"))
+                File.Copy(file, Path.Combine(notices, Path.GetFileName(file)), true);
+            File.Copy("ThirdParty/Xonotic/README.md", Path.Combine(notices, "UPSTREAM-RESOURCES.md"), true);
+            File.Copy("ThirdParty/Xonotic/resource-index.json", Path.Combine(notices, "resource-index.json"), true);
+            File.WriteAllText(Path.Combine(notices, "BUILD-SCOPE.txt"),
+                "Unofficial Unity reimplementation, experimental Boil slice; NOT complete Xonotic.\n" +
+                "Boil: kuniu the frogg, Mirio. Original artwork retains upstream licences.\n" +
+                "Upstream: https://xonotic.org and https://gitlab.com/xonotic\n" +
+                "Port/source/provenance: https://github.com/ayoub5550/my-xonotic/tree/feat/unity-original-map\n" +
+                "No DarkPlaces engine or QuakeC implementation included. No download required at runtime.\n");
+            foreach (var manifest in Directory.GetFiles("Assets/MyXonotic/Generated", "*manifest*.json", SearchOption.AllDirectories))
+                File.Copy(manifest, Path.Combine(notices, Path.GetFileName(Path.GetDirectoryName(manifest))+"-"+Path.GetFileName(manifest)), true);
+            AssetDatabase.Refresh();
+            AssetDatabase.SaveAssets();
         }
 
         [MenuItem("My Xonotic/Build local Linux development player")]
         public static void BuildLinux()
         {
             Configure();
-            CreateDevelopmentScene();
+            if (Environment.GetEnvironmentVariable("XONOTIC_INCLUDE_EXTERNAL") == "1") PrepareOriginalMap();
+            else CreateDevelopmentScene();
             Build(BuildTarget.StandaloneLinux64, "my-xonotic.x86_64");
         }
 
@@ -160,7 +188,9 @@ namespace MyXonotic.EditorTools
                 warnings = summary.totalWarnings,
                 bytes = summary.totalSize,
                 revision = Environment.GetEnvironmentVariable("XONOTIC_REVISION") ?? "unrecorded",
-                content = "original development fixture only; not the complete Xonotic game"
+                content = Environment.GetEnvironmentVariable("XONOTIC_INCLUDE_EXTERNAL") == "1"
+                    ? "Original Boil geometry/art with approximate Unity development rules; NOT full Xonotic; Android device unverified"
+                    : "original development fixture only; not the complete Xonotic game"
             };
             File.WriteAllText("Builds/build-receipt.json", JsonUtility.ToJson(stamp, true));
             Debug.Log("[my-xonotic] BUILD RESULT " + summary.result);

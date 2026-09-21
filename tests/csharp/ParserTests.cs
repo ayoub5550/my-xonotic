@@ -108,21 +108,29 @@ public static class ParserTests
         var submodelMesh = BspGeometryBuilder.BuildModel(doc, 1, submodelWarnings);
         Assert(submodelMesh.Triangles.Count == 0, "inline submodel with 0 faces should yield 0 triangles");
 
-        // Winding/handedness sanity: the quad is a Quake floor (normal +Z,
-        // "up"). After BspCoordinateSpace.QuakeToUnity swaps Y/Z, "up" in
-        // Unity is +Y. If winding reversal is correct, the converted
-        // triangle's face normal (right-hand rule on its *emitted* index
-        // order) must also point toward +Y, not -Y.
+        // Winding/handedness sanity: rather than hardcoding an expected
+        // emitted index order (a synthetic fixture's own specific meshvert
+        // order is not necessarily representative of a real map compiler's
+        // output — see BspGeometryBuilder.AppendIndexedFace's history, where
+        // a check just like the old version of this one passed by
+        // coincidence while real map data was ~99.9% inward-facing), check
+        // the emitted triangle's cross product against its OWN source
+        // vertex normal (already axis-converted into mesh.Normals). This is
+        // the same invariant TestRealMapParses checks in aggregate against
+        // real compiled maps.
         {
             int ia = mesh.Triangles[0], ib = mesh.Triangles[1], ic = mesh.Triangles[2];
             var pa = mesh.Positions[ia]; var pb = mesh.Positions[ib]; var pc = mesh.Positions[ic];
+            var na = mesh.Normals[ia];
             var e1 = new BspVec3(pb.X - pa.X, pb.Y - pa.Y, pb.Z - pa.Z);
             var e2 = new BspVec3(pc.X - pa.X, pc.Y - pa.Y, pc.Z - pa.Z);
             float nx = e1.Y * e2.Z - e1.Z * e2.Y;
             float ny = e1.Z * e2.X - e1.X * e2.Z;
             float nz = e1.X * e2.Y - e1.Y * e2.X;
-            Assert(ny > 0f, string.Format(
-                "expected winding-reversed floor triangle to face +Y (up) in Unity space, got normal ({0},{1},{2})", nx, ny, nz));
+            float dot = nx * na.X + ny * na.Y + nz * na.Z;
+            Assert(dot > 0f, string.Format(
+                "expected emitted floor triangle winding to agree with its own (converted) source normal ({3},{4},{5}); " +
+                "got emitted-order cross product ({0},{1},{2})", nx, ny, nz, na.X, na.Y, na.Z));
         }
 
         // Coordinate conversion sanity: quad vertex (64,64,0) in Quake space
@@ -275,5 +283,50 @@ public static class ParserTests
             warnings.Count));
         Assert(mesh.Positions.Count > 0, "real map worldspawn should produce some geometry");
         Assert(mesh.CollisionTriangles.Count > 0, "real sample worldspawn should produce collision triangles");
+
+        // Winding/normal-alignment regression guard, against REAL compiled
+        // map data rather than one hand-picked synthetic fixture (a
+        // synthetic-only check here previously happened to pass while the
+        // shipped code emitted inward-facing geometry for ~99.9% of a real
+        // map's faces — see BspGeometryBuilder.AppendIndexedFace's history).
+        // For every emitted triangle, the cross product of its own emitted
+        // index order must agree in sign with the source vertex normal
+        // (already axis-converted into mesh.Normals by the same builder),
+        // for the overwhelming majority of triangles. A handful of
+        // legitimately double-sided/degenerate faces are tolerated.
+        int triCount = mesh.Triangles.Count / 3;
+        if (triCount > 0)
+        {
+            int misaligned = 0;
+            for (int t = 0; t < triCount; t++)
+            {
+                int ia = mesh.Triangles[t * 3 + 0];
+                int ib = mesh.Triangles[t * 3 + 1];
+                int ic = mesh.Triangles[t * 3 + 2];
+                var pa = mesh.Positions[ia]; var pb = mesh.Positions[ib]; var pc = mesh.Positions[ic];
+                var na = mesh.Normals[ia]; var nb = mesh.Normals[ib]; var nc = mesh.Normals[ic];
+                float naLenSq = na.X * na.X + na.Y * na.Y + na.Z * na.Z;
+                float nbLenSq = nb.X * nb.X + nb.Y * nb.Y + nb.Z * nb.Z;
+                float ncLenSq = nc.X * nc.X + nc.Y * nc.Y + nc.Z * nc.Z;
+                if (naLenSq < 1e-6f && nbLenSq < 1e-6f && ncLenSq < 1e-6f) continue; // no usable source normal.
+
+                float e1x = pb.X - pa.X, e1y = pb.Y - pa.Y, e1z = pb.Z - pa.Z;
+                float e2x = pc.X - pa.X, e2y = pc.Y - pa.Y, e2z = pc.Z - pa.Z;
+                float cx = e1y * e2z - e1z * e2y;
+                float cy = e1z * e2x - e1x * e2z;
+                float cz = e1x * e2y - e1y * e2x;
+                float nx = na.X + nb.X + nc.X, ny = na.Y + nb.Y + nc.Y, nz = na.Z + nb.Z + nc.Z;
+                float dot = cx * nx + cy * ny + cz * nz;
+                if (dot < 0f) misaligned++;
+            }
+            double misalignedFraction = (double)misaligned / triCount;
+            Console.WriteLine(string.Format(
+                "{0} winding/normal alignment: {1}/{2} triangles misaligned ({3:P2})",
+                Path.GetFileName(path), misaligned, triCount, misalignedFraction));
+            Assert(misalignedFraction < 0.05,
+                string.Format("{0}: {1}/{2} ({3:P2}) emitted triangles face away from their own source normal " +
+                    "after conversion; expected only a small minority (bad winding would show up here almost " +
+                    "entirely misaligned, not as a minority).", Path.GetFileName(path), misaligned, triCount, misalignedFraction));
+        }
     }
 }

@@ -10,7 +10,10 @@
 /tests/fixtures/generated/
 /Assets/MyXonotic/Generated/
 /Assets/MyXonotic/Generated.meta
+/Assets/MyXonotic/Resources/Weapons/
+/Assets/MyXonotic/Resources/Weapons.meta
 /Assets/StreamingAssets/Xonotic/
+/Assets/StreamingAssets/Xonotic.meta
 *.csproj
 *.sln
 *.suo

@@ -34,6 +34,11 @@ namespace MyXonotic
         }
 
         public void ApplyExternalImpulse(Vector3 impulse) => _externalImpulse += impulse;
+        public void Launch(Vector3 velocity)
+        {
+            _velocity = velocity;
+            _externalImpulse = Vector3.zero;
+        }
 
         public void ResetMotion()
         {

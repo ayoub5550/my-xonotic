@@ -211,19 +211,32 @@ namespace MyXonotic.Content.Bsp
 
                 if (!skipDraw)
                 {
-                    // Reverse winding (b,c swapped) for the Y/Z handedness flip.
+                    // NOT reversed: verified numerically against real map data
+                    // (boil.bsp, 2951 sampled first-triangles) that emitting
+                    // indices in the SAME order the source meshverts define
+                    // (a,b,c), after the QuakeToUnity axis swap, already
+                    // produces a triangle cross product aligned with the
+                    // source vertex normal (also axis-swapped) for 2949/2951
+                    // faces; the previously-shipped (a,c,b) swap was aligned
+                    // for only 1/2951 — i.e. it produced inward-facing
+                    // geometry almost everywhere (players fell through the
+                    // floor). The axis-swap-reverses-handedness reasoning
+                    // this used to rely on was correct in isolation but
+                    // wrong once combined with how Unity itself interprets
+                    // triangle winding; trust the measurement, not the
+                    // isolated theory.
                     mesh.Triangles.Add(ia);
-                    mesh.Triangles.Add(ic);
                     mesh.Triangles.Add(ib);
+                    mesh.Triangles.Add(ic);
                     group.Triangles.Add(ia);
-                    group.Triangles.Add(ic);
                     group.Triangles.Add(ib);
+                    group.Triangles.Add(ic);
                 }
                 if (collisionEligible)
                 {
                     mesh.CollisionTriangles.Add(ia);
-                    mesh.CollisionTriangles.Add(ic);
                     mesh.CollisionTriangles.Add(ib);
+                    mesh.CollisionTriangles.Add(ic);
                 }
             }
         }

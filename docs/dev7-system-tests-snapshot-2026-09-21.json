@@ -1,0 +1,36 @@
+{
+  "snapshot_note": "Copied from the in-progress dev.7 Artifacts/dev7-system-tests.json; internal absolute project paths redacted to repository-relative paths. Not rerun by the documentation task. Later source/tests may supersede this snapshot.",
+  "passed": false,
+  "utc": "2026-09-21T20:34:48.9205940Z",
+  "scope": "Unity Editor component/data checks; NOT Android input, rendered output or full original gameplay parity",
+  "modules": [
+    {
+      "name": "UI geometry and runtime construction",
+      "passed": true,
+      "error": ""
+    },
+    {
+      "name": "Original OBJ props and parser guards",
+      "passed": true,
+      "error": ""
+    },
+    {
+      "name": "Core arsenal, ammo and pickup behavior",
+      "passed": true,
+      "error": ""
+    },
+    {
+      "name": "Movers and rider mechanics",
+      "passed": true,
+      "error": ""
+    },
+    {
+      "name": "Original character skeletal data and animation",
+      "passed": false,
+      "error": "System.Exception: CharacterAnimationTests FAILED: erebus: SkinnedMeshRenderer.BakeMesh output matches the predicted per-frame skin within tolerance (worst=42.74235)\n  at MyXonotic.EditorTools.CharacterAnimationTests.Check (System.Boolean condition, System.String what) [0x00014] in Assets/MyXonotic/Editor/CharacterAnimationTests.cs:350 \n  at MyXonotic.EditorTools.CharacterAnimationTests.CheckBakeMeshMatchesPrediction (System.String name, UnityEngine.SkinnedMeshRenderer smr, MyXonotic.CharacterAnimation anim, MyXonotic.EditorTools.XonoticContentResolver resolver) [0x0027d] in Assets/MyXonotic/Editor/CharacterAnimationTests.cs:309 \n  at MyXonotic.EditorTools.CharacterAnimationTests.RunImportAndAttachChecks () [0x00191] in Assets/MyXonotic/Editor/CharacterAnimationTests.cs:231 \n  at MyXonotic.EditorTools.CharacterAnimationTests.Run () [0x0060a] in Assets/MyXonotic/Editor/CharacterAnimationTests.cs:140 \n  at MyXonotic.EditorTools.Dev7RegressionTests.RunModule (System.Collections.Generic.List`1[T] results, System.String name, System.Action action) [0x0001c] in Assets/MyXonotic/Editor/Dev7RegressionTests.cs:50 "
+    }
+  ],
+  "errors": [
+    "Destroy may not be called from edit mode! Use DestroyImmediate instead.\nDestroying an object in edit mode destroys it permanently."
+  ]
+}

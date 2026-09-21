@@ -23,10 +23,11 @@ namespace MyXonotic.EditorTools
             Check(true, "real Actor scoring and MatchSession self-tests");
             var root = BspImportPipeline.Import("ThirdParty/Xonotic/maps-pk3/maps/boil.bsp");
             var pickups = root.GetComponentsInChildren<Pickup>(true);
-            Check(pickups.Length == 25, "real Boil has 25 supported health/armor/rocket pickups");
+            Check(pickups.Length == 36, "real Boil has 36 supported health/armor/ammo/weapon pickups (37 items minus item_strength)");
+            int weaponPickups = 0;
             foreach (var pickup in pickups)
             {
-                Check(pickup.Type != PickupType.AmmoRifle, "no bullet-to-practice-rifle substitution");
+                if (pickup.Type == PickupType.Weapon) weaponPickups++;
                 Check(AssetDatabase.Contains(pickup.GetComponent<MeshFilter>().sharedMesh),
                     "pickup placeholder mesh persisted");
                 Check(AssetDatabase.Contains(pickup.GetComponent<MeshRenderer>().sharedMaterial),
@@ -36,8 +37,9 @@ namespace MyXonotic.EditorTools
             Check(EditorSceneManager.SaveScene(root.scene, scenePath), "pickup scene saved");
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             EditorSceneManager.OpenScene(scenePath);
-            Check(UnityEngine.Object.FindObjectsOfType<Pickup>().Length == 25,
-                "25 pickups survive scene reload");
+            Check(weaponPickups == 7, "Boil's 7 weapon_* entities became weapon pickups");
+            Check(UnityEngine.Object.FindObjectsOfType<Pickup>().Length == 36,
+                "36 pickups survive scene reload");
             foreach (var pickup in UnityEngine.Object.FindObjectsOfType<Pickup>())
             {
                 Check(pickup.GetComponent<MeshFilter>().sharedMesh != null, "serialized pickup mesh retained");

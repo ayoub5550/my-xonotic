@@ -1,5 +1,23 @@
 # my-xonotic — developer and agent handoff
 
+## dev.8 full-arsenal checkpoint — 2026-09-21 (branch `feat/unity-dev8-weapons`)
+
+Read `docs/UNITY-DEV8.md` first. All nine Xonotic weapons (primary/secondary,
+four shared ammo pools, auto-switch) with original static `v_*` view models and
+sounds, generated into git-ignored `Assets/MyXonotic/Generated/Weapons/` by
+`IqmWeaponImporter.GenerateWeaponAssets()` — which runs inside the Android
+FullGame build, NOT inside `prepare-maps`; run the menu item or the build to
+refresh `weapon-manifest.json`. `item_*` ammo and `weapon_*` entities are now
+live pickups (2,111 pickups / 28 decorations across 29 maps; Boil 36/37, 7
+weapons). Touch weapon bar, keys 1–9, mouse wheel. Bots seek pickups, pick
+weapon by range, lead targets. Gates passed headless: Editor 22, content 158,
+gameplay-integration 151. `WeaponController.SwitchTo(current)` returns true
+(no-op). Prerequisite decoded textures (characters, items, weapons) are listed
+in `docs/UNITY-DEV8.md`; `prepare-maps` on a fresh clone needs them plus
+`pk3_tool.py fixture`. APK vc9: see `CHANGELOG.md` / `docs/unity-dev8-build-2026-09-21.json`.
+Still absent: skeletal animation, movers, modes/network, Rifle/Minelayer/Arc/
+Fireball/Hook, powerups, any device or GPU test.
+
 ## dev.6 content-fix checkpoint — 2026-09-21 (branch `feat/unity-dev5-full-game`)
 
 Read `docs/UNITY-DEV6.md` first; it supersedes dev.5's absence claims for

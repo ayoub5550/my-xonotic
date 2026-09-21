@@ -61,6 +61,41 @@ namespace MyXonotic
         /// does not compete with the LibreQuake-reference layout.
         public static Rect Alt => Circle(340f / 720f, 185f / 720f, 90f / 720f);
 
+        /// <summary>
+        /// Weapon bar: nine tappable slots centred along the top edge of the
+        /// safe area (below the banner), one per <see cref="WeaponType"/>.
+        /// Tapping a slot selects that weapon if it is owned.
+        /// </summary>
+        public static Rect WeaponBar
+        {
+            get
+            {
+                var s = Safe;
+                float slot = WeaponSlotSize;
+                float width = slot * WeaponController.WeaponCount + WeaponSlotGap * (WeaponController.WeaponCount - 1);
+                return new Rect(s.center.x - width * 0.5f, s.yMax - s.height * 0.055f - slot, width, slot);
+            }
+        }
+
+        public static float WeaponSlotSize => Safe.height * 0.085f;
+        public static float WeaponSlotGap => Safe.height * 0.008f;
+
+        public static Rect WeaponSlot(int index)
+        {
+            var bar = WeaponBar;
+            float slot = WeaponSlotSize;
+            return new Rect(bar.x + index * (slot + WeaponSlotGap), bar.y, slot, slot);
+        }
+
+        /// Returns the weapon slot index under <paramref name="screenPos"/>, or -1.
+        public static int WeaponSlotAt(Vector2 screenPos)
+        {
+            if (!WeaponBar.Contains(screenPos)) return -1;
+            for (int i = 0; i < WeaponController.WeaponCount; i++)
+                if (WeaponSlot(i).Contains(screenPos)) return i;
+            return -1;
+        }
+
         public static Rect Pause
         {
             get

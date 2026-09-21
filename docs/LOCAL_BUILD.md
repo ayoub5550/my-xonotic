@@ -50,6 +50,8 @@ checksum المنشور وحماية استخراج ZIP/PK3 من تجاوز ال
 # <extracted-data> هو جذر محتوى حزمة data، وليس جذر ملف ZIP الخارجي.
 python3 tools/content/prepare_unity_textures.py <extracted-data> \
   --texture models/weapons/laser
+# القائمة الكاملة للخامات المطلوبة قبل prepare-maps (شخصيات، عناصر، الأسلحة التسعة)
+# موجودة في docs/UNITY-DEV8.md قسم «المتطلبات».
 export XONOTIC_CONTENT_ROOTS="<decoded>:<extracted-maps>:<extracted-data>:ThirdParty/Xonotic/maps-pk3"
 export XONOTIC_BSP="<extracted-maps>/maps/boil.bsp"
 export XONOTIC_INCLUDE_EXTERNAL=1

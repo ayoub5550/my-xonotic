@@ -143,6 +143,23 @@ namespace MyXonotic.EditorTools
                 // (textures/rl_new.tga) is declared inside scripts/rl.shader.
                 texturePath = resolver.ResolveDiffuse(shaderRefName, out script);
                 if (script != null) provenance.MatchedScriptName = script.Name;
+                if (texturePath == null)
+                {
+                    // Some upstream view models name their surface after the
+                    // decompiled mesh rather than the material (v_uzi) or use a
+                    // different case (Hagar); try the documented aliases and the
+                    // plain textures/<name> convention before giving up.
+                    foreach (var candidate in AliasCandidates(shaderRefName))
+                    {
+                        texturePath = resolver.ResolveDiffuse(candidate, out script);
+                        if (texturePath != null)
+                        {
+                            if (script != null) provenance.MatchedScriptName = script.Name;
+                            result.Notes.Add(string.Format("Surface \"{0}\": shader name \"{1}\" resolved via alias \"{2}\".", surf.Name, shaderRefName, candidate));
+                            break;
+                        }
+                    }
+                }
             }
 
             var material = new Material(Shader.Find(preferredShaderName) ?? Shader.Find("Diffuse"));
@@ -191,6 +208,24 @@ namespace MyXonotic.EditorTools
 
             string materialAssetPath = generatedRoot + "/" + weaponName + "_Material_" + surfaceIndex + ".mat";
             return PersistAsset(material, materialAssetPath);
+        }
+
+        static readonly Dictionary<string, string> SurfaceAliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["v_uzi_decompiled"] = "uzi",
+            ["v_mesh"] = "electro",
+            ["shotgun2"] = "textures/shotgun2",
+            ["shotgun_sight"] = "textures/shotgun_sight",
+            ["grenadelauncher_sight"] = "textures/glsight01",
+        };
+
+        static IEnumerable<string> AliasCandidates(string name)
+        {
+            if (SurfaceAliases.TryGetValue(name, out var alias)) yield return alias;
+            yield return name.ToLowerInvariant();
+            yield return "textures/" + name;
+            yield return "textures/" + name.ToLowerInvariant();
+            yield return "models/weapons/" + name;
         }
 
         static T PersistAsset<T>(T asset, string path) where T : UnityEngine.Object

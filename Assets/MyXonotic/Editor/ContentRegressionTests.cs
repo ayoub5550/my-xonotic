@@ -102,10 +102,15 @@ namespace MyXonotic.EditorTools
                         if (m != null && AssetDatabase.GetAssetPath(m).StartsWith("Assets/MyXonotic/Generated/MapModels/") &&
                             m.mainTexture == null) untexturedModelMaterials++;
             }
-            Check(totalPickups == 1562 && originalPickups == totalPickups && placeholders == 0,
-                "1562 persisted original pickup meshes; zero placeholder spheres");
-            Check(totalModels == 304 && totalSubmodels == 117 && totalDecorations == 577,
-                "304 props / 117 static submodels / 577 visual-only items persisted");
+            // dev.6 shipped 1562 pickups + 577 visual-only items = 2139 item/weapon
+            // entities with original art; dev.8 promotes ammo and the nine core
+            // weapons to real pickups, so the split moves but the total must not.
+            Check(totalPickups + totalDecorations == 2139 && originalPickups == totalPickups && placeholders == 0,
+                "2139 persisted original item/weapon meshes (" + totalPickups + " pickups + " + totalDecorations + " visual-only); zero placeholder spheres");
+            Check(totalPickups > 1562, "ammo and weapon entities are now live pickups (" + totalPickups + " > 1562)");
+            Check(totalModels == 304 && totalSubmodels == 117,
+                "304 props / 117 static submodels persisted");
+            Passed.Add("INFO pickups=" + totalPickups + " decorations=" + totalDecorations);
             Passed.Add("INFO untextured map/item material references: " + untexturedModelMaterials +
                        " (reported, not a texture-parity pass)");
             Directory.CreateDirectory("Artifacts");

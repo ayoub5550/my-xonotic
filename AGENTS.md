@@ -1,337 +1,517 @@
-# my-xonotic — developer and agent handoff
+# my-xonotic — دليل التسليم الكامل للمطوّر والـagent التالي
 
-## dev.6 content-fix checkpoint — 2026-09-21 (branch `feat/unity-dev5-full-game`)
+**مرجع هذا الدليل:** نقطة المصدر المنشورة `7a6ec966e802a0039ba8f079de8716ec3980c3d8`
+وAPK `0.1.0-dev.6 / versionCode 7`، بتاريخ **2026-09-21**.
+هذا تحديث توثيق، **ليس بناء APK جديدًا ولا إعلان نجاح dev.7**.
 
-Read `docs/UNITY-DEV6.md` first; it supersedes dev.5's absence claims for
-character art / map props / item visuals, not the remaining gameplay gates.
-Local APK vc7, `0.1.0-dev.6`, 400,459,348 bytes, SHA256
-`ef140281d7639840c9b3d75b9631c1b28fad5784bdd73e32f56ccd6905ee7be5`.
-Receipt `docs/unity-dev6-build-2026-09-21.json`; the receipt revision is the
-pre-change base (`deea0ed6`), NOT the full clean source revision. Source-file
-fingerprints are in `docs/unity-dev6-source-2026-09-21.json`.
-CRC/manifest/ARM64/v2 debug signature verified (same cert as vc6); no device test.
+## 0. اقرأ هذا أولًا
 
-Map report `docs/unity-dev6-maps-2026-09-21.json`: 29 maps, 583 spawns,
-1,562 pickups, 304 original props, 117 visible inline submodels (STATIC),
-577 visual-only unsupported items, 11 original IQM player models (STATIC idle).
-Only three bots currently spawn, choosing the first three character resources.
-12 OBJ entities skipped; 23 submodels have no renderable triangles. 13 jump-pad
-material assets remain untextured (366 references across scenes). No parity claim.
-Full-game arsenal, skeletal animation, mover behavior, modes/network still absent.
+الهدف إعادة تنفيذ Xonotic على **Unity/C# وAndroid**، لا إعادة تسمية LibreQuake
+ولا العودة إلى محرك DarkPlaces. الموجود حزمة خرائط ومحتوى أصلي مع لعب
+مستقل تقريبي؛ **ليست Xonotic مكتملة**. افصل دائمًا بين:
+وجود الملف ← نجاح الاستيراد ← ظهور الرسم ← صحة الاصطدام ← صحة اللعب ← اختبار الهاتف.
 
-Regression lesson: `PersistPickupVisuals` must only persist TRANSIENT assets
-(`!AssetDatabase.Contains`); otherwise it silently replaces original models
-with the old sphere after import. `python3 tools/local_unity.py content-test`
-reopens all saved scenes and checks actual mesh/material references: 157 checks,
-including all 1,562 originals, zero placeholder spheres, all character resources.
-Run it after prepare-maps/build; it requires the full resource set.
-ETC2 mip compression may fail internally for NPOT 600x600 despite base-level
-4-block alignment; retain raw mipmapped RGBA32 for NPOT textures.
-New model/character persistence preserves GUIDs on reimport.
-Inline model vertices are pivot-local when the entity has an origin brush:
-apply the entity origin (e.g. afterslime *7); do NOT assume every submodel
-is already world-space. Content tests check all saved pivots against BSP.
-Python 154 and basic Editor 22 checks pass. Runtime evidence is separate:
-`all-maps-playtest` is headless simulation, not rendering or full-map traversal.
-Final dev.6 run: 30/30 scenes, 0 runtime errors/warnings, 982.4 seconds;
-`docs/unity-dev6-all-maps-playtest-2026-09-21.json`.
-Graphical Linux/Xvfb/llvmpipe tour timed out with zero PNGs; do not fabricate
-visual evidence or reuse upstream screenshots as output from this APK.
+1. اقرأ هذا الملف ثم [تفاصيل dev.6](docs/UNITY-DEV6.md).
+2. افحص الفرع وcommit وحالة الملفات قبل أي تعديل. التنفيذ على
+   `feat/unity-dev5-full-game` ([PR #3](https://github.com/ayoub5550/my-xonotic/pull/3))،
+   وليس `main` التعريفي. لا تعتبر checkout لـ`main` فقدانًا للمشروع.
+3. **لا تفترض أن شجرة العمل = APK المنشور.** عند إعداد هذا الدليل وُجدت
+   تعديلات dev.7 محلية قيد التطوير/التحقق، و`VERSION` محليًا قد يقول dev.7.
+   وجود `systems-test` أو `dev7-playtest` أو كود تحريك/محركات جديد ليس إثبات نجاح.
+   تلك الأوامر غير موجودة في baseline dev.6 لهذا الدليل؛ راجع أحدث commit
+   وإيصال واختبارات قبل دمجها أو البناء منها.
+4. نسّق مع أي agent نشط. لا تبدّل فرعه، ولا تسترجع ملفاته، ولا تشغّل Unity
+   أثناء تغيّر المصدر. مطوّر واحد يملك البناء والدمج في كل موجة.
+5. الدليل يوثّق الأدلة السابقة ولا يحوّلها إلى نتائج أُعيد تشغيلها عندك.
+   لا يوجد اختبار هاتف/رسم موثّق لبصمة APK أدناه.
 
-## dev.5 full-map checkpoint — 2026-09-21 (branch `feat/unity-dev5-full-game`)
+**لمن يستأنف dev.7:** اقرأ [نقطة توقف العمل الجاري](docs/DEV7-HANDOFF-SNAPSHOT-2026-09-21.md)
+قبل إعادة تنفيذ الأنظمة. توجد ملفات وتعديلات فعلية، لكن فحص 20:34 UTC
+لم يجتز تحريك الشخصيات؛ هذا snapshot تاريخي، لا بديل عن أحدث نتيجة.
+`versionCode=7` في الـAPK المنشور **لا يعني** `versionName=dev.7`.
 
-Read `docs/UNITY-DEV5.md` first. First APK bundling all 29 importable official
-maps + code-built main menu + per-map music: `my-xonotic-full.apk`,
-322,882,281 bytes, versionCode 5, SHA256
-`0e34d259539458ff091f100fb78648530f0ccdf72f693126bb73613db54c887f`,
-receipt `docs/unity-dev5-build-2026-09-21.json`, map report
-`docs/unity-dev5-maps-2026-09-21.json` (29/29 imported, 0 failed).
-Build: `XONOTIC_ALL_MAPS=1 XONOTIC_VERSION_CODE=5 python3 tools/local_unity.py android`
-(~12 min on 17 cores). Imported textures are ETC2 + mipmaps and shared across
-maps (`Editor/Import/ImportedTexturePolicy.cs`); generated scenes/catalog live
-under git-ignored `Assets/MyXonotic/Generated/`, so `prepare-maps` or the
-FullGame build must run before opening the menu scene on a fresh clone.
-`docs/UNITY-DEV5-WIP.md` describes code that was never pushed; do not assume
-weapons/Erebus/doors exist. Still NOT complete Xonotic; no device test of this hash.
+### قواعد لا تُكسر
 
-versionCode 6 rebuild (same VERSION): SHA256
-`e9e1d8ee84e84610f1847f1039a7110d725f38dd4cfbb926f53520c735add07d`,
-322,902,649 bytes, receipt `docs/unity-dev5-build-2026-09-21-vc6.json`.
-Fixes found by `python3 tools/local_unity.py all-maps-playtest`
-(`Editor/AllMapsPlaytest.cs`, Play Mode over MainMenu + all maps, report
-`Artifacts/all-maps-playtest.json`): default input axes added to
-`ProjectSettings/InputManager.asset` (StandaloneInputModule threw every frame),
-`BspImportPipeline.SpawnClasses` accepts info_player_team1..4/race/attacker/
-defender (10 CTF/Nexball/Race maps had 0 spawns → origin fallback). Run
-all-maps-playtest after any runtime/import change; still no device test.
+- البناء **محلي فقط**: لا Unity Cloud Build ولا GitHub Actions للبناء ولا
+  خدمات مدفوعة أو شراء موارد. الـAPK يحمل موارده المطلوبة دون تنزيل وقت اللعب.
+- فروع معزولة وPR؛ لا push مباشر إلى `main`، لا force-push للعمل المشترك.
+  استند إلى فرع التنفيذ، لا إلى `main` الفارغ من التنفيذ. افحص upstream قبل push.
+- لا كلمات مرور أو tokens أو رخصة Unity أو logs حساب أو keystores في Git.
+  **مفاتيح التطوير هنا تعني الإعدادات ونقاط الربط، لا الأسرار.**
+- APK/AAB مرفقات **GitHub Release** أو تسليم خاص، لا ملفات داخل تاريخ Git.
+- احتفظ بالموارد الأصلية الفعلية ونَسبها ومصادرها في `ThirdParty/`؛
+  لا تنسخ تنفيذ DarkPlaces/QuakeC GPL إلى تنفيذ C# الأصلي.
+- وثائق المالك بالعربية؛ أسماء الكود والتعليقات التقنية وcommit messages بالإنجليزية.
+- لا ادعاء «كاملة»، «بلا أخطاء»، «اختُبرت على الهاتف»، أو تطابق بصري بلا دليل.
+  حجم APK وعدد الاختبارات ليسا مقياس اكتمال؛ لا تحشُ ملفات غير مستخدمة لتكبيره.
+- في Viktor، عمليات Git وGitHub عبر أدوات SDK المعتمدة لا shell git/gh المباشر.
+  عند رفض صلاحية توقف؛ لا تغيّر الملكية أو تبحث عن نسخة تتجاوز المنع.
 
-## Full-game continuation wave — dev.4 source checkpoint
+## 1. آخر APK منشور ومصدره
 
-Owner reiterated full game after dev.3; a Boil-only release is not the endpoint.
-Do not manufacture a >1GB APK with unused files to simulate completeness.
-Current wave: original-map pickups, offline Deathmatch lifecycle, and a complete
-official-map/entity coverage inventory. Full weapons/animation/models/modes/network
-and Android validation remain separate acceptance gates.
-
-Workers finished; parent integrated and verified actual Unity Editor/Play Mode.
-25 Boil pickups (health/armor/rocket ammo) survive scene serialization and collect
-through actual physics. Pickup visuals are development spheres, not original art.
-Offline match limit/winner/tie/freeze/restart is wired into the arena and HUD.
-Current passes: 55 BSP, 36 MD3, 68 match rules, 172 Boil entity-data, 130 Python,
-22 Editor, 59 sky, 131 integration, 44 gameplay Play Mode, 12 synthetic Play Mode,
-100 original-Boil smoke assertions. No Android device/visual parity claim.
-All-map inventory reads 31 BSP files incl internal stub; no all-map playability claim.
-Read `docs/FULL-GAME-GATES.md`. Local dev.4 Android build succeeded from
-`3322efb2a3260c28edd4b36f6523ee68297d7e48`, 72,377,724 bytes, versionCode 4.
-SHA256 `9605df41cee8e68d7dd24d33953245b3de0df5979a74c6ebce06972a3b02e12a`.
-Receipt: `docs/unity-dev4-build-2026-09-21.json` (0 errors, 1 build warning).
-APK CRC/hash/manifest/ARM64 and v2 signature verified; same certificate as dev.3,
-still different from dev.2. No install/update/device test performed.
-Keep dev.3 evidence below historical when reporting this wave.
-
-## Verified continuation checkpoint — 2026-09-21
-
-Current working branch: `feat/unity-android-continuation`, based on `f59e34a`.
-Read this section and `docs/LOCAL_BUILD.md` before historical notes below.
-New bounded dev.3 APK built and verified; NOT complete Xonotic.
-Read `docs/UNITY-CONTINUATION.md` and the dated build receipt for evidence.
-
-- APK 72,332,393 bytes; SHA256
-  `cca7f66e67f18c229f889cca1b70a3427943ee1217f3fc650c5aafa4c3bd33c0`.
-- Build source `45e7e1c9c711142b8c4037023b6b0eaa04b6c4c8`; versionCode 3.
-- 55 BSP checks, 36 synthetic MD3 / 40 with real Rocket, 90 Python, 22 Editor,
-  59 sky-import, 12 synthetic Play Mode checks passed; Boil seven-spawn smoke passed.
-- Actual Unity weapon manifest confirms static view-model IQM Blaster + MD3 Rocket,
-  both resolved original diffuse skins. No animation or full-game claim.
-- APK v2 debug signature verified. Certificate differs from released dev.2:
-  in-place update will fail; never silently uninstall/delete app data.
-- Graphical Camera.Render still hangs in llvmpipe; no visual/device validation.
-- Complete official 0.8.6 archive SHA512 verified, selected extraction only.
-
-Completed scope: sky editor-preview routing, static original MD3 weapon support,
-selected DDS skins with provenance, and hardened local build verification.
-Only the parent launches Unity; workers finished.
-
-- `tools/local_unity.py` now requires a fresh invocation-bound build receipt,
-  matching target/output, nonempty artifact, byte count and SHA256 for Android
-  and Linux. Editor compile uses an executeMethod completion marker; Editor
-  tests and playtests cannot reuse stale result files.
-- `prepare_unity_textures.py` accepts repeatable `--texture` content paths,
-  validates containment and actual DDS format, stages conversions, and retains
-  earlier source/hash entries. It does not claim full texture/runtime support.
-- Full original assets on disk and complete gameplay are separate gates.
-  Do not rename a bounded development build as a complete Xonotic port.
-- Source/binary resource provenance and licence compatibility remain independent
-  review requirements; keep upstream art notices intact.
-- A user-reported test of the earlier experimental APK is not a device test of
-  any newly built version. Never transfer test claims between APK hashes.
-
-## Current direction — 2026-09-21
-
-Owner explicitly rejected the native/DarkPlaces approach and requested returning
-to Unity. Resume the original C# implementation here; native/offline release
-history is retained separately, not the current delivery path.
-
-Active task branch: `feat/unity-original-map`, based on
-`wip/textured-bsp-import` (`59b3d5c`). First milestone is original Boil geometry,
-textures/lightmaps, integrated LibreQuake-style touch, original weapon visuals
-where supported, and basic traversal. This is a staged reimplementation, NOT
-full Xonotic; retain explicit missing-feature lists.
-
-Parent owns LocalBuild/bootstrap/playtests/docs. Parallel workers currently own
-importer/content BSP, touch Player/Hud/Layout, new IQM weapon importer/view, and
-new BSP trigger importer/runtime. Only parent launches Unity.
-
-All builds remain LOCAL. A single APK must contain its required content with
-no resource download at runtime. Original-art distribution is owner-authorized,
-but attribution/source correspondence and Unity/GPL compatibility are separate
-review matters, not magically solved by that permission. Preserve notices and
-source provenance. No DarkPlaces/QuakeC code is copied into original C#.
-
-Use `XONOTIC_INCLUDE_EXTERNAL=1` and `XONOTIC_BSP=<boil.bsp>` for the imported-map
-APK; the default remains a clearly named synthetic development fixture.
-Original content roots can be provided through `XONOTIC_CONTENT_ROOTS`.
-`LocalBuild.BuildAndroid` must NOT replace a requested imported scene with the
-plain development arena (the previous method always did).
-
-### Verified checkpoint: Unity 0.1.0-dev.2 (2026-09-21)
-- Local ARM64/IL2CPP/GLES3 APK built, 51,114,182 bytes, versionCode 2,
-  `com.ayoub.myxonotic` (distinct from native `com.ayoub.xonotic`).
-- SHA256 `3f82420161a2b23388b46eb8a4d283e721ff16321681830cd11d30bf98f1d753`.
-- v2 debug signature verified; SDK26 minimum / target36. APK includes
-  Boil assets, 2 weapon prefabs, audio and upstream notices; no runtime download.
-- 55 standalone C# checks (real-map winding regression), 68 Python tests,
-  22 real Unity Editor checks; original resource index 207 files verified.
-- Actual Unity Play Mode synthetic mechanics smoke: 12 checks passed.
-- Actual imported Boil headless Play Mode: all 7 spawn points grounded, movement,
-  jump, weapon firing and pause passed. World textures/materials referenced.
-- Graphical host Camera.Render capture hung in llvmpipe and timed out, followed
-  by shutdown crash. No usable visual capture; headless simulation passed.
-- **Android installation, touch input, visuals, thermals and gameplay UNTESTED.**
-
-Critical corrections:
-- Shader parser must skip newline tokens between a material name and `{`;
-  without this, real exomorphx scripts were ignored and textures fell back.
-- Real BSP polygon meshverts already have native cross-product opposite vertex
-  normals; Y/Z axis swap makes source a,b,c face correctly in Unity. Earlier
-  blanket a,c,b reversal made players fall through floors. Patch grid triangles
-  are separate and retain their existing winding. Synthetic fixture was corrected
-  to represent actual compiled data; real-map cross/normal checks prevent regression.
-- Weapon IQM triangles had the same inherited winding mistake; fixed separately.
-  Blaster uses original static v_laser IQM + decoded laser DDS skin. Rocket uses
-  a world-model fallback, currently without resolved full skin; real v_rl is MD3
-  and unsupported. Rifle remains a prototype with no visible model. No animation
-  parity or original full weapon mechanics claim.
-- Trigger push/teleport/hurt imported as source model AABBs, not exact brush
-  shapes; independent approximate logic, not full original rules. Actual trigger
-  traversal has not been comprehensively tested. Pickups, other weapons, proper
-  character art, sophisticated bots, menus/modes/networking remain incomplete.
-- `tools/content/prepare_unity_textures.py <extracted-data>` decodes selected DDS
-  to `ExternalContent/decoded`; put that root first in XONOTIC_CONTENT_ROOTS,
-  followed by extracted maps/data and ThirdParty/Xonotic/maps-pk3.
-- Only parent launches Unity. Worker tasks are now complete; no ongoing ownership.
-
-## Historical checkpoint, 2026-09-20 — superseded where noted above
-
-**Goal:** genuinely bring Xonotic to Unity/Android, not a renamed LibreQuake game.
-**Current checkpoint:** `0.1.0-dev.1`, source + a bounded original upstream resource
-pack. It is NOT the complete game, a verified Unity project import, or an APK.
-
-| Gate | Current result |
+| البند | القيمة المثبتة |
 |---|---|
-| Host C# API/type check | PASS: runtime + Editor sources against local Unity 2022.3.62f3 assemblies |
-| Named asmdef / builtin package check | PASS; UGUI assembly is `UnityEngine.UI`, not `Unity.ugui` |
-| Standalone BSP checks | PASS: 53 assertions including two actual release maps; 49 synthetic-only |
-| Python intake/range/resource-index checks | PASS: 57 tests |
-| Source asset GUID check | PASS: generated once and checked for missing/duplicate GUIDs |
-| Unity Editor import/compilation | PASS 2026-09-20: activated locally (Personal), project imported, 0 C# errors |
-| Editor tests / Play Mode | Editor tests PASS (14) after generating fixtures; Play Mode smoke NOT RUN |
-| Android build / installation / device play | APK BUILT 2026-09-20 (0.1.0-dev.1, 18.5 MB, ~5 min); device play NOT verified |
+| الإصدار | `0.1.0-dev.6`، `versionCode 7` |
+| Release | [unity-v0.1.0-dev.6](https://github.com/ayoub5550/my-xonotic/releases/tag/unity-v0.1.0-dev.6)، prerelease وليس latest |
+| مرفق التنزيل | `xonotic-unity-0.1.0-dev.6-vc7.apk` |
+| اسم مخرج البناء | `Builds/my-xonotic-full.apk`؛ إعادة تسمية المرفق لا تغيّر البايتات |
+| الحجم | **400,459,348 بايت**، نحو 400.5 MB |
+| SHA-256 | `ef140281d7639840c9b3d75b9631c1b28fad5784bdd73e32f56ccd6905ee7be5` |
+| الحزمة | `com.ayoub.myxonotic`؛ مختلفة عن native القديم `com.ayoub.xonotic` |
+| Android | ARM64 فقط، IL2CPP، OpenGLES3، أفقي، minimum API 26 / target API 36 |
+| Unity | `2022.3.62f3` |
+| التوقيع | Android Debug، APK v2؛ ليس مفتاح متجر/إنتاج |
+| بصمة شهادة SHA-256 العامة | `2ef0784b3aad4046b2add35f9da40f424ba42607d95897807bdc0b6763bd408a` |
+| بناء dev.6 المسجّل | 332.3 ثانية، 0 أخطاء و30 تحذير Ambient/Reflection Probes في `-nographics` |
+| تحقق النشر | الحجم وSHA-256 وZIP CRC وmanifest وABI والتوقيع محليًا؛ digest مرفق GitHub مطابق |
+| اختبار Android/اللمس/الأداء | **غير منفذ لهذه البصمة** |
 
-The local Editor existed; matching Android support/JDK/NDK/SDK were installed during
-this task. Installation checks are not build proof. Do not use an earlier
-`my-librequake` result as proof for this project.
+**تتبّع المصدر مهم:** بُني APK من شجرة معدّلة فوق `deea0ed6`.
+`revision` في [إيصال البناء](docs/unity-dev6-build-2026-09-21.json) هو الأساس
+السابق، وليس commit نظيفًا يحتوي كل الإصلاحات. نقطة `7a6ec966` تحفظ المصدر
+والتوثيق؛ عند تدقيق هذا التسليم طابقت ملفات المصدر الـ81 كلها بصمات
+[سجل المصدر](docs/unity-dev6-source-2026-09-21.json).
+هذا لا يثبت إعادة إنتاج APK مطابق بايتًا ببايت، ولا يغطي ProjectSettings المولّدة.
 
-## Owner instructions and repository discipline
+الشهادة تطابق dev.3/dev.4/vc5/vc6 وتختلف عن dev.2. لا تفترض إمكان تحديث
+dev.2 فوق تثبيته الحالي؛ **لا تحذف التطبيق أو بياناته تلقائيًا** لحل تعارض التوقيع.
+أي جهاز/بيئة جديدة قد تولّد debug keystore مختلفًا؛ قارن الشهادة أولًا.
 
-- All code, structure, real resources, development records and releases belong here.
-- **Build locally only.** No Unity Cloud Build, GitHub Actions builds, remote build
-  farms, paid services or purchases.
-- Owner explicitly asked for **actual resources in Git**, not just download tools.
-  Keep upstream originals/source in `ThirdParty/Xonotic/`, with their own notices
-  and manifests, outside Unity `Assets`; preserve upstream copyrights.
-- Owner then explicitly approved publication without waiting for further
-  source-matching research. The resource index covers **207 unmodified upstream
-  files / 203,918,053 bytes**, including exports, authoring sources and notices.
-  Keep unresolved source correspondence visible; do not turn this approval into
-  a statement of legal clearance or completed runtime integration.
-- Owner-facing docs Arabic; engineering names/comments English.
-- No credentials, activation files, account logs, keystores or APKs in Git.
-- Do not copy GPL engine/QuakeC implementations into original MIT source.
-- Original-fixture APK distribution and upstream-content distribution are separate
-  gates. No assertion that an aggregate resource repository resolves Unity/GPL terms.
-- Work on `feat/local-unity-android` (or a new isolated task branch), not directly on
-  `main`. Fetch/reconcile before each push. Do not force-push shared work.
-- This repo was empty at intake. `main` carries the bootstrap overview; implementation
-  is on the development branch/PR. Do not mistake a main-only checkout for lost work.
-- Update this handoff, test evidence and CHANGELOG with each tangible increment.
-- One Unity instance at a time. Worker assignments from the initial task are finished;
-  no lasting parallel file ownership is implied.
+## 2. ما يعمل وما لا يعمل في baseline dev.6
 
-## Local build notes (2026-09-20)
+المصدر: [تقرير الخرائط](docs/unity-dev6-maps-2026-09-21.json)
+و[شرح الإصلاحات](docs/UNITY-DEV6.md)، وليس اختبارًا بصريًا.
 
-- Never pin `Standard` in Always Included Shaders: it expands to 24,576 variants and
-  the sandbox shader compiler (qemu-emulated) needs ~1 h for it. `LocalBuild.Configure`
-  now unpins it; `Editor/ShaderVariantStripper.cs` keeps only minimal forward variants
-  of built-in shaders; GraphicsSettings strips fog/lightmap/instancing variants.
-- Run `python3 tools/content/pk3_tool.py fixture --out-dir tests/fixtures/generated`
-  before `tools/local_unity.py test`.
-- Task order that works: compile → configure → scene → test → android.
+| النظام | الموجود | الحد الذي لا تتجاوزه في وصف النتيجة |
+|---|---|---|
+| الخرائط والقائمة | 29 خريطة مستوردة، قائمة اختيار وموسيقى ومعاينات | بيانات gametype لا تعني تنفيذ CTF/Nexball/Race؛ اللعب تقريبي أوفلاين |
+| نقاط الظهور | 583؛ تشمل فئات team/race/attacker/defender | فحص الظهور ليس اجتياز كل ممر |
+| عناصر الالتقاط | 1,562 بنماذج أصلية، صحة/درع/ذخيرة مدعومة حسب المستورد | 577 عنصرًا إضافيًا زينة غير قابلة للالتقاط |
+| زينة العالم | 304 نماذج أصلية | 12 كيان OBJ متخطى؛ وجود النموذج لا يثبت خاماته |
+| الأجزاء الداخلية | 117 جزءًا مرئيًا مع إزاحة origin | ثابتة؛ لا سلوك أبواب/مصاعد/دوّارات. 23 submodel بلا مثلثات قابلة للرسم |
+| الشخصيات | 11 مورد IQM مخبوز في وضع idle ثابت | 3 بوتات تختار أول 3 موارد؛ لا قائمة اختيار ولا skeletal animation |
+| الأسلحة | Blaster وRocket بمرئيات أصلية ثابتة، Rifle prototype؛ قواعد مستقلة | ليست الترسانة الأصلية ولا توازن/إطلاق ثانوي مطابق |
+| المباراة | Deathmatch أوفلاين، حد قتل/وقت، فوز/تعادل/تجميد/إعادة | لا بقية الأنماط ولا شبكة ولا AI أصلي |
+| المحفزات | push/teleport/hurt عبر AABB تقريبي | لا brush volumes الأصلية ولا اختبار عبور شامل |
+| الخامات | صور/lightmaps/سماء وضغط ومشاركة أصول | 13 خامة jump-pad بلا صورة، 366 مرجعًا؛ شفافية مقصوصة تقريبية لا شفافية كاملة |
 
-## Layout and entry points
+أسماء الشخصيات: `erebus`, `gak`, `gakmasked`, `ignis`, `ignismasked`,
+`megaerebus`, `nyx`, `pyria`, `seraphina`, `seraphinamasked`, `umbra`.
+الجسم المرئي للاعب منظور أول ما زال غير مكتمل، والبوتات خصوم اختبار لا نظام تنقل أصلي.
 
-- `Assets/MyXonotic/Runtime/Gameplay/`: original, approximate practice arena logic.
-- `Runtime/Content/Bsp/`: pure managed IBSP v46 parser, coordinates, geometry.
-- `Runtime/Content/`: typed `ImportedArena` and `BspSpawnPoint` markers.
-- `Editor/Import/BspImportPipeline.Import(path)`: worldspawn + spawn marker import.
-- `Editor/LocalBuild`: Configure / CreateDevelopmentScene / ImportExternalBsp /
-  BuildAndroid / BuildLinux.
-- `Editor/LocalTests.Run`: Editor assertions including repeat-import GUID stability.
-- `Editor/LocalPlaytest.Run`: actual frame/physics smoke driver, runs WITHOUT `-quit`.
-- `tools/local_unity.py`: local tasks, timeout, process-group stop, exclusive project lock.
-- `tools/host_compile.py`: source/API check ONLY; no Editor, IL2CPP or shaders.
-- `tools/content/`: bounded archive tools, optional fixed reference fetch, resource verifier.
-- `ThirdParty/Xonotic/`: real upstream material, licences, source/provenance and limitations.
+## 3. خريطة المستودع ونقاط التطوير
 
-Unity 2022.3.62f3 is the current toolchain match, not a recommendation to ship an
-unsupported Editor indefinitely. Review a supported LTS before production.
-Android defaults are engineering choices: ARM64/IL2CPP, landscape, OpenGLES3,
-minimum API 26, target API 36, development/debug signing, no custom keystore.
+كل المسارات أدناه **نسبية لجذر المشروع**. لا تعتمد على مسار جهاز سابق.
 
-## Reproduce current checks
+| المسار | مسؤوليته |
+|---|---|
+| `Assets/MyXonotic/Runtime/Content/Bsp/` | قراءة IBSP v46 بحدود وفحص offsets، سجلات وهندسة وتحويل إحداثيات |
+| `Runtime/Content/Md3/` تحت `Assets/MyXonotic/` | قارئ MD3 مستقل |
+| `Assets/MyXonotic/Editor/Import/BspImportPipeline.cs` | worldspawn، الأسطح والخامات والسماء، submodels وحفظ الأصول |
+| `BspGameplayImporter.cs` في نفس مجلد Import | محفزات الخريطة وارتباطاتها |
+| `BspPickupImporter.cs` | فئات الالتقاط، الأصل المرئي، حفظ المراجع، Unsupported → decoration |
+| `BspMapModelImporter.cs` | MD3/IQM لزينة الخريطة، التحويلات ومشاركة النماذج |
+| `XonoticContentResolver.cs` | أولوية جذور الملفات وقراءة shader scripts كبيانات لا كود |
+| `BspTextureLoader.cs`, `ImportedTexturePolicy.cs` | فك الصور/الخامات، lightmaps، mipmaps والضغط وإعادة استخدام الأصول |
+| `IqmWeaponImporter.cs`, `Md3WeaponModelBuilder.cs` | توليد مرئيات وأصوات الأسلحة وmanifest |
+| `IqmCharacterImporter.cs`، وفيه الصنف الداخلي `IqmSkinnedDocument` | قراءة IQM وتقييم pose ثم mesh ثابت في dev.6؛ القارئ ليس ملفًا منفصلًا |
+| `Assets/MyXonotic/Editor/FullGameBuild.cs` | استيراد الخرائط، MapCatalog، المشاهد، القائمة والموسيقى والتقرير |
+| `Assets/MyXonotic/Editor/LocalBuild.cs` | إعداد Android، اختيار fixture/Boil/all-maps، notices، BuildPlayer والإيصال |
+| `Assets/MyXonotic/Runtime/Gameplay/Player.cs` | الحركة، CharacterController، لوحة المفاتيح واللمس متعدد الأصابع |
+| `TouchLayout.cs`, `Hud.cs` في Gameplay | مناطق لمس وsafe area مشتركة بين القراءة والرسم |
+| `Actor.cs`, `Bot.cs`, `ArenaBootstrap.cs`, `ContentBridge.cs` | الضرر/البوتات/إنشاء الجولة/الربط مع الخريطة ونقاط الظهور |
+| `WeaponController.cs`, `WeaponView.cs`, `Projectile.cs` | منطق الأسلحة ومرئياتها والمقذوفات |
+| `MatchRules.cs`, `MatchSession.cs`, `Pickup.cs`, `MapTrigger.cs` | قواعد المباراة والالتقاط والمحفزات |
+| `Assets/MyXonotic/Runtime/Menu/MainMenu.cs` | اختيار الخريطة والقائمة |
+| `tools/local_unity.py` | تشغيل Editor بمهلة وقفل، فحص marker/receipt ومنع اعتماد النتائج القديمة |
+| `tools/host_compile.py` | ترجمة C# ضد مكتبات Unity؛ لا يُعد اختبار Editor أو IL2CPP |
+| `tools/content/` | أرشيفات وprovenance واستعادة وتحويل صور وجرد |
+| `tests/csharp/`, `tests/python/`, `Assets/MyXonotic/Editor/Tests/` | اختبارات مستقلة وتكامل؛ توجد اختبارات أخرى مباشرة تحت Editor |
+
+### الأصل مقابل الناتج المولّد
+
+- **مصدر قابل للتعديل:** C#، shaders الأصلية، ProjectSettings، Packages، VERSION، tests، docs.
+- **مواد upstream لا تعدّلها بصمت:** `ThirdParty/Xonotic/` و`ThirdParty/Xonotic-0.8.6/`.
+- **مشتقات تُعاد توليدها:** `Assets/MyXonotic/Generated/`، موارد Weapons المولدة،
+  `Assets/StreamingAssets/Xonotic/`، و`ExternalContent/`.
+- `Library/`, `Artifacts/`, `Builds/`, `Logs/`, `UserSettings/` ليست مصادر ولا دليل نجاح بمجرّد وجودها.
+- حافظ على `.meta` وGUID؛ لا تعالج كسر المراجع بحذف الأصول وإعادة إنشائها.
+  `tools/asset_meta.py --write-missing` للأصول المصدرية الجديدة فقط؛ لا يعيد كتابة الموجود.
+
+## 4. الأدوات والترخيص والبيئة
+
+- Unity **2022.3.62f3** مع رخصة محلية صالحة، Android Build Support،
+  OpenJDK 11، NDK r23b، SDK platform 36؛ build-tools 34.0.0 استُخدمت للفحص.
+- Python **3.10+** وPillow لتحويل DDS؛ Mono/mcs للاختبارات المستقلة.
+  افحص نسخ الأدوات والمساحة والذاكرة على جهازك. الحزمة الأصلية المفكوكة
+  وحدها كبيرة، ثم تحتاج نسخ العمل وLibrary ومخرجات البناء؛ لا تعتمد على مساحة APK فقط.
+- Unity Hub هو مسار التثبيت/التفعيل المعتاد. تسجيل الدخول إلى موقع Unity
+  ليس تفعيلًا للمحرر. لا تتجاوز الترخيص أو شروط أهلية الحساب.
+- نقطة إصدار المحرر: `96770f904ca7`. يمكن مراجعة metadata الرسمية:
+  `https://services.api.unity.com/unity/editor/release/v1/releases?version=2022.3.62f3&platform=LINUX&architecture=X86_64`.
+  لا تفترض أن اسم installer يعني توافقه؛ تحقق من module/platform/version.
+- على Linux المعزول السابق استُخرج Android support من حزمة `.pkg` التي
+  أشارت إليها metadata إلى `Editor/Data/PlaybackEngines/AndroidPlayer/`.
+  استخدم Hub إن أمكن بدل وصفة استخراج غير موثقة لجهاز مختلف.
+- الإعداد المعتاد:
 
 ```bash
-# Use explicit Mono/mcs paths as the first two args if not on PATH.
+export UNITY_EDITOR="/absolute/path/to/Unity-or-approved-local-wrapper"
+export UNITY_EDITOR_DATA="/absolute/path/to/Editor/Data"
+export JAVA_HOME="$UNITY_EDITOR_DATA/PlaybackEngines/AndroidPlayer/OpenJDK"
+export PATH="$JAVA_HOME/bin:$PATH"
+```
+
+### حلول gVisor الخاصة — ليست متطلبات لكل جهاز
+
+1. عند ثبوت `Shader compiler initialization error 0x80000004`، استُخدم
+   `qemu-x86_64-static` لتشغيل نسخة `UnityShaderCompiler.real` عبر wrapper
+   اسمه `UnityShaderCompiler`. احفظ الأصل ولا تجعل wrapper يشغّل نفسه.
+2. تعذّر جدولة FMOD بزمن حقيقي عولج بـshim محلي `libschedfix.so` محمّل
+   عبر `LD_PRELOAD` لتعطيل طلبات أولوية الجدولة فقط؛ لا علاقة له بتجاوز الرخصة.
+3. launcher يحدد HOME الثابت الذي يحمل تفعيل Unity، ومكتبات Linux
+   عبر `LD_LIBRARY_PATH`، والـshim. هذه أدوات **خارج المستودع**، لا يفترض
+   agent جديد أنها موجودة أو مثبتة على جهاز آخر.
+4. رسالة FMOD output device قد تبقى في headless؛ افصلها عن فشل التهيئة القاتل.
+5. لا تثبّت shader `Standard` في Always Included Shaders: توسّع سابقًا إلى
+   24,576 variant ووقت طويل مع qemu. `LocalBuild.Configure` يزيله،
+   و`ShaderVariantStripper.cs` يقلل variants.
+
+### إدارة الأسرار
+
+الـrunner يقبل `UNITY_USER` و`UNITY_PASS` **معًا أو لا شيء** للتفعيل القديم،
+لكن التفعيل المحلي المسبق دون تمريرها هو المفضّل. لا تسجل قيمهما أو argv
+لـUnity؛ قد تحمل الوسيطات كلمة المرور. افحص PID/comm فقط عند إدارة العمليات.
+لا ترفع logs الخام قبل التنقيح. سر التوقيع يبقى لدى المالك في مخزن أسرار؛
+بصمة الشهادة العامة ليست المفتاح الخاص ولا يمكن استخدامها لتوقيع إصدار.
+احتفظ بنسخة احتياطية آمنة للمفتاح خارج Git ولا تستبدله بلا خطة ترقية.
+
+## 5. الموارد: من أين جاءت وكيف تُستعاد
+
+### مصدران مختلفان داخل Git
+
+1. `ThirdParty/Xonotic/`: المجموعة الأولى، **207 ملفًا / 203,918,053 بايت**؛
+   فهرسها `resource-index.json` وأداة فحصها `tools/content/verify_resources.py`.
+2. `ThirdParty/Xonotic-0.8.6/`: الحزم السبعة المفكوكة والمشتقات والإشعارات.
+   يذكر `publish-manifest.json` **17,345 ملفًا / 4,474,463,781 بايت منطقيًا**،
+   و2,845 نسخة hardlink متطابقة و1,908 رابط archive حُلّ إلى ملف عادي؛
+   لا symlink نظام حقيقي مطلوب. هذه أرقام سجل النشر، لا قياس جديد لمساحة القرص.
+   verifier المجموعة الأولى **لا يفحص الحزمة الكبيرة**.
+
+الأرشيف الأصلي: `https://dl.xonotic.org/xonotic-0.8.6.zip`،
+**1,238,439,495 بايت**؛ SHA-512 الذي يوثّق `FULL-GAME-GATES` تحققه سابقًا
+(لم يُعَد تنزيل/فحص الأرشيف أثناء كتابة هذا الدليل؛ manifest يقول `rehashed_this_run:false`):
+
+```text
+cb39879e96f19abb2877588c2d50c5d3e64dd68153bec3dd1bebedf4d765e506afa419c28381d7005aed664cb1a042571c132b5b319e4308cab67745d996c2a6
+```
+
+بصمات الحزم السبع مثبتة في `KNOWN_PACK_SHA256` داخل
+`tools/content/publish_resources.py`. الخرائط من `xonotic-20230620-maps.pk3`،
+البيانات من `xonotic-20230620-data.pk3`؛ البقية موسيقى وخطان وحزم توافق.
+لا تشغّل أي `.cfg/.qc/.shader` أو executable منها؛ تعامل معها كبيانات مرجعية.
+مرجع المصدر والتراخيص: [بيان الحزمة الكبيرة](ThirdParty/Xonotic-0.8.6/README.md)،
+[المجموعة الأولى](ThirdParty/Xonotic/README.md)، [الإشعارات](THIRD_PARTY_NOTICES.md).
+وصف «لم يتحقق SHA512 كاملًا» في بعض وثائق المجموعة الأولى تاريخي، لا يلغي
+التحقق اللاحق في [FULL-GAME-GATES](docs/FULL-GAME-GATES.md).
+
+### المسار المفضّل لـcheckout كامل — بلا تنزيل
+
+من جذر المشروع، بعد التأكد من وجود `ThirdParty/Xonotic-0.8.6/publish-manifest.json`:
+
+```bash
+python3 tools/content/verify_resources.py
+python3 tools/content/publish_resources.py restore
+```
+
+`restore` يتحقق من SHA-256 للمصدر قبل نسخه، ويعيد `ExternalContent/data`,
+`maps`, `decoded`, `worlddecoded`, `characters`, `music`, `notices`.
+الموجود المطابق يُترك؛ المختلف **لا يُكتب فوقه** ويظهر mismatch؛ والـsymlink
+مرفوض. لا تحذف تعديلات محلية لحل mismatch: اعزلها وراجع سببها أولًا.
+`restore --with-pk3-entries` يضيف المحتوى المفكوك لحزم الخطوط/الموسيقى/التوافق
+في staging؛ **لا يعيد أرشيفات PK3 المضغوطة الأصلية**.
+
+لقطة `derived/characters` تحتوي bundle Erebus فقط، لا bundles للشخصيات الـ11.
+مصدر الشخصيات العام هو `models/player/*.iqm` داخل `ExternalContent/data`
+بعد restore؛ `IqmCharacterImporter.ImportAll` يستورده أثناء prepare-maps.
+وجود ذلك المصدر لا يعفي من تحويل صور dev.6 أو فحص التقرير والمشاهد.
+لا يوجد ادعاء بأن checkout نظيفًا ثم restore/build كاملًا أُعيد اختباره هنا.
+
+لا تبدأ بـ`publish`: ذلك ينقل موارد محلية إلى Git، ليس تنزيلًا ولا استعادة.
+`publish --overwrite --verify-full-zip` يحتاج الأرشيف الأصلي في
+`ExternalContent/downloads/xonotic-0.8.6.zip` والحزم السبع في
+`ExternalContent/staging_pk3/Xonotic/data/`، فضلًا عن المشتقات/الإشعارات.
+إذا كانت هذه المدخلات غير موجودة فتوقف؛ لا تقل إن restore أعادها كلها.
+الاستثناء من فحص نسبة الضغط مرتبط ببصمات الحزم الرسمية المثبتة فقط،
+ولا يجوز تعميمه على ZIP مجهول أو تعطيل فحص CRC/path traversal.
+
+### تحويلات dev.6 الإضافية — لا يكفي restore وحده
+
+تدقيق manifest المنشور وجد **22 من 24 PNG إضافية** في سجل dev.6 غير موجودة
+ضمن لقطة المشتقات المنشورة؛ جميع DDS الأصلية الـ24 موجودة وتطابق بصماتها.
+بعد الاستعادة، أعد تحويل القائمة الموثقة بدل افتراض اكتمال الصور:
+
+```bash
+python3 - <<'PY'
+import json, subprocess, sys
+from pathlib import Path
+records = json.loads(Path("docs/unity-dev6-texture-provenance-2026-09-21.json").read_text())
+cmd = [sys.executable, "tools/content/prepare_unity_textures.py",
+       "ExternalContent/data", "--output", "ExternalContent/decoded"]
+for item in records:
+    name = item["source"].removeprefix("dds/").removesuffix(".dds")
+    cmd += ["--texture", name]
+subprocess.run(cmd, check=True)
+PY
+```
+
+الأداة تستعمل Pillow: DDS → RGBA → PNG بلا إعادة ترخيص، مع
+`ExternalContent/decoded/conversion-manifest.json`. تتحقق من المسارات والحجم
+والصيغة وتجهّز الدفعة قبل استبدال النتائج. PNG قد تختلف بايتاتها مع نسخة Pillow؛
+سجّل نسختك وبصمات المشتقات الجديدة ولا تُعدّل البصمات القديمة لتبدو مطابقة.
+للإضافة المحددة: `--texture models/weapons/laser`، بلا `dds/` وبلا امتداد.
+`worlddecoded/world-texture-manifest.json` و`music/music-manifest.json` جزء
+من خط الموارد؛ وجود raw OGG وحده لا يبني ربط cdtrack.
+
+## 6. متغيرات التطوير والإعدادات
+
+| المفتاح | الوظيفة والتحذير |
+|---|---|
+| `UNITY_EDITOR` / `--unity` | executable محلي أو wrapper مُراجع |
+| `XONOTIC_REVISION` | commit المصدر الذي تم البناء منه؛ إن كانت الشجرة معدلة صرّح بذلك وسجل بصماتها |
+| `XONOTIC_ALL_MAPS=1` | حزمة الخرائط والقائمة؛ بدونه قد تحصل على fixture صغيرة |
+| `XONOTIC_VERSION_CODE` | رقم Android صريح؛ default في dev.6 هو 5، فلا تعتمد عليه للإصدار التالي |
+| `XONOTIC_CONTENT_ROOTS` | جذور مرتبة، `:` على Linux و`;` على Windows؛ تُبحث أولًا وتُلحق بعدها الجذور الافتراضية |
+| `XONOTIC_MAPS_ROOT` | default `ExternalContent/maps`، ويتوقع داخله `maps/*.bsp` |
+| `XONOTIC_MUSIC_ROOT` | default `ExternalContent/music` مع music-manifest |
+| `XONOTIC_MAP_FILTER` | أسماء خرائط بفاصلة/مسافة للتشخيص؛ **أزله** قبل قبول all-maps |
+| `XONOTIC_TEXTURE_FORMAT` | `etc2` افتراضي، `astc` أو `none`؛ ASTC لا يُفترض دعمه بكل جهاز |
+| `XONOTIC_TEXTURE_REBUILD=1` | لا تعِد استخدام texture asset موجود؛ مهم عند تغيير سياسة الضغط |
+| `XONOTIC_INCLUDE_EXTERNAL=1` | مسار خريطة منفردة بدل fixture، وليس بديلًا لـALL_MAPS |
+| `XONOTIC_BSP` | BSP للخريطة المفردة؛ اختره صراحة |
+| `XONOTIC_BUILD_INVOCATION` | يولّده runner؛ لا تعِد استعماله لتزوير إيصال سابق |
+| `--timeout` | مهلة موجبة؛ default 1800 ثانية، ارفعها بقرار واضح للأعمال الثقيلة |
+| `--graphics` | استخدام display/OpenGL بدل `-nographics`؛ ليس ضمان التقاط صورة |
+
+إعداد Android في `LocalBuild.Configure`: Linear color، shadows وMSAA
+معطّلان، fixedDeltaTime=1/60، stripping Low، Development + StrictMode.
+`VERSION` يحدد versionName. لا تغيّر نسخة Unity خلال إصلاح محتوى بلا اختبار ترحيل منفصل.
+
+## 7. وصفة البناء المحلي خطوة بخطوة
+
+الأوامر من **جذر checkout المقصود**، بعد الاستعادة وتحويل DDS أعلاه
+وتفعيل Unity. ليست إعلانًا أن هذه الوثيقة أعادت البناء.
+
+```bash
+set -eu
+export XONOTIC_CONTENT_ROOTS="ExternalContent/decoded:ExternalContent/worlddecoded:ExternalContent/maps:ExternalContent/data:ThirdParty/Xonotic/maps-pk3"
+export XONOTIC_MAPS_ROOT="ExternalContent/maps"
+export XONOTIC_MUSIC_ROOT="ExternalContent/music"
+export XONOTIC_ALL_MAPS=1
+export XONOTIC_TEXTURE_FORMAT=etc2
+unset XONOTIC_MAP_FILTER XONOTIC_INCLUDE_EXTERNAL XONOTIC_BSP
+# عيّن commit المصدر الحقيقي عبر أداة Git المعتمدة قبل البناء.
+export XONOTIC_REVISION="<exact-source-commit>"
+# 7 لإعادة baseline dev.6 فقط؛ لأي APK جديد اختر رقمًا أعلى بعد فحص آخر إصدار.
+export XONOTIC_VERSION_CODE=7
+
+python3 tools/content/pk3_tool.py fixture --out-dir tests/fixtures/generated
+python3 -m unittest discover -s tests/python -p 'test_*.py' -v
+python3 tools/asset_meta.py
+python3 tools/local_unity.py compile --timeout 3600
+python3 tools/local_unity.py configure
+python3 tools/local_unity.py test
+python3 tools/local_unity.py sky-test
+python3 tools/local_unity.py gameplay-test
+python3 tools/local_unity.py gameplay-playtest
+python3 tools/local_unity.py prepare-maps --timeout 3600
+python3 - <<'PY'
+import json
+from pathlib import Path
+r = json.loads(Path("Artifacts/full-game-maps.json").read_text())
+assert (r["requested"], r["imported"], r["failed"]) == (29, 29, 0), r
+PY
+python3 tools/local_unity.py content-test
+python3 tools/local_unity.py all-maps-playtest --timeout 3600
+python3 tools/local_unity.py android --timeout 3600
+python3 - <<'PY'
+import json
+from pathlib import Path
+r = json.loads(Path("Artifacts/full-game-maps.json").read_text())
+assert (r["requested"], r["imported"], r["failed"]) == (29, 29, 0), r
+PY
+```
+
+- أمر Android يعيد Configure ثم تجهيز الحزمة؛ اختبارات Editor قد تغيّر
+  اسم المنتج/رقم النسخة ومشهد DevelopmentArena، لذلك افحص APK النهائي نفسه.
+- `prepare-maps` يولّد مشاهد `Assets/MyXonotic/Generated/Maps/map_*.unity`،
+  `Generated/MainMenu.unity` و`Generated/Resources/MapCatalog.asset`.
+- `FullGameBuild` يقرأ BSP غير البادئة بـ`_`، ينشئ لكل خريطة المشهد والبيانات،
+  يربط cdtrack بموسيقى streaming Vorbis، ويبني القائمة أول مشهد.
+  **تحذير baseline:** فشل خريطة يُسجل وتُتخطى، ولا يرمي المستورد فشلًا نهائيًا
+  إلا إذا فشلت جميع الخرائط. لذا راجع `requested=imported=29` و`failed=0`
+  بنفسك؛ نجاح الأمر أو كلمة “all” لا يمنع APK ناقصة الخرائط.
+- `LocalBuild.PrepareFullGamePackage` يجهّز أسلحة وnotices مع الحزمة في baseline.
+  ثم BuildPlayer ينشئ APK ويكتب `Builds/build-receipt.json`.
+- ترتيب جذور decoded أولًا يمنع استخدام DDS الخام بدل PNG المُعدّة.
+- `scene` يبني الساحة المصطنعة، فلا تشغّله بعد prepare-maps وتتوقع بقاء القائمة.
+- كل shell جديد يحتاج متغيراته من جديد. لا تشغّل أمرًا يعتمد على بيئة shell انتهى.
+
+### فحوص مستقلة واختبار محدود
+
+```bash
 bash tests/run_all.sh mono mcs \
   ThirdParty/Xonotic/maps-pk3/maps/_hudsetup.bsp \
   ThirdParty/Xonotic/maps-pk3/maps/boil.bsp
-
-python3 tools/asset_meta.py
-python3 tools/content/verify_resources.py
 python3 tools/host_compile.py --editor-data "$UNITY_EDITOR_DATA" \
-  --ui-dll "$LOCAL_UNITY_UI_DLL"
+  --ui-dll "<actual-path-to-UnityEngine.UI.dll>"
 ```
 
-The host check used an existing locally compiled Unity UGUI DLL as a reference.
-It is NOT committed. `csc` wrappers can contain stale vendor build paths: invoke
-the actual local Mono executable and `lib/mono/4.5/csc.exe`. Do not mix monolithic
-`Managed/UnityEngine.dll` with modular `Managed/UnityEngine/*.dll`.
+الـhost compiler يستخدم Mono و`csc.exe` داخل Unity، ومراجع modular؛ لا تخلط
+UnityEngine monolithic وmodular. UGUI assembly اسمه `UnityEngine.UI`.
+لا تفترض أن UI DLL مولّدة موجودة في checkout جديد.
+لتسريع تحقيق محدد يمكن `XONOTIC_MAP_FILTER=boil` مع prepare/playtest؛
+النتيجة عندئذ ليست all-maps. لمسار Boil المنفرد عطّل ALL_MAPS، فعّل
+INCLUDE_EXTERNAL وحدد BSP؛ المخرج `my-xonotic-unity-boil.apk`.
+بدون الاثنين المخرج `my-xonotic-development.apk` لساحة صناعية.
 
-See `docs/TESTING.md` for sample-map counts and what these checks cannot prove.
-The optional fetcher reproduces official BSP hashes using exact HTTP byte ranges;
-full release SHA512 was not verified. It is never run implicitly by a build.
+## 8. أين تجد دليل النجاح؟
 
-## Historical implementation boundaries (dev.1, not current feature inventory)
+| الأمر/الدليل | المخرج | ما لا يثبته |
+|---|---|---|
+| `compile` | `Artifacts/compile-result.json` مع passed وinvocation الحالي | shader/render/Android |
+| `test` | `Artifacts/editor-tests.txt` | لمس أو أداء هاتف |
+| `sky-test` | `Artifacts/sky-import-regression-tests.txt` | تطابق السماء بصريًا |
+| `gameplay-test` | `Artifacts/gameplay-integration-tests.txt` | كل قواعد upstream |
+| `gameplay-playtest` | `Artifacts/gameplay-playtest.json` | اللعب على جهاز |
+| `playtest` | `Artifacts/playtest-result.json` | خرائط أصلية؛ هذا fixture |
+| `original-playtest` | `Artifacts/original-playtest.json` | جميع الخرائط |
+| `prepare-maps` | `Artifacts/full-game-maps.json` | صحة الرسم بمجرد نجاح الاستيراد |
+| `content-test` | `Artifacts/content-regression-tests.txt` | أن كل خامة مرئية صحيحة |
+| `all-maps-playtest` | `Artifacts/all-maps-playtest.json` | رسم/لمس/اجتياز كامل |
+| `android` / `linux` | `Builds/build-receipt.json` وartifact مطابق | صحة اللعب أو توقيع APK |
 
-The following describes the earlier dev.1 checkpoint. Texture/lightmap, static
-IQM and approximate trigger support were subsequently added as documented in the
-2026-09-21 checkpoint above. Do not use the older absence claims as current status.
+الـrunner يحذف التقارير القديمة التي يتحقق منها، ويشترط marker للترجمة،
+وpassed لتقارير Play Mode، وإيصال بناء حديث مرتبط بـinvocation/target/output/
+artifactBytes/SHA-256. يحتفظ بالـAPK القديم عند فشل محاولة جديدة؛
+**لا تشاركه على أنه نتيجة المحاولة الفاشلة**. خروج Unity بصفر وحده لا يكفي.
 
-- Original 40×40 practice arena; 3 test bots, 5 pickups, 3 prototype guns. Not the
-  full Xonotic arsenal, character art, AI, match modes, campaign or networking.
-- Base movement constants reference public `physicsX.cfg`; advanced air control,
-  ramp/step behavior and timing are not matched. Fixed clamped movement steps are
-  a development approximation, not deterministic network simulation.
-- Coordinate convention: source `(x,y,z)` → Unity `(x,z,y)/32`. The scale is ours,
-  not an upstream physical-unit definition. Hull origin is **not feet**:
-  `ContentBridge` subtracts `24/32` on Y for a feet-based controller.
-- BSP parses/indexes polygons/meshes and tessellates quadratic patches. Surface
-  flags and content flags are independent. `SURF_SKIP=0x200`, not `0x10`.
-  Invisible NODRAW caulk can still be solid.
-- Collision uses eligible face triangles, NOT full original brush volumes/BSP
-  collision. Do not call imported-map traversal verified.
-- Only worldspawn becomes static geometry. Inline movers/triggers are not baked
-  into the world. Unsupported entity classes warn, not silently pretend to work.
-- Imported scenes use development rules. Original pickups, jump pads,
-  teleporters, hazards and targets are not implemented. No fake pickup placement.
-- No material/texture/lightmap/sky/IQM/MD3 runtime importer yet. Resource presence
-  is not runtime support. Shader code here is debug vertex/tint rendering only.
-- The four included upstream files named `*.md3` have `INTERQUAKEMODEL\0`
-  headers (IQM). Dispatch any future model importer by magic, not extension.
-- Typed marker references avoid reflection/IL2CPP stripping; runtime shaders live
-  in Resources and are pinned by LocalBuild. Shader compilation remains untested.
-- Stable `.meta` GUIDs are committed. `tools/asset_meta.py --write-missing` seeds
-  new source assets only and never rewrites an existing GUID.
+### أدلة dev.6 التاريخية المحفوظة
 
-## Historical next actions (dev.1)
+- 154 Python و22 Editor في [شرح dev.6](docs/UNITY-DEV6.md).
+- 157 تحقق محتوى في [تقرير المحتوى](docs/unity-dev6-content-tests-2026-09-21.txt):
+  يفتح المشاهد المحفوظة ويفحص mesh/material أصلية، لا مجرد أعداد.
+- 30/30 مشهدًا (قائمة +29 خريطة)، 0 runtime errors/warnings، 982.4 ثانية:
+  [Play Mode](docs/unity-dev6-all-maps-playtest-2026-09-21.json).
+- 2,856 تحذير استيراد في تقرير الخرائط، ليست هي 30 تحذير البناء ولا أخطاء التشغيل.
+- نجاح جلسة سابقة لا يغطي كود dev.7 ولا أي APK ببصمة مختلفة.
 
-1. DONE: local activation, compile, Editor checks, Android APK (see table).
-2. Run the real Play Mode smoke (`playtest`, needs Xvfb + `-force-glcore`).
-3. Run on a real ARM64 Android device: independent move/look/fire, safe area,
-   pause/background/resume, shots/walls, score/respawn, performance and thermals.
-4. Verify remaining source/attribution gaps in the upstream resource manifests
-   before packaging; preserve all rights notices and corresponding source.
-5. Connect actual texture/lightmap data to importer and implement one Boil gameplay
-   feature at a time (trigger_push/teleport/hurt, pickups), with original-vs-port
-   evidence. Do not broaden the prototype and relabel it Xonotic.
-6. Record every outcome separately: source, import, play, packaging and device.
+## 9. فحص APK وإطلاقه دون تسريب أسرار
+
+```bash
+export ANDROID_BT="$UNITY_EDITOR_DATA/PlaybackEngines/AndroidPlayer/SDK/build-tools/34.0.0"
+export JAVA_HOME="$UNITY_EDITOR_DATA/PlaybackEngines/AndroidPlayer/OpenJDK"
+export PATH="$JAVA_HOME/bin:$PATH"
+sha256sum Builds/my-xonotic-full.apk
+python3 -m zipfile -t Builds/my-xonotic-full.apk
+"$ANDROID_BT/aapt" dump badging Builds/my-xonotic-full.apk
+"$ANDROID_BT/apksigner" verify --verbose --print-certs Builds/my-xonotic-full.apk
+```
+
+قارن package/versionName/versionCode/minSdk/ABI/cert والحجم مع الإيصال.
+`artifactBytes` هو حجم APK؛ `bytes` في إيصال Unity totalSize مختلف ولا يُعرض كحجم التنزيل.
+سجّل commit نظيفًا أو fingerprint وتفصيل dirty tree بوضوح.
+انشر APK مع SHA256SUMS وملاحظات عربية وأدلة/قيود، **prerelease وlatest=false**.
+يمكن إنشاء draft أولًا، فحص `assets[].state/size/digest` من GitHub API،
+ثم نشره والتحقق من الرابط النهائي. draft بلا tag قد يكون `untagged-*`:
+ابحث في قائمة releases بـ`tag_name` بدل الاعتماد على endpoint by-tag قبل النشر.
+لا ترفق keystore/رخصة/raw logs/ملفات حساب. لا تدفع APK إلى Git.
+
+## 10. اختصارات التحكم وكيف تختبر الهاتف
+
+Baseline dev.6: WASD حركة، mouse نظر، Space قفز، زر mouse الأيسر إطلاق
+والأيمن alt، Q التالي/E السابق، 1 Blaster/2 Rifle/3 Rocket.
+P أو Escape توقف/استئناف، R إعادة، M رجوع للقائمة أثناء الإيقاف.
+على الهاتف: joystick يسار، نظر مستقل يمين، FIRE/ALT/JUMP وWPN± وPAUSE.
+اللمس مبني على finger IDs و`Screen.safeArea`؛ `TouchLayout` مصدر الحقيقة
+لأماكن الرسم والالتقاط معًا، لا تغيّر Hud وحده فتفصل الصورة عن hit region.
+
+قبل تسمية إصدار «مجرّب على Android»، سجّل اسم الهاتف وAndroid وGPU وبصمة APK:
+
+- [ ] تثبيت وبدء؛ وإن كان تحديثًا فقارن التوقيع واحفظ بيانات المستخدم.
+- [ ] حركة+نظر+إطلاق متزامن، القفز، إلغاء touches بعد pause/background/resume.
+- [ ] safe area والاتجاه الأفقي على نسب شاشة مختلفة.
+- [ ] الخامات والسماء والإضاءة والشفافية وصوت الأسلحة والموسيقى.
+- [ ] كل خريطة: spawn صالح، أرض/جدران، jump/teleport/hurt، عناصر ومباراة وإعادة.
+- [ ] قياس FPS/frame time، ذاكرة، حرارة وبطارية خلال جلسة مسماة، لا تخمين أداء.
+- [ ] لقطة/فيديو من **هذا APK** للمشكلات؛ لا صور upstream أو صور مصطنعة كدليل.
+
+التصوير Linux/Xvfb/llvmpipe السابق انتهى بعد 1,500 ثانية دون PNG صالح.
+لا تكرّر انتظارًا مفتوحًا ولا تعد بفيديو من مسار لم يعمل. headless ليس visual QA.
+
+## 11. أعطال ودروس تمنع إعادة الأخطاء
+
+| العرض | التشخيص/الإجراء |
+|---|---|
+| `Another local invocation holds the lock` | افحص PID في `Artifacts/local-unity.lock` وعمليات Editor دون argv. لا تمسح قفلًا حيًا ولا تشغّل نسخة ثانية |
+| timeout خارجي ترك Unity يعمل | تحقق من شجرة العمليات؛ أوقف فقط عمليتك المملوكة بعد التنسيق. لا تقتل Unity لزميل أو تتجاوز رفض النظام |
+| APK صغيرة أو المشهد الصناعي | ALL_MAPS لم يُمرر أو scene أعاد BuildSettings؛ افحص receipt+manifest+catalog لا الاسم |
+| خريطة بلا spawn | راجع SpawnClasses وteam/race/attacker/defender، لا تُخفِ origin fallback |
+| كل frame خطأ Submit/Cancel | StandaloneInputModule يحتاج InputManager axes حتى في قائمة لمس |
+| عناصر أصلية تتحول لكرات بعد save | `PersistPickupVisuals` يحفظ transient فقط (`!AssetDatabase.Contains`)، ثم content-test على مشاهد أُعيد فتحها |
+| أجزاء متكدسة عند الصفر | inline vertices قد تكون pivot-local؛ طبّق entity origin واختبر bounds مثل afterslime `*7` |
+| أسطح lightmapped مثقوبة | `blendfunc filter` أو additive لا يعني alpha-cutout؛ لا تقص ألفا لكل blendfunc |
+| ETC يفشل بلا C# exception | NPOT مثل 600×600 يصنع mip 150×150؛ اتركه RGBA32 mipmapped أو أعد التحجيم بقرار موثق |
+| references تتكسر بعد reimport | حافظ على GUID واستعمل تحديث asset موجود لا delete/recreate |
+| سقوط خلال أرض BSP | لا تعكس جميع meshverts عميانيًا: source winding مع swap Y/Z له اختبار حقيقي؛ patch winding منفصل |
+| MD3 يفشل رغم الامتداد | افحص magic؛ بعض `.md3` الأصلية IQM (`INTERQUAKEMODEL`) |
+| shader script لا يُقرأ | اسم shader قد يسبق `{` بسطر جديد؛ parser يجب أن يتجاوز newline |
+| apksigner لا يجد java | اضبط JAVA_HOME **وPATH** إلى OpenJDK/bin |
+| تكرار Git status البطيء | الحزمة كبيرة؛ استخدم فحصًا scoped و`--untracked-files=no` عبر الأداة، لا تكدّس scans يتيمة |
+| missing raw/derived resource | راجع restore manifests وأولوية roots وتحويلات dev.6، لا تستبدله بplaceholder دون تصريح |
+
+اتفاق الإحداثيات: `(x,y,z)` الأصلي → `(x,z,y)/32`، واختلاف handedness
+يعالج حسب نوع السطح. origin اللاعب ليس القدم؛ `ContentBridge` يطرح `24/32`
+على Y. تصادم mesh triangles **ليس** BSP brush collision الأصلي.
+قارئ IQM هنا للموارد الرسمية المعروفة، لا بوابة آمنة عامة لملفات مجهولة.
+
+## 12. خطة المتابعة ومعايير قبولها
+
+ابدأ بتقييم أحدث dev.7 قبل كتابة نفس الأنظمة من الصفر. ما يلي **بوابات**
+مفتوحة من baseline dev.6، لا حكم على تعديلات غير منشورة:
+
+| الأولوية | العمل ونقطة الربط | القبول المطلوب |
+|---|---|---|
+| P0 | اختبار APK المنشور على هاتف | معلومات الجهاز والبصمة، صور حقيقية، تقرير crashes/لمس/أداء |
+| P1 | UI/HUD ولمس: Player/TouchLayout/Hud/MainMenu | hit regions لا تتداخل، 3 أصابع مستقلة، pause/resume، لا allocations ثقيلة لكل frame |
+| P1 | IQM skeletal animation: importer/runtime character | bind pose صحيح، idle/run/jump/death، bounds وnormals وثبات references، اختبار runtime لا إطار ثابت فقط |
+| P1 | doors/platforms/rotating/bobbing من ImportedSubmodel | origin/axis/distance/speed/wait صحيحة، collision وركوب المنصة والانسداد والpause/reset، فحوص فيزياء حقيقية |
+| P1 | الترسانة والذخيرة المشتركة/التقاط الأسلحة | نماذج view أصلية وخامات/أصوات كاملة لكل سلاح، أولي/ثانوي، ammo وownership ودورة pickup قابلة للاختبار |
+| P2 | OBJ وjump-pad materials والمؤثرات | حصر مسارات unresolved ثم فحص scene serialization ومراجعة مرئية، لا تحويل كل تحذير إلى نجاح |
+| P2 | الحركة/BSP collision/bots | مسارات مرجعية لكل نوع هندسة ومنحدر وممر، bots لا تتعلق/تسقط؛ أرقام مقارنة لا ادعاء parity |
+| P3 | modes ثم networking | مواصفة مستقلة، شروط فوز لكل نمط؛ authoritative server/prediction واختبار جهازين وتأخير قبل claim |
+| قبل الإنتاج | التراخيص، source correspondence، LTS وتوقيع إصدار | مراجعة موثقة منفصلة وخطة تحديث/استرجاع؛ لا استنتاج clearance من وجود الموارد |
+
+**تعريف إنجاز أي موجة:**
+1. مجال واضح وملفات مملوكة، لا edits متزامنة متعارضة.
+2. regression يفشل قبل الإصلاح وينجح بعده حيث أمكن.
+3. Python/host/Unity compile ثم Editor/content/Play Mode الملائمة؛ تحقق تقارير حديثة.
+4. all-maps بلا filter عند ادعاء الحزمة الكاملة؛ سجل استيراد وكيانات وخامات ناقصة.
+5. APK محلي برقم جديد وإيصال وCRC/manifest/signature/hash؛ اختبار الجهاز منفصل وصريح.
+6. تحديث VERSION/CHANGELOG/هذا الدليل ووثيقة الإصدار وأدلة منقحة،
+   commit/PR ثم Release إن طُلب. اترك للـagent التالي آخر نجاح وآخر فشل والخطوة التالية.
+
+## 13. ترتيب المراجع والحفاظ على التاريخ
+
+- هذا الملف هو نقطة الدخول التشغيلية؛ التفاصيل المصدرية أحدث من التخمين.
+- [UNITY-DEV6](docs/UNITY-DEV6.md) وتقاريره هي مرجع APK المنشور.
+- [LOCAL_BUILD](docs/LOCAL_BUILD.md)، [RELEASING](docs/RELEASING.md) للتوسّع.
+- [FULL-GAME-GATES](docs/FULL-GAME-GATES.md) يحتوي جدول dev.4 تاريخيًا؛
+  اقرأ تحديث dev.6 في بدايته قبل نقل ادعاء غياب محتوى.
+- [TESTING](docs/TESTING.md) و[ARCHITECTURE](docs/ARCHITECTURE.md)
+  يتضمنان تأسيسًا أقدم؛ وصف «APK لم يُبن» أو «art غائب» لا يُنقل كحالة اليوم.
+- [CHANGELOG](CHANGELOG.md)، [dev.5](docs/UNITY-DEV5.md)،
+  [dev.4](docs/UNITY-DEV4.md)، [dev.3](docs/UNITY-CONTINUATION.md) لسجل التطور.
+- `docs/UNITY-DEV5-WIP.md` وصف عمل غير مُثبت بالنشر وقت كتابته، وليس دليل وجوده في APK.
+- [التسليم السابق محفوظ كاملًا](docs/history/AGENTS-PRE-HANDOFF-2026-09-21.md)
+  للرجوع، لا للعمل بتعليمات فروعه القديمة على أنها حالية.

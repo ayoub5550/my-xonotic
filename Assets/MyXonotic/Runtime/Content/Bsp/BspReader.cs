@@ -157,19 +157,6 @@ namespace MyXonotic.Content.Bsp
 
         private const float MaxUvMagnitude = 1_000_000f; // UVs can legitimately repeat many times over large surfaces; only reject NaN/Infinity/absurd.
 
-        private static void CheckFiniteUv(float v, string what)
-        {
-            if (float.IsNaN(v) || float.IsInfinity(v))
-            {
-                throw new BspFormatException("Non-finite float (" + what + ") encountered in BSP data.");
-            }
-            if (v > MaxUvMagnitude || v < -MaxUvMagnitude)
-            {
-                throw new BspFormatException(string.Format(
-                    "UV magnitude {0} in {1} exceeds sanity bound {2}.", v, what, MaxUvMagnitude));
-            }
-        }
-
         private static void CheckFinite(float v, string what)
         {
             if (float.IsNaN(v) || float.IsInfinity(v))
@@ -235,6 +222,7 @@ namespace MyXonotic.Content.Bsp
             int count = lump.Length / VertexRecordSize;
             CheckCount(count, MaxVertexes, BspLump.Vertexes);
             var result = new BspVertex[count];
+            int sanitizedUvs = 0;
             for (int i = 0; i < count; i++)
             {
                 int o = lump.Offset + i * VertexRecordSize;
@@ -249,10 +237,15 @@ namespace MyXonotic.Content.Bsp
                 float sv = reader.ReadFloat32(o + 16);
                 float lu = reader.ReadFloat32(o + 20);
                 float lv = reader.ReadFloat32(o + 24);
-                CheckFiniteUv(su, "vertex.surfaceUv.u");
-                CheckFiniteUv(sv, "vertex.surfaceUv.v");
-                CheckFiniteUv(lu, "vertex.lightmapUv.u");
-                CheckFiniteUv(lv, "vertex.lightmapUv.v");
+                // Real q3map2 output leaves garbage (huge/NaN) in the lightmap
+                // UV channel of vertices whose faces do not sample a lightmap
+                // (e.g. afterslime patch faces). Surface UVs get the same
+                // treatment so a single junk unused vertex does not veto a
+                // whole official map: sanitize to 0 and report once.
+                su = SanitizeUv(su, ref sanitizedUvs);
+                sv = SanitizeUv(sv, ref sanitizedUvs);
+                lu = SanitizeUv(lu, ref sanitizedUvs);
+                lv = SanitizeUv(lv, ref sanitizedUvs);
                 float nx = reader.ReadFloat32(o + 28);
                 float ny = reader.ReadFloat32(o + 32);
                 float nz = reader.ReadFloat32(o + 36);
@@ -274,7 +267,23 @@ namespace MyXonotic.Content.Bsp
                     Color = new BspColor32(r, g, b, a),
                 };
             }
+            if (sanitizedUvs > 0)
+            {
+                warnings.Add(string.Format(
+                    "{0} vertex UV component(s) were non-finite or exceeded {1} and were reset to 0 (typically unused lightmap UVs on non-lightmapped faces).",
+                    sanitizedUvs, MaxUvMagnitude));
+            }
             return result;
+        }
+
+        private static float SanitizeUv(float v, ref int counter)
+        {
+            if (float.IsNaN(v) || float.IsInfinity(v) || v > MaxUvMagnitude || v < -MaxUvMagnitude)
+            {
+                counter++;
+                return 0f;
+            }
+            return v;
         }
 
         private static int[] ReadMeshVerts(BspLittleEndianReader reader, BspLumpDirEntry lump)

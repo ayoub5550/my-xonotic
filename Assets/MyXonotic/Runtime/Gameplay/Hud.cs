@@ -73,7 +73,7 @@ namespace MyXonotic
 
             _bannerText = CreateText("Banner", _safeAreaRoot, new Vector2(0f, 1f), new Vector2(1f, 1f),
                 new Vector2(0f, -20f), new Vector2(0f, 30f), 22, TextAnchor.UpperCenter, Color.yellow);
-            _bannerText.text = "DEVELOPMENT SLICE — NOT FULL XONOTIC";
+            _bannerText.text = "my-xonotic " + Application.version + " — development build";
 
             _statusText = CreateText("Status", _safeAreaRoot, new Vector2(0f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(20f, 20f), new Vector2(0f, 90f), 20, TextAnchor.LowerLeft, Color.white);
@@ -91,7 +91,7 @@ namespace MyXonotic
             rt.offsetMax = Vector2.zero;
             _pauseText = CreateText("PauseText", _pausePanel.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(600f, 100f), 28, TextAnchor.MiddleCenter, Color.white);
-            _pauseText.text = "PAUSED\nTouch RESUME or RESTART\nDesktop: P / R";
+            _pauseText.text = "PAUSED\nTouch RESUME, RESTART or MAIN MENU\nDesktop: P / R / M";
             _pausePanel.SetActive(false);
         }
 
@@ -151,7 +151,7 @@ namespace MyXonotic
                     _pauseText.text = "MATCH OVER — " + winner + "\n" + result.Reason +
                         "\nTouch RESTART / Desktop R";
                 }
-                else _pauseText.text = "PAUSED\nTouch RESUME or RESTART\nDesktop: P / R";
+                else _pauseText.text = "PAUSED\nTouch RESUME, RESTART or MAIN MENU\nDesktop: P / R / M";
             }
             if (_pausePanel != null) _pausePanel.SetActive(ArenaBootstrap.IsPaused);
         }
@@ -261,6 +261,13 @@ namespace MyXonotic
             if (isPaused)
             {
                 GUI.Box(GuiRect(TouchLayout.Restart), "RESTART MATCH", boxStyle);
+                if (MyXonotic.Menu.SceneFlow.HasMainMenu())
+                {
+                    GUI.color = PauseColor;
+                    GUI.Box(GuiRect(TouchLayout.MainMenu), string.Empty, boxStyle);
+                    GUI.color = Color.white;
+                    GUI.Box(GuiRect(TouchLayout.MainMenu), "MAIN MENU", boxStyle);
+                }
                 return;
             }
 

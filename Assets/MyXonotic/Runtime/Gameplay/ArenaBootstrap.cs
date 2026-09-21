@@ -91,19 +91,29 @@ namespace MyXonotic
             if (Match != null) Match.AdvanceTime(Time.deltaTime, IsPaused);
             if (Input.GetKeyDown(KeyCode.P) || Input.GetKeyDown(KeyCode.Escape)) SetPaused(!IsPaused);
             if (Input.GetKeyDown(KeyCode.R)) Restart();
+            if (Input.GetKeyDown(KeyCode.M) && IsPaused) ReturnToMenu();
             for (int i = 0; i < Input.touchCount; i++)
             {
                 var touch = Input.GetTouch(i);
                 if (touch.phase != TouchPhase.Began) continue;
                 if (TouchLayout.Pause.Contains(touch.position)) SetPaused(!IsPaused);
                 else if (IsPaused && TouchLayout.Restart.Contains(touch.position)) Restart();
+                else if (IsPaused && TouchLayout.MainMenu.Contains(touch.position)) ReturnToMenu();
             }
             if (Input.touchCount == 0 && Input.GetMouseButtonDown(0) &&
                 Cursor.lockState != CursorLockMode.Locked)
             {
                 if (TouchLayout.Pause.Contains(Input.mousePosition)) SetPaused(!IsPaused);
                 else if (IsPaused && TouchLayout.Restart.Contains(Input.mousePosition)) Restart();
+                else if (IsPaused && TouchLayout.MainMenu.Contains(Input.mousePosition)) ReturnToMenu();
             }
+        }
+
+        /// Leaves the match for the map menu when one is packaged; otherwise a no-op.
+        public void ReturnToMenu()
+        {
+            if (!MyXonotic.Menu.SceneFlow.HasMainMenu()) return;
+            MyXonotic.Menu.SceneFlow.LoadMainMenu();
         }
 
         public void SetPaused(bool paused)

@@ -21,6 +21,9 @@ namespace MyXonotic.EditorTools
     public static class BspImportPipeline
     {
         private const string GeneratedRoot = "Assets/MyXonotic/Generated/Imported";
+        /// World/sky textures are shared across every imported map so the
+        /// same upstream image is stored once in the player, not once per map.
+        private const string SharedTextureFolder = "Assets/MyXonotic/Generated/Textures";
         private const string VertexColorShaderName = "MyXonotic/VertexColor";
         private const string LightmappedShaderName = "MyXonotic/Lightmapped";
         private const string SkySixSidedShaderName = "MyXonotic/Sky6Sided";
@@ -390,8 +393,8 @@ namespace MyXonotic.EditorTools
                     }
                     else
                     {
-                        string texAssetPath = folder + "/textures/" + MakeSafeFolderName(Path.GetFileNameWithoutExtension(diffusePath)) + "_" + StableShortHash(diffusePath) + ".asset";
-                        diffuse = CreateOrReplaceAsset(loaded, texAssetPath);
+                        string texAssetPath = SharedTextureFolder + "/" + MakeSafeFolderName(Path.GetFileNameWithoutExtension(diffusePath)) + "_" + StableShortHash(diffusePath) + ".asset";
+                        diffuse = CreateOrReplaceTexture(loaded, texAssetPath, true);
                         diffuseCache[diffusePath] = diffuse;
                         manifestEntries.Add(ManifestEntry.For("diffuse", shaderName, diffusePath));
                     }
@@ -552,9 +555,9 @@ namespace MyXonotic.EditorTools
                         "loaded (" + reason + "); sky surface uses the flat fallback material.");
                     return BuildFallbackMaterial(materialName, fallbackShader, folder);
                 }
-                string texAssetPath = folder + "/textures/" + MakeSafeFolderName(envBase.Replace('/', '_')) + "_" +
+                string texAssetPath = SharedTextureFolder + "/" + MakeSafeFolderName(envBase.Replace('/', '_')) + "_" +
                     side + "_" + StableShortHash(sourcePath) + ".asset";
-                var tex = CreateOrReplaceAsset(loaded, texAssetPath);
+                var tex = CreateOrReplaceTexture(loaded, texAssetPath, false);
                 mat.SetTexture(SkySidePropertyName(side), tex);
                 manifestEntries.Add(ManifestEntry.For("sky-" + side, envBase, sourcePath));
             }
@@ -574,7 +577,7 @@ namespace MyXonotic.EditorTools
                 {
                     string assetPath = folder + "/textures/lm_internal_" + lightmapIndex + ".asset";
                     manifestEntries.Add(ManifestEntry.ForInternal("lightmap-internal", lightmapIndex));
-                    return CreateOrReplaceAsset(internalTex, assetPath);
+                    return CreateOrReplaceTexture(internalTex, assetPath, false);
                 }
             }
 
@@ -590,7 +593,7 @@ namespace MyXonotic.EditorTools
                 }
                 string assetPath = folder + "/textures/lm_external_" + lightmapIndex + "_" + StableShortHash(externalPath) + ".asset";
                 manifestEntries.Add(ManifestEntry.For("lightmap-external", "lm_" + lightmapIndex.ToString("D4"), externalPath));
-                return CreateOrReplaceAsset(loaded, assetPath);
+                return CreateOrReplaceTexture(loaded, assetPath, false);
             }
 
             return null;
@@ -749,6 +752,24 @@ namespace MyXonotic.EditorTools
         /// references. Returning the persisted object is important: the caller
         /// must not keep a reference to the discarded transient mesh/material.
         /// </summary>
+        /// <summary>
+        /// Persists a decoded texture: reuses an identical existing asset
+        /// (same path = same source hash) without re-encoding, otherwise
+        /// builds mipmaps and GPU-compresses it via ImportedTexturePolicy.
+        /// </summary>
+        private static Texture2D CreateOrReplaceTexture(Texture2D loaded, string assetPath, bool repeat)
+        {
+            EnsureFolder(Path.GetDirectoryName(assetPath).Replace('\\', '/'));
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+            if (existing != null && ImportedTexturePolicy.ReuseExisting)
+            {
+                UnityEngine.Object.DestroyImmediate(loaded);
+                return existing;
+            }
+            var finalTex = ImportedTexturePolicy.Finalize(loaded, repeat);
+            return CreateOrReplaceAsset(finalTex, assetPath);
+        }
+
         private static T CreateOrReplaceAsset<T>(T asset, string assetPath) where T : UnityEngine.Object
         {
             var existing = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);

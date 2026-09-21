@@ -1,5 +1,21 @@
 # my-xonotic — developer and agent handoff
 
+## dev.5 full-map checkpoint — 2026-09-21 (branch `feat/unity-dev5-full-game`)
+
+Read `docs/UNITY-DEV5.md` first. First APK bundling all 29 importable official
+maps + code-built main menu + per-map music: `my-xonotic-full.apk`,
+322,882,281 bytes, versionCode 5, SHA256
+`0e34d259539458ff091f100fb78648530f0ccdf72f693126bb73613db54c887f`,
+receipt `docs/unity-dev5-build-2026-09-21.json`, map report
+`docs/unity-dev5-maps-2026-09-21.json` (29/29 imported, 0 failed).
+Build: `XONOTIC_ALL_MAPS=1 XONOTIC_VERSION_CODE=5 python3 tools/local_unity.py android`
+(~12 min on 17 cores). Imported textures are ETC2 + mipmaps and shared across
+maps (`Editor/Import/ImportedTexturePolicy.cs`); generated scenes/catalog live
+under git-ignored `Assets/MyXonotic/Generated/`, so `prepare-maps` or the
+FullGame build must run before opening the menu scene on a fresh clone.
+`docs/UNITY-DEV5-WIP.md` describes code that was never pushed; do not assume
+weapons/Erebus/doors exist. Still NOT complete Xonotic; no device test of this hash.
+
 ## Full-game continuation wave — dev.4 source checkpoint
 
 Owner reiterated full game after dev.3; a Boil-only release is not the endpoint.

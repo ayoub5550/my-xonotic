@@ -71,6 +71,17 @@ namespace MyXonotic
             }
         }
 
+        /// Pause-overlay button under RESTART that returns to the map menu.
+        public static Rect MainMenu
+        {
+            get
+            {
+                var s = Safe;
+                return new Rect(s.center.x - s.height * 0.25f, s.center.y - s.height * 0.34f,
+                    s.height * 0.5f, s.height * 0.12f);
+            }
+        }
+
         public static Rect Restart
         {
             get

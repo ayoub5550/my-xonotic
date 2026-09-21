@@ -18,6 +18,7 @@ METHODS = {
     "configure": "MyXonotic.EditorTools.LocalBuild.Configure",
     "scene": "MyXonotic.EditorTools.LocalBuild.CreateDevelopmentScene",
     "import": "MyXonotic.EditorTools.LocalBuild.ImportExternalBsp",
+    "prepare-maps": "MyXonotic.EditorTools.FullGameBuild.PrepareFullGame",
     "android": "MyXonotic.EditorTools.LocalBuild.BuildAndroid",
     "linux": "MyXonotic.EditorTools.LocalBuild.BuildLinux",
     "test": "MyXonotic.EditorTools.LocalTests.Run",
@@ -31,6 +32,8 @@ METHODS = {
 
 def build_output(task, imported):
     if task == "android":
+        if os.environ.get("XONOTIC_ALL_MAPS") == "1":
+            return "my-xonotic-full.apk"
         return "my-xonotic-unity-boil.apk" if imported else "my-xonotic-development.apk"
     return "my-xonotic.x86_64"
 

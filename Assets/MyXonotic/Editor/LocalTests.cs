@@ -18,6 +18,8 @@ namespace MyXonotic.EditorTools
         public static void Run()
         {
             Passed.Clear();
+            BspGameplayImporter.RunSelfTests();
+            Check(true, "trigger import bounds and launch math self-tests");
             Check(ArenaMath.ApplyGroundFriction(new Vector3(10, 7, 0), 6, 3, 0.1f).y == 7,
                 "friction preserves vertical speed");
             int armor = 100;
@@ -39,13 +41,33 @@ namespace MyXonotic.EditorTools
             Check(root.GetComponentsInChildren<BspSpawnPoint>().Length == 1, "fixture spawn marker");
             Check(root.GetComponentsInChildren<MeshCollider>().Length == 1, "fixture collision mesh");
             Check(root.GetComponentInChildren<MeshFilter>().sharedMesh.vertexCount > 4, "patch tessellation");
+
+            var fixtureMesh = root.GetComponentInChildren<MeshFilter>().sharedMesh;
+            Check(fixtureMesh.uv.Length == fixtureMesh.vertexCount, "surface UV channel populated");
+            Check(fixtureMesh.uv2.Length == fixtureMesh.vertexCount, "lightmap UV channel populated");
+            var fixtureRenderer = root.GetComponentInChildren<MeshRenderer>();
+            Check(fixtureRenderer.sharedMaterials.Length == fixtureMesh.subMeshCount, "one material per submesh");
+            Check(fixtureRenderer.sharedMaterials.Length >= 1 && fixtureRenderer.sharedMaterials[0] != null,
+                "fixture shader with no resolvable content root still gets a usable (fallback) material");
+            Check(fixtureRenderer.sharedMaterials[0].shader != null &&
+                fixtureRenderer.sharedMaterials[0].shader.name == "MyXonotic/VertexColor",
+                "unresolvable fixture texture degrades to the vertex-colour fallback material, not a broken/pink one");
+
+            string manifestPath = "Assets/MyXonotic/Generated/Imported/" + root.name + "/import-manifest.json";
+            Check(File.Exists(manifestPath), "import writes a provenance manifest JSON next to the generated assets");
+
             var previousMesh = root.GetComponentInChildren<MeshFilter>().sharedMesh;
             var previousGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(previousMesh));
+            var previousMaterial = fixtureRenderer.sharedMaterials[0];
+            var previousMaterialGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(previousMaterial));
             UnityEngine.Object.DestroyImmediate(root);
             root = BspImportPipeline.Import(fixture);
             Check(root.GetComponentInChildren<MeshFilter>().sharedMesh != null, "repeat import");
             Check(AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(
                 root.GetComponentInChildren<MeshFilter>().sharedMesh)) == previousGuid, "repeat import preserves GUID");
+            Check(AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(
+                root.GetComponentInChildren<MeshRenderer>().sharedMaterials[0])) == previousMaterialGuid,
+                "repeat import preserves the generated material's GUID (deterministic asset path)");
             foreach (var behaviour in root.GetComponentsInChildren<MonoBehaviour>())
                 Check(behaviour != null, "imported component serializable");
             LocalBuild.CreateDevelopmentScene();

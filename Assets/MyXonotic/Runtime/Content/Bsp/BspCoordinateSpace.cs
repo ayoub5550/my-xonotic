@@ -12,11 +12,24 @@ namespace MyXonotic.Content.Bsp
     ///   unity.z =  quake.y / 32
     ///
     /// Swapping Y and Z is a mirroring transform (it flips handedness from
-    /// Quake's right-handed Z-up system to Unity's left-handed Y-up system),
-    /// so every triangle's winding order must also be reversed
-    /// (index order a,b,c -> a,c,b) or normals/backface culling come out
-    /// inside-out. This is applied once, centrally, in
-    /// <see cref="BspGeometryBuilder"/>.
+    /// Quake's right-handed Z-up system to Unity's left-handed Y-up system).
+    /// A theory-only reading of that says every triangle's winding order
+    /// must also be reversed for normals/backface culling to come out
+    /// right-side-out — an earlier revision of this importer did exactly
+    /// that (index order a,b,c -> a,c,b) for polygon/mesh faces. That was
+    /// measured (numerically, against real compiled Xonotic maps: cross
+    /// product of the emitted triangle vs. the source's own per-vertex
+    /// normal, both axis-converted) to be backwards: it produced
+    /// inward-facing world geometry for ~99.9% of a real map's faces
+    /// (players fell through the floor onto its underside). Polygon/mesh
+    /// faces are now emitted in the SAME order the source meshverts define
+    /// (no reversal). Patch faces (this project's own from-scratch grid
+    /// tessellation, not a meshvert triangle-soup from the map compiler)
+    /// were independently measured to need the opposite convention and are
+    /// unchanged. See BspGeometryBuilder.AppendIndexedFace /
+    /// AddQuadTriangles for the emission code and tests/csharp/ParserTests.cs
+    /// for the regression guard against real map data. Trust a numeric
+    /// check against real data over an isolated theoretical argument.
     ///
     /// Player-origin note: source "origin" is the player hull origin, NOT
     /// feet or eye height. The nominal hull bottom is origin.z - 24.
@@ -34,6 +47,12 @@ namespace MyXonotic.Content.Bsp
         {
             return new BspVec3(q.X / SourceUnitsPerUnityUnit, q.Z / SourceUnitsPerUnityUnit,
                 q.Y / SourceUnitsPerUnityUnit);
+        }
+
+        /// <summary>Direction/normal conversion: same axis swap, no scale.</summary>
+        public static BspVec3 QuakeDirectionToUnity(BspVec3 q)
+        {
+            return new BspVec3(q.X, q.Z, q.Y);
         }
 
         /// <summary>

@@ -313,6 +313,13 @@ namespace MyXonotic
             var player = go.AddComponent<Player>();
             player.ViewCamera = cam;
             player.Weapons = weapons;
+            if (UsedImportedArena)
+            {
+                var viewObject = new GameObject("OriginalWeaponView");
+                viewObject.transform.SetParent(cameraGO.transform, false);
+                weapons.View = viewObject.AddComponent<WeaponView>();
+                weapons.View.Controller = weapons;
+            }
 
             float yaw = PlaceAtSpawn(go.transform);
             player.SetViewYaw(yaw);

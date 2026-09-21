@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using MyXonotic.Content;
 using MyXonotic.Content.Bsp;
 using UnityEditor;
@@ -14,12 +15,14 @@ namespace MyXonotic.EditorTools
     /// in-scene arena GameObject. Does not read/extract PK3 archives itself
     /// (see tools/content/pk3_tool.py for safe PK3 inventory/extraction) and
     /// never executes any script/code found inside a BSP or archive — it
-    /// only interprets fixed-layout binary lumps and quoted entity text.
+    /// only interprets fixed-layout binary lumps and quoted entity text, and
+    /// parses material scripts (see XonoticContentResolver) purely as data.
     /// </summary>
     public static class BspImportPipeline
     {
         private const string GeneratedRoot = "Assets/MyXonotic/Generated/Imported";
         private const string VertexColorShaderName = "MyXonotic/VertexColor";
+        private const string LightmappedShaderName = "MyXonotic/Lightmapped";
 
         // A legitimate Q3-family map .bsp is typically a few hundred KB to
         // a few tens of MB. 128 MiB is a generous ceiling that still
@@ -30,9 +33,13 @@ namespace MyXonotic.EditorTools
         /// <summary>
         /// Imports a single .bsp file. Returns the root GameObject (carrying
         /// an ImportedArena component) with child spawn-marker GameObjects
-        /// (BspSpawnPoint) and one or more mesh children for world geometry.
-        /// Throws MyXonotic.Content.Bsp.BspFormatException for unsupported
-        /// or malformed input — callers should surface that message to the
+        /// (BspSpawnPoint), one mesh child for world geometry (one submesh +
+        /// material per distinct shader/lightmap combination, when content
+        /// roots resolve real textures/lightmaps; a flat vertex-colour
+        /// fallback otherwise), and any gameplay trigger volumes
+        /// BspGameplayImporter recognizes. Throws
+        /// MyXonotic.Content.Bsp.BspFormatException for unsupported or
+        /// malformed input — callers should surface that message to the
         /// user rather than let Unity log a raw stack trace.
         /// </summary>
         public static GameObject Import(string bspPath)
@@ -58,9 +65,11 @@ namespace MyXonotic.EditorTools
             BspDocument doc = BspReader.Read(data); // throws BspFormatException on unsupported/malformed input
 
             string sourceName = Path.GetFileName(bspPath);
-            string safeName = MakeSafeFolderName(Path.GetFileNameWithoutExtension(bspPath));
+            string mapName = Path.GetFileNameWithoutExtension(bspPath);
+            string safeName = MakeSafeFolderName(mapName);
 
             var warnings = new List<string>(doc.Warnings);
+            var manifestEntries = new List<ManifestEntry>();
 
             var root = new GameObject(safeName);
             var arena = root.AddComponent<ImportedArena>();
@@ -81,7 +90,7 @@ namespace MyXonotic.EditorTools
                 if (doc.Models.Length > 1)
                 {
                     warnings.Add(string.Format(
-                        "{0} inline brush submodel(s) (movers/triggers) found; only worldspawn (model 0) geometry was imported, submodels are skipped in this pass.",
+                        "{0} inline brush submodel(s) (movers/triggers) found; only worldspawn (model 0) geometry was imported here (see BspGameplayImporter for trigger_* volumes built from a subset of these submodels).",
                         doc.Models.Length - 1));
                 }
 
@@ -89,7 +98,7 @@ namespace MyXonotic.EditorTools
                 if (meshData.Positions.Count > 0 &&
                     (meshData.Triangles.Count > 0 || meshData.CollisionTriangles.Count > 0))
                 {
-                    BuildMeshChild(root.transform, safeName, meshData, warnings);
+                    BuildMeshChild(root.transform, safeName, mapName, doc, meshData, warnings, manifestEntries);
                 }
                 else
                 {
@@ -99,19 +108,41 @@ namespace MyXonotic.EditorTools
 
             BuildSpawnMarkers(doc, root.transform, warnings);
 
+            // Additive gameplay pass (trigger_push/trigger_teleport/trigger_hurt
+            // volumes from brush submodels). Kept separate from worldspawn/spawn
+            // building above; see BspGameplayImporter's own doc comment.
+            try
+            {
+                warnings.AddRange(BspGameplayImporter.Import(doc, root.transform));
+            }
+            catch (Exception e)
+            {
+                warnings.Add("BspGameplayImporter.Import threw and was skipped: " + e.Message);
+            }
+
             arena.warnings = warnings.ToArray();
             foreach (var w in warnings)
             {
                 Debug.LogWarning("[BspImportPipeline] " + sourceName + ": " + w);
             }
 
+            WriteImportManifest(safeName, sourceName, manifestEntries, warnings);
+
             return root;
         }
 
-        private static void BuildMeshChild(Transform parent, string safeName, BspMeshData meshData, List<string> warnings)
+        // --------------------------------------------------------------
+        // World mesh: geometry + per-(shader,lightmap) submeshes/materials
+        // --------------------------------------------------------------
+
+        private static void BuildMeshChild(
+            Transform parent, string safeName, string mapName, BspDocument doc, BspMeshData meshData,
+            List<string> warnings, List<ManifestEntry> manifestEntries)
         {
             string folder = GeneratedRoot + "/" + safeName;
             EnsureFolder(folder);
+            EnsureFolder(folder + "/textures");
+            EnsureFolder(folder + "/materials");
 
             var mesh = new Mesh();
             mesh.name = safeName + "_world";
@@ -121,6 +152,9 @@ namespace MyXonotic.EditorTools
 
             var positions = new Vector3[meshData.Positions.Count];
             var colors = new Color32[meshData.Colors.Count];
+            var surfaceUvs = new Vector2[meshData.SurfaceUvs.Count];
+            var lightmapUvs = new Vector2[meshData.LightmapUvs.Count];
+            var normals = new Vector3[meshData.Normals.Count];
             for (int i = 0; i < positions.Length; i++)
             {
                 var p = meshData.Positions[i];
@@ -131,11 +165,86 @@ namespace MyXonotic.EditorTools
                 var c = meshData.Colors[i];
                 colors[i] = new Color32(c.R, c.G, c.B, c.A);
             }
+            for (int i = 0; i < surfaceUvs.Length; i++)
+            {
+                var uv = meshData.SurfaceUvs[i];
+                surfaceUvs[i] = new Vector2(uv.X, uv.Y);
+            }
+            for (int i = 0; i < lightmapUvs.Length; i++)
+            {
+                var uv = meshData.LightmapUvs[i];
+                lightmapUvs[i] = new Vector2(uv.X, uv.Y);
+            }
+            bool anyNonZeroNormal = false;
+            for (int i = 0; i < normals.Length; i++)
+            {
+                var n = meshData.Normals[i];
+                normals[i] = new Vector3(n.X, n.Y, n.Z);
+                if (normals[i].sqrMagnitude > 1e-8f) anyNonZeroNormal = true;
+            }
 
             mesh.vertices = positions;
             mesh.colors32 = colors;
-            mesh.triangles = meshData.Triangles.ToArray();
-            mesh.RecalculateNormals();
+            mesh.uv = surfaceUvs;
+            mesh.uv2 = lightmapUvs;
+
+            var resolver = new XonoticContentResolver();
+            if (resolver.Roots.Count == 0)
+            {
+                warnings.Add(
+                    "XonoticContentResolver found no existing content roots (checked XONOTIC_CONTENT_ROOTS, then " +
+                    "ExternalContent/maps, ExternalContent/data, ThirdParty/Xonotic/maps-pk3, ThirdParty/Xonotic/data); " +
+                    "world geometry will use the flat vertex-colour fallback material for every surface.");
+            }
+
+            bool hasDeluxemaps = HasLikelyDeluxemaps(resolver, mapName);
+            if (hasDeluxemaps)
+            {
+                warnings.Add(
+                    "External lightmap directory for '" + mapName + "' looks deluxemapped (alternating lighting/normal " +
+                    "images); only the even lighting lightmaps referenced directly by face data are used, deluxemap " +
+                    "(bumped specular) images are intentionally not sampled by this pass.");
+            }
+
+            var diffuseCache = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
+            var lightmapCache = new Dictionary<int, Texture2D>();
+            var fallbackShader = Shader.Find(VertexColorShaderName);
+            var lightmappedShader = Shader.Find(LightmappedShaderName);
+            if (lightmappedShader == null)
+            {
+                warnings.Add("Shader '" + LightmappedShaderName + "' not found; all groups fall back to '" + VertexColorShaderName + "'.");
+            }
+
+            int groupCount = Math.Max(meshData.Groups.Count, 1);
+            mesh.subMeshCount = groupCount;
+            var materials = new Material[groupCount];
+
+            if (meshData.Groups.Count == 0)
+            {
+                mesh.SetTriangles(meshData.Triangles, 0);
+                materials[0] = null;
+            }
+            else
+            {
+                for (int gi = 0; gi < meshData.Groups.Count; gi++)
+                {
+                    var group = meshData.Groups[gi];
+                    mesh.SetIndices(group.Triangles.ToArray(), MeshTopology.Triangles, gi, false);
+                    materials[gi] = BuildGroupMaterial(
+                        doc, group, folder, mapName, resolver, diffuseCache, lightmapCache,
+                        lightmappedShader, fallbackShader, warnings, manifestEntries);
+                }
+            }
+
+            if (anyNonZeroNormal)
+            {
+                mesh.normals = normals;
+            }
+            else
+            {
+                warnings.Add("Worldspawn vertex data had no usable normals; recalculating flat/smoothed normals instead.");
+                mesh.RecalculateNormals();
+            }
             mesh.RecalculateBounds();
 
             string meshAssetPath = folder + "/" + safeName + "_world.asset";
@@ -148,19 +257,7 @@ namespace MyXonotic.EditorTools
 
             var mr = go.AddComponent<MeshRenderer>();
             mr.enabled = meshData.Triangles.Count > 0;
-            var shader = Shader.Find(VertexColorShaderName);
-            if (shader == null)
-            {
-                warnings.Add("Shader '" + VertexColorShaderName + "' not found; world geometry has no material assigned. " +
-                             "This importer intentionally does not attempt real texture/material parity with Xonotic.");
-            }
-            else
-            {
-                var mat = new Material(shader) { name = safeName + "_VertexColor" };
-                string matAssetPath = folder + "/" + safeName + "_VertexColor.mat";
-                mat = CreateOrReplaceAsset(mat, matAssetPath);
-                mr.sharedMaterial = mat;
-            }
+            mr.sharedMaterials = materials;
 
             if (meshData.CollisionTriangles.Count >= 3)
             {
@@ -180,9 +277,186 @@ namespace MyXonotic.EditorTools
             }
             else
             {
-                warnings.Add("No collision-eligible (CONTENTS_SOLID) surfaces found; world has no MeshCollider.");
+                warnings.Add(
+                    "No collision-eligible (CONTENTS_SOLID) surfaces found; world has no MeshCollider. Collision, when " +
+                    "present, still only covers eligible face triangles, not the original brush volumes — see AGENTS.md.");
             }
         }
+
+        /// <summary>
+        /// Builds (or fetches from the caches) the one persisted Material
+        /// asset for a (shader,lightmap) surface group: resolves a diffuse
+        /// texture and a lighting source (internal lump block, external
+        /// lightmap image, or per-vertex colour) through
+        /// <see cref="XonoticContentResolver"/>, and always returns a usable
+        /// material — degrading to the flat vertex-colour fallback (with an
+        /// explicit warning) rather than leaving a group unrendered.
+        /// </summary>
+        private static Material BuildGroupMaterial(
+            BspDocument doc, BspSurfaceGroup group, string folder, string mapName, XonoticContentResolver resolver,
+            Dictionary<string, Texture2D> diffuseCache, Dictionary<int, Texture2D> lightmapCache,
+            Shader lightmappedShader, Shader fallbackShader, List<string> warnings, List<ManifestEntry> manifestEntries)
+        {
+            string shaderName = "shader#" + group.ShaderIndex;
+            MaterialScript script = null;
+            bool shaderValid = group.ShaderIndex >= 0 && group.ShaderIndex < doc.Shaders.Length;
+            if (shaderValid)
+            {
+                shaderName = doc.Shaders[group.ShaderIndex].Name;
+                if (string.IsNullOrEmpty(shaderName)) shaderName = "shader#" + group.ShaderIndex;
+            }
+            else
+            {
+                warnings.Add(string.Format("Surface group references out-of-range shader index {0}; using fallback material.", group.ShaderIndex));
+            }
+
+            string safeShaderName = MakeSafeFolderName(shaderName.Replace('/', '_'));
+            string materialName = safeShaderName + "_lm" + group.LightmapIndex;
+
+            Texture2D diffuse = null;
+            if (shaderValid)
+            {
+                string diffusePath = resolver.ResolveDiffuse(shaderName, out script);
+                if (diffusePath == null)
+                {
+                    warnings.Add("No texture resolved for shader '" + shaderName + "'; check XONOTIC_CONTENT_ROOTS/ThirdParty coverage. Group uses fallback material.");
+                }
+                else if (!diffuseCache.TryGetValue(diffusePath, out diffuse))
+                {
+                    string reason;
+                    var loaded = BspTextureLoader.Load(diffusePath, srgb: true, failureReason: out reason);
+                    if (loaded == null)
+                    {
+                        warnings.Add("Texture for shader '" + shaderName + "' could not be loaded (" + reason + "); group uses fallback material.");
+                        diffuseCache[diffusePath] = null;
+                    }
+                    else
+                    {
+                        string texAssetPath = folder + "/textures/" + MakeSafeFolderName(Path.GetFileNameWithoutExtension(diffusePath)) + "_" + StableShortHash(diffusePath) + ".asset";
+                        diffuse = CreateOrReplaceAsset(loaded, texAssetPath);
+                        diffuseCache[diffusePath] = diffuse;
+                        manifestEntries.Add(ManifestEntry.For("diffuse", shaderName, diffusePath));
+                    }
+                }
+            }
+
+            if (diffuse == null)
+            {
+                // Never fall back to "Standard": AGENTS.md documents it as a
+                // ~1h shader-variant-compile trap in this sandboxed toolchain.
+                // "Hidden/InternalErrorShader" is Unity's always-available,
+                // trivially cheap built-in error shader.
+                var fallbackShaderChoice = fallbackShader != null ? fallbackShader : Shader.Find("Hidden/InternalErrorShader");
+                var fallbackMat = new Material(fallbackShaderChoice)
+                {
+                    name = materialName + "_Fallback"
+                };
+                return CreateOrReplaceAsset(fallbackMat, folder + "/materials/" + materialName + "_fallback.mat");
+            }
+
+            var shader = lightmappedShader != null ? lightmappedShader
+                : (fallbackShader != null ? fallbackShader : Shader.Find("Hidden/InternalErrorShader"));
+            var mat = new Material(shader) { name = materialName };
+            mat.SetTexture("_MainTex", diffuse);
+
+            // Lighting source: internal lump block, else external lightmap
+            // image, else per-vertex colour (LightMode 2), matching what
+            // BspGeometryBuilder already carries per vertex either way.
+            float lightMode = 2f; // default: vertex colour.
+            if (group.LightmapIndex >= 0)
+            {
+                Texture2D lightmap;
+                if (!lightmapCache.TryGetValue(group.LightmapIndex, out lightmap))
+                {
+                    lightmap = ResolveLightmapTexture(doc, group.LightmapIndex, folder, mapName, resolver, warnings, manifestEntries);
+                    lightmapCache[group.LightmapIndex] = lightmap;
+                }
+                if (lightmap != null)
+                {
+                    mat.SetTexture("_LightMap", lightmap);
+                    lightMode = 1f;
+                }
+                else
+                {
+                    warnings.Add(string.Format(
+                        "Shader '{0}': lightmap index {1} had no internal block and no external image resolved; falling back to per-vertex colour lighting.",
+                        shaderName, group.LightmapIndex));
+                }
+            }
+            // Negative indices (-1/-2/-3/...) are the documented Q3-family
+            // sentinels for "no lightmap"/"fullbright"/"by vertex colour";
+            // per-vertex colour (already carried on every vertex) is the
+            // correct, format-faithful fallback for all of them here.
+
+            mat.SetFloat("_LightMode", lightMode);
+            bool cullNone = script != null && script.CullNone;
+            mat.SetFloat("_Cull", cullNone ? 0f : 2f);
+
+            bool wantsAlphaTest = script != null && script.Stages.Any(s => !string.IsNullOrEmpty(s.AlphaFunc) || !string.IsNullOrEmpty(s.BlendFunc));
+            if (wantsAlphaTest)
+            {
+                mat.EnableKeyword("_ALPHATEST_ON");
+                mat.SetFloat("_Cutoff", 0.5f);
+                warnings.Add("Shader '" + shaderName + "' has an alpha-blended/alpha-tested stage; approximated here as a 0.5 alpha-cutout, not true translucency (no blend pass in Resources/Lightmapped.shader).");
+            }
+
+            return CreateOrReplaceAsset(mat, folder + "/materials/" + materialName + ".mat");
+        }
+
+        private static Texture2D ResolveLightmapTexture(
+            BspDocument doc, int lightmapIndex, string folder, string mapName, XonoticContentResolver resolver,
+            List<string> warnings, List<ManifestEntry> manifestEntries)
+        {
+            if (doc.Lightmaps != null && lightmapIndex < doc.Lightmaps.Length)
+            {
+                var block = doc.Lightmaps[lightmapIndex];
+                var internalTex = BspTextureLoader.LoadInternalLightmap(block, srgb: true, debugName: "lm_internal_" + lightmapIndex);
+                if (internalTex != null)
+                {
+                    string assetPath = folder + "/textures/lm_internal_" + lightmapIndex + ".asset";
+                    manifestEntries.Add(ManifestEntry.ForInternal("lightmap-internal", lightmapIndex));
+                    return CreateOrReplaceAsset(internalTex, assetPath);
+                }
+            }
+
+            string externalPath = resolver.FindExternalLightmap(mapName, lightmapIndex);
+            if (externalPath != null)
+            {
+                string reason;
+                var loaded = BspTextureLoader.Load(externalPath, srgb: true, failureReason: out reason);
+                if (loaded == null)
+                {
+                    warnings.Add("External lightmap '" + externalPath + "' could not be loaded (" + reason + ").");
+                    return null;
+                }
+                string assetPath = folder + "/textures/lm_external_" + lightmapIndex + "_" + StableShortHash(externalPath) + ".asset";
+                manifestEntries.Add(ManifestEntry.For("lightmap-external", "lm_" + lightmapIndex.ToString("D4"), externalPath));
+                return CreateOrReplaceAsset(loaded, assetPath);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Cheap heuristic: a map ships deluxemaps when its external
+        /// lightmap directory has an even count of lm_XXXX images (lighting,
+        /// normal-detail pairs) larger than the number of distinct lightmap
+        /// indices actually referenced by faces — i.e. there are "extra"
+        /// images beyond the ones face data points at. Only used to emit an
+        /// informational warning; it never changes which image is loaded.
+        /// </summary>
+        private static bool HasLikelyDeluxemaps(XonoticContentResolver resolver, string mapName)
+        {
+            for (int i = 1; i < 64; i += 2)
+            {
+                if (resolver.FindExternalLightmap(mapName, i) != null) return true;
+            }
+            return false;
+        }
+
+        // --------------------------------------------------------------
+        // Entities: spawn markers + unsupported-class reporting
+        // --------------------------------------------------------------
 
         private static void BuildSpawnMarkers(BspDocument doc, Transform parent, List<string> warnings)
         {
@@ -259,7 +533,7 @@ namespace MyXonotic.EditorTools
             }
             foreach (var c in unsupportedClasses.OrderBy(s => s, StringComparer.Ordinal))
             {
-                warnings.Add("Entity class '" + c + "' present in map but not instantiated by this import pass (movers/items/triggers are out of scope here).");
+                warnings.Add("Entity class '" + c + "' present in map but not instantiated by this import pass (see BspGameplayImporter for the trigger_push/trigger_teleport/trigger_hurt subset that is; movers/items remain out of scope).");
             }
         }
 
@@ -298,6 +572,16 @@ namespace MyXonotic.EditorTools
             return string.IsNullOrEmpty(cleaned) ? "arena" : cleaned;
         }
 
+        /// <summary>Short, deterministic (content-independent, path-dependent) suffix so two different source images that reduce to the same safe name don't collide/overwrite each other's generated asset.</summary>
+        private static string StableShortHash(string absolutePath)
+        {
+            using (var sha = SHA256.Create())
+            {
+                byte[] hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(absolutePath));
+                return BitConverter.ToString(hash, 0, 4).Replace("-", "").ToLowerInvariant();
+            }
+        }
+
         /// <summary>
         /// Update in place so repeat imports preserve GUIDs and existing scene
         /// references. Returning the persisted object is important: the caller
@@ -331,6 +615,80 @@ namespace MyXonotic.EditorTools
                     AssetDatabase.CreateFolder(current, parts[i]);
                 }
                 current = next;
+            }
+        }
+
+        // --------------------------------------------------------------
+        // Provenance manifest: which real upstream files this import used.
+        // --------------------------------------------------------------
+
+        [Serializable]
+        private sealed class ManifestEntry
+        {
+            public string role;
+            public string shaderOrContentPath;
+            public string sourcePath;
+            public string sha256;
+            public long sizeBytes;
+
+            public static ManifestEntry For(string role, string shaderOrContentPath, string absoluteSourcePath)
+            {
+                var entry = new ManifestEntry { role = role, shaderOrContentPath = shaderOrContentPath, sourcePath = absoluteSourcePath };
+                try
+                {
+                    var bytes = File.ReadAllBytes(absoluteSourcePath);
+                    entry.sizeBytes = bytes.LongLength;
+                    using (var sha = SHA256.Create())
+                        entry.sha256 = BitConverter.ToString(sha.ComputeHash(bytes), 0, 32).Replace("-", "").ToLowerInvariant();
+                }
+                catch (Exception)
+                {
+                    entry.sha256 = null;
+                }
+                return entry;
+            }
+
+            public static ManifestEntry ForInternal(string role, int lightmapIndex)
+            {
+                return new ManifestEntry
+                {
+                    role = role,
+                    shaderOrContentPath = "internal-lump#" + lightmapIndex,
+                    sourcePath = "(embedded in source .bsp LightMaps lump)",
+                    sha256 = null,
+                    sizeBytes = 128 * 128 * 3,
+                };
+            }
+        }
+
+        [Serializable]
+        private sealed class ImportManifest
+        {
+            public string sourceBsp;
+            public string generatedAtUtc;
+            public ManifestEntry[] entries;
+            public string[] warnings;
+        }
+
+        private static void WriteImportManifest(string safeName, string sourceName, List<ManifestEntry> entries, List<string> warnings)
+        {
+            var manifest = new ImportManifest
+            {
+                sourceBsp = sourceName,
+                generatedAtUtc = DateTime.UtcNow.ToString("o"),
+                entries = entries.ToArray(),
+                warnings = warnings.ToArray(),
+            };
+            string path = GeneratedRoot + "/" + safeName + "/import-manifest.json";
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllText(path, JsonUtility.ToJson(manifest, true));
+                AssetDatabase.ImportAsset(path);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[BspImportPipeline] failed to write import manifest '" + path + "': " + e.Message);
             }
         }
     }

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -15,6 +16,29 @@ namespace MyXonotic.EditorTools
     {
         public const string ScenePath = "Assets/MyXonotic/Scenes/DevelopmentArena.unity";
 
+        public static void ValidateCompilation()
+        {
+            // Reaching an Editor executeMethod proves the project assemblies
+            // compiled and loaded. A zero-exit licensing/early-exit path cannot
+            // generate this invocation-specific completion marker.
+            Directory.CreateDirectory("Artifacts");
+            File.WriteAllText("Artifacts/compile-result.json", JsonUtility.ToJson(
+                new CompileReceipt
+                {
+                    passed = true,
+                    invocation = Environment.GetEnvironmentVariable("XONOTIC_BUILD_INVOCATION"),
+                    unity = Application.unityVersion
+                }, true));
+            Debug.Log("[my-xonotic] EDITOR COMPILATION VERIFIED");
+        }
+
+        [Serializable]
+        sealed class CompileReceipt
+        {
+            public bool passed;
+            public string invocation, unity;
+        }
+
         [MenuItem("My Xonotic/1 - Configure local project")]
         public static void Configure()
         {
@@ -22,7 +46,7 @@ namespace MyXonotic.EditorTools
             PlayerSettings.productName = "my-xonotic Development";
             PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, "com.ayoub.myxonotic");
             PlayerSettings.bundleVersion = File.ReadAllText("VERSION").Trim();
-            PlayerSettings.Android.bundleVersionCode = 2;
+            PlayerSettings.Android.bundleVersionCode = 3;
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel26;
             PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevel36;
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
@@ -148,12 +172,33 @@ namespace MyXonotic.EditorTools
                 "Unofficial Unity reimplementation, experimental Boil slice; NOT complete Xonotic.\n" +
                 "Boil: kuniu the frogg, Mirio. Original artwork retains upstream licences.\n" +
                 "Upstream: https://xonotic.org and https://gitlab.com/xonotic\n" +
-                "Port/source/provenance: https://github.com/ayoub5550/my-xonotic/tree/feat/unity-original-map\n" +
+                "Port/source/provenance: https://github.com/ayoub5550/my-xonotic/tree/feat/unity-android-continuation\n" +
                 "No DarkPlaces engine or QuakeC implementation included. No download required at runtime.\n");
+            const string recoveryNotices = "ExternalContent/notices/Xonotic";
+            if (Directory.Exists(recoveryNotices))
+                foreach (var name in new[] { "COPYING", "GPL-2", "GPL-3" })
+                {
+                    string source = Path.Combine(recoveryNotices, name);
+                    if (File.Exists(source)) File.Copy(source, Path.Combine(notices, "upstream-" + name + ".txt"), true);
+                }
+            const string conversions = "ExternalContent/decoded/conversion-manifest.json";
+            if (File.Exists(conversions))
+                CopyPublicManifest(conversions, Path.Combine(notices, "texture-conversion-manifest.json"));
+            const string continuation = "docs/unity-continuation-content.json";
+            if (File.Exists(continuation))
+                File.Copy(continuation, Path.Combine(notices, "unity-continuation-content.json"), true);
             foreach (var manifest in Directory.GetFiles("Assets/MyXonotic/Generated", "*manifest*.json", SearchOption.AllDirectories))
-                File.Copy(manifest, Path.Combine(notices, Path.GetFileName(Path.GetDirectoryName(manifest))+"-"+Path.GetFileName(manifest)), true);
+                CopyPublicManifest(manifest, Path.Combine(notices, Path.GetFileName(Path.GetDirectoryName(manifest))+"-"+Path.GetFileName(manifest)));
             AssetDatabase.Refresh();
             AssetDatabase.SaveAssets();
+        }
+
+        static void CopyPublicManifest(string source, string destination)
+        {
+            // Preserve content-relative paths and hashes, not local build-machine directories.
+            string project = Path.GetFullPath(".").Replace('\\', '/').TrimEnd('/') + "/";
+            string json = File.ReadAllText(source).Replace(project, "");
+            File.WriteAllText(destination, json);
         }
 
         [MenuItem("My Xonotic/Build local Linux development player")]
@@ -177,6 +222,16 @@ namespace MyXonotic.EditorTools
                 options = BuildOptions.Development | BuildOptions.StrictMode
             });
             var summary = result.summary;
+            string output = Path.Combine("Builds", name);
+            long artifactBytes = 0;
+            string artifactHash = null;
+            if (summary.result == BuildResult.Succeeded && File.Exists(output))
+            {
+                artifactBytes = new FileInfo(output).Length;
+                using (var sha = SHA256.Create())
+                using (var stream = File.OpenRead(output))
+                    artifactHash = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+            }
             var stamp = new BuildReceipt
             {
                 unity = Application.unityVersion,
@@ -187,6 +242,10 @@ namespace MyXonotic.EditorTools
                 errors = summary.totalErrors,
                 warnings = summary.totalWarnings,
                 bytes = summary.totalSize,
+                output = name,
+                artifactBytes = artifactBytes,
+                sha256 = artifactHash,
+                invocation = Environment.GetEnvironmentVariable("XONOTIC_BUILD_INVOCATION") ?? "editor-menu",
                 revision = Environment.GetEnvironmentVariable("XONOTIC_REVISION") ?? "unrecorded",
                 content = Environment.GetEnvironmentVariable("XONOTIC_INCLUDE_EXTERNAL") == "1"
                     ? "Original Boil geometry/art with approximate Unity development rules; NOT full Xonotic; Android device unverified"
@@ -202,6 +261,8 @@ namespace MyXonotic.EditorTools
         sealed class BuildReceipt
         {
             public string unity, version, utc, target, result, revision, content;
+            public string output, sha256, invocation;
+            public long artifactBytes;
             public int errors, warnings;
             public ulong bytes;
         }

@@ -2,81 +2,104 @@
 
 ## المتطلبات
 
-- Unity **2022.3.62f3**، مع رخصة صالحة مفعّلة محليًا.
-- Android Build Support وAndroid SDK/NDK وOpenJDK من الإصدار نفسه.
-- Python **3.10+** للأدوات، وMono لاختبارات C# المستقلة.
-- Linux هو بيئة التطوير التي فُحصت هنا. أوامر Unity عبر Python قابلة للتهيئة
-  على أنظمة أخرى، لكننا لم نتحقق منها على Windows/macOS.
+- Unity **2022.3.62f3** مع رخصة صالحة مفعّلة محليًا.
+- Android Build Support وAndroid SDK/NDK وOpenJDK المتوافقة معه.
+- Python **3.10+**، وPillow عند تحويل DDS، وMono لاختبارات C# المستقلة.
+- الإعداد السابق استخدم NDK r23b وOpenJDK 11 وAndroid platform 36.
+  لا تفترض وجودها على جهاز جديد، ولا تعتبر تنزيلها إثباتًا لنجاح البناء.
 
-أدوات Android التي ثُبّتت في جلسة التأسيس: NDK r23b، OpenJDK 11.0.14.1،
-build-tools 34.0.0، platform-tools 32.0.0 وplatform 36. تحقق من قبول تراخيص SDK
-محليًا ومن نجاح البناء؛ وجود الملفات وحده غير كافٍ.
+المشروع يبنى محليًا فقط، دون Unity Cloud Build أو GitHub Actions.
+لا تنقل ملفات الرخصة أو كلمات المرور أو سجلات الحساب أو مفاتيح التوقيع إلى Git.
+تسجيل الدخول إلى موقع Unity لا يثبت تفعيل المحرر على جهاز البناء.
+استخدم Unity Hub للتفعيل المعتاد؛ لا تتجاوز الترخيص أو إقرار أهلية الحساب.
 
-## التفعيل
+## استعادة الحالة الحالية
 
-الطريقة المفضلة هي تسجيل الدخول وتفعيل Unity Personal عبر **Unity Hub**.
-محاولة هذه الجلسة أعادت `401` وانتهت قبل استيراد المشروع؛ لم تنتج APK.
-لا تضع بريدك أو كلمة مرورك أو ملف الرخصة في Git، ولا تُرفق سجلات التفعيل الخام.
+الفرع `main` تعريفي فقط. مصدر نقطة البداية `unity-v0.1.0-dev.2` موجود
+على `feat/unity-original-map`؛ متابعة الإصلاحات على فرع منفصل
+`feat/unity-android-continuation`. اقرأ `AGENTS.md` قبل التعديل.
+النتائج القديمة ليست نتائج اختبارات أُعيد تشغيلها على جهازك.
 
-الأداة تقبل اختياريًا `UNITY_USER` و`UNITY_PASS` من البيئة للتفعيل القديم،
-لكنها لا تطبع الأمر. هذا الأسلوب قد يُظهر الوسائط في قائمة العمليات المحلية؛
-لا تستخدمه على جهاز مشترك، وامسح المتغيرات بعد الاستخدام. لا يحتوي المشروع
-على بيانات حساب أو خطوة تحايل على ترخيص Unity.
+## فحوص لا تحتاج Unity
 
-## التشغيل بالواجهة
+```sh
+python3 tools/content/pk3_tool.py fixture --out-dir tests/fixtures/generated
+python3 -m unittest discover -s tests/python -p 'test_*.py' -v
+python3 tools/asset_meta.py
+python3 tools/content/verify_resources.py
+bash tests/run_all.sh mono mcs \
+  ThirdParty/Xonotic/maps-pk3/maps/_hudsetup.bsp \
+  ThirdParty/Xonotic/maps-pk3/maps/boil.bsp
+```
 
-1. أضف جذر المشروع إلى Hub وافتحه بالنسخة المثبتة.
-2. انتظر انتهاء ترجمة الكود؛ افحص Console.
-3. `My Xonotic → 1 - Configure local project`.
-4. `My Xonotic → 2 - Create development arena scene`.
-5. اضغط Play. يجب أن تظهر عبارة `DEVELOPMENT SLICE — NOT FULL XONOTIC`.
-6. شغّل اختبارات Editor وPlay Mode قبل بناء Android.
+فحوص Python وقراءة الملفات لا تثبت عرض الخامات أو لعب Android.
+اختبارات تحويل DDS تتطلب Pillow؛ راقب الاختبارات المتخطاة.
 
-## التشغيل من الطرفية
+## إعداد موارد الخريطة الأصلية
 
-```bash
-export UNITY_EDITOR="/path/to/Unity"
+الملفات الموجودة في `ThirdParty/Xonotic` مجموعة محدودة وليست كل اللعبة.
+يمكن تجهيز بيانات إصدار Xonotic الرسمي **0.8.6** محليًا، مع التحقق من
+checksum المنشور وحماية استخراج ZIP/PK3 من تجاوز المسارات والتضخم.
+لا تنفّذ برامج أو شيفرة مضمنة في حزم الموارد.
+المصادر الأصلية والتراخيص تبقى مستقلة عن مشتقات Unity.
+
+```sh
+# <extracted-data> هو جذر محتوى حزمة data، وليس جذر ملف ZIP الخارجي.
+python3 tools/content/prepare_unity_textures.py <extracted-data> \
+  --texture models/weapons/laser
+export XONOTIC_CONTENT_ROOTS="<decoded>:<extracted-maps>:<extracted-data>:ThirdParty/Xonotic/maps-pk3"
+export XONOTIC_BSP="<extracted-maps>/maps/boil.bsp"
+export XONOTIC_INCLUDE_EXTERNAL=1
+```
+
+`--texture` قابل للتكرار لتحويل صور DDS المطلوبة فقط؛ تحفظ الأداة أصل كل
+صورة وSHA256 للمدخل والمشتق في سجل التحويل. لا يُعاد ترخيص الأصل.
+وجود جميع الملفات محليًا لا يعني أن المستورد يدعم كل خامة أو نموذج أو
+أن APK يضم كل الخرائط. أوضاع اللعب والشبكة وبقية أنظمة اللعبة عمل مستقل.
+
+## تشغيل Unity والبناء
+
+```sh
+export UNITY_EDITOR="<local-editor-executable>"
+export XONOTIC_REVISION="<exact-source-commit>"
 python3 tools/local_unity.py compile
-python3 tools/local_unity.py scene
-python3 tools/content/pk3_tool.py fixture
+python3 tools/local_unity.py configure
 python3 tools/local_unity.py test
-python3 tools/local_unity.py playtest --graphics
+python3 tools/local_unity.py original-playtest
 python3 tools/local_unity.py android --timeout 3600
 ```
 
-`--graphics` يحتاج شاشة محلية أو Xvfb؛ بدونه تُستخدم `-nographics`.
-الاختبار بلا رسومات لا يثبت صحة العرض. `playtest` لا يستخدم `-quit` لأن الاختبار
-يجب أن ينتظر مرور إطارات ومحاكاة فعلية.
+بدون `XONOTIC_INCLUDE_EXTERNAL=1` يبني أمر Android ساحة التطوير المصطنعة.
+عند تفعيله يستورد مسار `XONOTIC_BSP` ويولّد موارد الخريطة الأصلية قبل
+البناء؛ المخرج الحالي اسمه `my-xonotic-unity-boil.apk`، وليس لعبة كاملة.
 
-الأداة تمنع تشغيل مهمتين متزامنتين على المشروع بقفل محلي، وتوقف مجموعة العمليات
-عند انتهاء المهلة. لا تحذف قفلًا قبل التأكد من انتهاء العملية التي أنشأته.
-مخرجات البناء والسجلات محلية ومستبعدة من Git.
+- `test` اختبار Editor؛ `playtest` اختبار الساحة المصطنعة؛
+  `original-playtest` اختبار الخريطة الأصلية.
+- الاختبارات بدون `--graphics` لا تثبت صحة العرض. الاختبار الرسومي يحتاج
+  شاشة أو Xvfb ودعم OpenGL مناسبًا.
+- أداة التشغيل تمنع تشغيل Unity مرتين على المشروع وتقيد المهلة.
+- `android` و`linux` لا يعتبران الخروج برمز صفر نجاحًا وحده: يلزم إيصال
+  جديد يطابق معرّف التشغيل والهدف واسم الملف وحجمه وSHA256.
+- تحتفظ الأداة بملف البناء السابق إن فشل تشغيل جديد، لكنها تزيل الإيصال
+  القديم قبل البدء؛ لا تشارك الملف القديم على أنه بناء جديد.
+- إيصال SHA256 يثبت تطابق الملف، لا صحة اللعب ولا توقيع APK. تحقق من
+  التوقيع بأداة `apksigner` ثم اختبر التثبيت والعرض واللمس على هاتف.
 
-## إعداد Android الحالي
+## إعداد Android الحالي وحدود الإصدار
 
-- Package ID: `com.ayoub.myxonotic`.
-- ARM64، IL2CPP، landscape، OpenGLES3، min API 26، target API 36.
-- Development Build وتوقيع debug محلي؛ لا يوجد keystore إنتاجي.
-- المخرج المتوقع عند **نجاح** البناء: `Builds/my-xonotic-development.apk`
-  و`Builds/build-receipt.json`. هذه أسماء مخرجات، وليست ملفات أنتجتها هذه الجلسة.
-- البناء الافتراضي يحتوي الساحة الأصلية فقط، ولا يضم `ThirdParty/Xonotic`.
-- `XONOTIC_INCLUDE_EXTERNAL=1` مرفوض عمدًا إلى أن يكتمل مسار الدمج ومراجعة التوزيع.
+`com.ayoub.myxonotic`، ARM64/IL2CPP، اتجاه أفقي، OpenGLES3،
+min API 26 وtarget API 36. التوقيع تطويري وليس إصدار متجر جاهزًا.
+أي تغيير في versionCode أو keystore يجب توثيقه.
 
-## استيراد خريطة موجودة في المستودع
+الخريطة تستعمل قواعد قتال وحركة تقريبية. ليست كل أسلحة Xonotic أو
+شخصياتها أو أنيميشنها أو ذكائها الاصطناعي أو أوضاعها أو شبكتها مكتملة.
+مراجعة تطابق المصادر والتراخيص وتوافق التوزيع مع Unity ما زالت منفصلة.
 
-```bash
-export XONOTIC_BSP="$PWD/ThirdParty/Xonotic/maps-pk3/maps/boil.bsp"
-python3 tools/local_unity.py import
-```
+## قيود البيئة
 
-هذا يُنشئ **هندسة خريطة مع قواعد تطوير**؛ لا يطبق مواد Xonotic أو الضوء الأصلي
-أو jump pads أو teleporters أو بقية منطق الخريطة. لا تستخدم نجاح هذا الأمر
-لتسمية الخريطة مكتملة.
-
-## ملاحظات Linux المقيد
-
-في بعض sandboxes قد يفشل UnityShaderCompiler بسبب دعم FS/GS، أو FMOD بسبب
-طلبات realtime scheduling. مشروع `my-librequake` وثّق حلولًا محلية خاصة لتلك البيئة
-(qemu للـShaderCompiler وshim لجدولة FMOD). ليست متطلبات للمستخدم العادي،
-ولا تُنسخ ملفات الرخصة/الثنائيات أو المسارات الخاصة إلى هذا المشروع.
-`--unity` يقبل wrapper محليًا عند الحاجة.
+افحص `nproc` وRAM والمساحة وتوافق النظام على **الجهاز الحالي**. لا تنقل
+أرقام الجهاز السابق إلى تقرير جديد.
+وثّق `my-librequake` حلولًا خاصة لـgVisor: تشغيل ShaderCompiler عبر
+qemu عند ثبوت خطأ FS/GS، وshim لجدولة FMOD عند ثبوت خطئه.
+ليست متطلبات عادية ولا وسائل لتجاوز ترخيص Unity. لا تطبقها قبل التحقق
+من الخطأ الحالي. شغّل نسخة Unity واحدة فقط.

@@ -23,6 +23,7 @@ namespace MyXonotic.EditorTools
         private const string GeneratedRoot = "Assets/MyXonotic/Generated/Imported";
         private const string VertexColorShaderName = "MyXonotic/VertexColor";
         private const string LightmappedShaderName = "MyXonotic/Lightmapped";
+        private const string SkySixSidedShaderName = "MyXonotic/Sky6Sided";
 
         // A legitimate Q3-family map .bsp is typically a few hundred KB to
         // a few tens of MB. 128 MiB is a generous ceiling that still
@@ -313,6 +314,24 @@ namespace MyXonotic.EditorTools
             string safeShaderName = MakeSafeFolderName(shaderName.Replace('/', '_'));
             string materialName = safeShaderName + "_lm" + group.LightmapIndex;
 
+            // Sky surfaces (surfaceparm sky / skyparms) branch out here,
+            // BEFORE the ordinary diffuse-texture resolution below: that
+            // path's qer_editorimage fallback is exactly the credit/preview
+            // texture (e.g. textures/skies/polluted_earth.jpg) that used to
+            // get stretched across sky geometry as if it were a normal
+            // diffuse map. See BuildSkyMaterial for the original six-side
+            // replacement and its explicit missing/unsupported fallback.
+            if (shaderValid)
+            {
+                var skyScript = resolver.GetScript(shaderName);
+                bool isSky = skyScript != null && (skyScript.Has("sky") || !string.IsNullOrEmpty(skyScript.SkyEnv));
+                if (isSky)
+                {
+                    return BuildSkyMaterial(
+                        skyScript, shaderName, folder, resolver, warnings, manifestEntries, materialName, fallbackShader);
+                }
+            }
+
             Texture2D diffuse = null;
             if (shaderValid)
             {
@@ -342,16 +361,7 @@ namespace MyXonotic.EditorTools
 
             if (diffuse == null)
             {
-                // Never fall back to "Standard": AGENTS.md documents it as a
-                // ~1h shader-variant-compile trap in this sandboxed toolchain.
-                // "Hidden/InternalErrorShader" is Unity's always-available,
-                // trivially cheap built-in error shader.
-                var fallbackShaderChoice = fallbackShader != null ? fallbackShader : Shader.Find("Hidden/InternalErrorShader");
-                var fallbackMat = new Material(fallbackShaderChoice)
-                {
-                    name = materialName + "_Fallback"
-                };
-                return CreateOrReplaceAsset(fallbackMat, folder + "/materials/" + materialName + "_fallback.mat");
+                return BuildFallbackMaterial(materialName, fallbackShader, folder);
             }
 
             var shader = lightmappedShader != null ? lightmappedShader
@@ -401,6 +411,116 @@ namespace MyXonotic.EditorTools
             }
 
             return CreateOrReplaceAsset(mat, folder + "/materials/" + materialName + ".mat");
+        }
+
+        /// <summary>
+        /// Never-Standard, always-cheap opaque fallback material shared by
+        /// every "could not resolve real content" path (missing content
+        /// roots, unloadable image, unresolved sky env, missing
+        /// Sky6Sided/Lightmapped shader, ...). "Hidden/InternalErrorShader"
+        /// is Unity's always-available, trivially cheap built-in error
+        /// shader; "Standard" is never used here (AGENTS.md documents it as
+        /// a ~1h shader-variant-compile trap in this sandboxed toolchain).
+        /// </summary>
+        private static Material BuildFallbackMaterial(string materialName, Shader fallbackShader, string folder)
+        {
+            var fallbackShaderChoice = fallbackShader != null ? fallbackShader : Shader.Find("Hidden/InternalErrorShader");
+            var fallbackMat = new Material(fallbackShaderChoice)
+            {
+                name = materialName + "_Fallback"
+            };
+            return CreateOrReplaceAsset(fallbackMat, folder + "/materials/" + materialName + "_fallback.mat");
+        }
+
+        // --------------------------------------------------------------
+        // Sky surfaces: bounded original six-side images, never the
+        // qer_editorimage credit/editor-preview texture.
+        // --------------------------------------------------------------
+
+        private static readonly string[] SkySideOrder = { "rt", "lf", "ft", "bk", "up", "dn" };
+
+        private static string SkySidePropertyName(string side)
+        {
+            switch (side)
+            {
+                case "rt": return "_SkyRt";
+                case "lf": return "_SkyLf";
+                case "ft": return "_SkyFt";
+                case "bk": return "_SkyBk";
+                case "up": return "_SkyUp";
+                case "dn": return "_SkyDn";
+                default: throw new ArgumentOutOfRangeException(nameof(side), side, "Unknown sky side key.");
+            }
+        }
+
+        /// <summary>
+        /// Builds a "MyXonotic/Sky6Sided" material for a surfaceparm-sky
+        /// group from the map's real skyparms env base (e.g.
+        /// "env/polluted_earth/polluted_earth"), assigning all six original
+        /// rt/lf/ft/bk/up/dn side images from
+        /// <see cref="XonoticContentResolver.FindSkybox"/> — each stays an
+        /// individually loaded/provenance-tracked texture ("sky-rt" ..
+        /// "sky-dn" manifest entries), not a single texture repeated across
+        /// every sky face and never the shader script's qer_editorimage
+        /// credit/preview image. Falls back to the ordinary flat/error
+        /// material (with an explicit warning, never silently) when the env
+        /// base is missing, any of the six side images cannot be found or
+        /// loaded, or the Sky6Sided shader itself is unavailable — the
+        /// group still renders something reasonable, it never crashes the
+        /// import or leaves a group without a material.
+        /// </summary>
+        private static Material BuildSkyMaterial(
+            MaterialScript script, string shaderName, string folder, XonoticContentResolver resolver,
+            List<string> warnings, List<ManifestEntry> manifestEntries, string materialName, Shader fallbackShader)
+        {
+            string envBase = script.SkyEnv;
+            if (string.IsNullOrEmpty(envBase))
+            {
+                warnings.Add(
+                    "Shader '" + shaderName + "' has surfaceparm sky but no resolvable skyparms env base " +
+                    "(both sides may be '-', e.g. a decal-only sky variant); using the flat fallback material " +
+                    "instead of any single stretched preview texture.");
+                return BuildFallbackMaterial(materialName, fallbackShader, folder);
+            }
+
+            var sides = resolver.FindSkybox(envBase);
+            if (sides == null)
+            {
+                warnings.Add(
+                    "Shader '" + shaderName + "' sky env '" + envBase + "' is missing one or more of the six " +
+                    "rt/lf/ft/bk/up/dn side images under XONOTIC_CONTENT_ROOTS/ThirdParty; sky surface uses the " +
+                    "flat fallback material rather than any single editor-preview/credit texture.");
+                return BuildFallbackMaterial(materialName, fallbackShader, folder);
+            }
+
+            var skyShader = Shader.Find(SkySixSidedShaderName);
+            if (skyShader == null)
+            {
+                warnings.Add("Shader '" + SkySixSidedShaderName + "' not found in Resources; sky surface uses the flat fallback material.");
+                return BuildFallbackMaterial(materialName, fallbackShader, folder);
+            }
+
+            var mat = new Material(skyShader) { name = materialName + "_Sky" };
+            foreach (var side in SkySideOrder)
+            {
+                string sourcePath = sides[side];
+                string reason;
+                var loaded = BspTextureLoader.Load(sourcePath, srgb: true, failureReason: out reason);
+                if (loaded == null)
+                {
+                    warnings.Add(
+                        "Sky side image '" + sourcePath + "' (" + side + ") for env '" + envBase + "' could not be " +
+                        "loaded (" + reason + "); sky surface uses the flat fallback material.");
+                    return BuildFallbackMaterial(materialName, fallbackShader, folder);
+                }
+                string texAssetPath = folder + "/textures/" + MakeSafeFolderName(envBase.Replace('/', '_')) + "_" +
+                    side + "_" + StableShortHash(sourcePath) + ".asset";
+                var tex = CreateOrReplaceAsset(loaded, texAssetPath);
+                mat.SetTexture(SkySidePropertyName(side), tex);
+                manifestEntries.Add(ManifestEntry.For("sky-" + side, envBase, sourcePath));
+            }
+
+            return CreateOrReplaceAsset(mat, folder + "/materials/" + materialName + "_sky.mat");
         }
 
         private static Texture2D ResolveLightmapTexture(

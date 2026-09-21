@@ -1,5 +1,29 @@
 # my-xonotic — developer and agent handoff
 
+## Continuation in progress — 2026-09-21
+
+Current working branch: `feat/unity-android-continuation`, based on `f59e34a`.
+Read this section and `docs/LOCAL_BUILD.md` before historical notes below.
+No new APK or complete-game claim follows merely from the code changes.
+
+Current work: correct sky editor-preview rendering, add static original MD3
+weapon support, prepare required DDS skins with provenance, and harden local
+build verification. Only the parent launches Unity.
+
+- `tools/local_unity.py` now requires a fresh invocation-bound build receipt,
+  matching target/output, nonempty artifact, byte count and SHA256 for Android
+  and Linux. Editor compile uses an executeMethod completion marker; Editor
+  tests and playtests cannot reuse stale result files.
+- `prepare_unity_textures.py` accepts repeatable `--texture` content paths,
+  validates containment and actual DDS format, stages conversions, and retains
+  earlier source/hash entries. It does not claim full texture/runtime support.
+- Full original assets on disk and complete gameplay are separate gates.
+  Do not rename a bounded development build as a complete Xonotic port.
+- Source/binary resource provenance and licence compatibility remain independent
+  review requirements; keep upstream art notices intact.
+- A user-reported test of the earlier experimental APK is not a device test of
+  any newly built version. Never transfer test claims between APK hashes.
+
 ## Current direction — 2026-09-21
 
 Owner explicitly rejected the native/DarkPlaces approach and requested returning
@@ -65,7 +89,7 @@ Critical corrections:
   followed by extracted maps/data and ThirdParty/Xonotic/maps-pk3.
 - Only parent launches Unity. Worker tasks are now complete; no ongoing ownership.
 
-## Read this first: current evidence, 2026-09-20
+## Historical checkpoint, 2026-09-20 — superseded where noted above
 
 **Goal:** genuinely bring Xonotic to Unity/Android, not a renamed LibreQuake game.
 **Current checkpoint:** `0.1.0-dev.1`, source + a bounded original upstream resource
@@ -165,7 +189,11 @@ See `docs/TESTING.md` for sample-map counts and what these checks cannot prove.
 The optional fetcher reproduces official BSP hashes using exact HTTP byte ranges;
 full release SHA512 was not verified. It is never run implicitly by a build.
 
-## Important implementation boundaries
+## Historical implementation boundaries (dev.1, not current feature inventory)
+
+The following describes the earlier dev.1 checkpoint. Texture/lightmap, static
+IQM and approximate trigger support were subsequently added as documented in the
+2026-09-21 checkpoint above. Do not use the older absence claims as current status.
 
 - Original 40×40 practice arena; 3 test bots, 5 pickups, 3 prototype guns. Not the
   full Xonotic arsenal, character art, AI, match modes, campaign or networking.
@@ -193,7 +221,7 @@ full release SHA512 was not verified. It is never run implicitly by a build.
 - Stable `.meta` GUIDs are committed. `tools/asset_meta.py --write-missing` seeds
   new source assets only and never rewrites an existing GUID.
 
-## Next actions, in order
+## Historical next actions (dev.1)
 
 1. DONE: local activation, compile, Editor checks, Android APK (see table).
 2. Run the real Play Mode smoke (`playtest`, needs Xvfb + `-force-glcore`).

@@ -164,6 +164,8 @@ namespace MyXonotic.EditorTools
             IqmWeaponImporter.GenerateWeaponAssets();
             string notices = "Assets/StreamingAssets/Xonotic/Notices";
             Directory.CreateDirectory(notices);
+            foreach (var stale in Directory.GetFiles(notices, "*manifest*.json"))
+                File.Delete(stale);
             foreach (var file in Directory.GetFiles("ThirdParty/Xonotic/LICENSES"))
                 File.Copy(file, Path.Combine(notices, Path.GetFileName(file)), true);
             File.Copy("ThirdParty/Xonotic/README.md", Path.Combine(notices, "UPSTREAM-RESOURCES.md"), true);
@@ -188,7 +190,12 @@ namespace MyXonotic.EditorTools
             if (File.Exists(continuation))
                 File.Copy(continuation, Path.Combine(notices, "unity-continuation-content.json"), true);
             foreach (var manifest in Directory.GetFiles("Assets/MyXonotic/Generated", "*manifest*.json", SearchOption.AllDirectories))
-                CopyPublicManifest(manifest, Path.Combine(notices, Path.GetFileName(Path.GetDirectoryName(manifest))+"-"+Path.GetFileName(manifest)));
+            {
+                string owner = Path.GetFileName(Path.GetDirectoryName(manifest));
+                string map = Path.GetFileNameWithoutExtension(Environment.GetEnvironmentVariable("XONOTIC_BSP"));
+                if (owner != "Weapons" && owner != map) continue;
+                CopyPublicManifest(manifest, Path.Combine(notices, owner+"-"+Path.GetFileName(manifest)));
+            }
             AssetDatabase.Refresh();
             AssetDatabase.SaveAssets();
         }
@@ -196,8 +203,11 @@ namespace MyXonotic.EditorTools
         static void CopyPublicManifest(string source, string destination)
         {
             // Preserve content-relative paths and hashes, not local build-machine directories.
-            string project = Path.GetFullPath(".").Replace('\\', '/').TrimEnd('/') + "/";
+            string project = Path.GetFullPath(Path.Combine(Application.dataPath, "..")).Replace('\\', '/').TrimEnd('/') + "/";
             string json = File.ReadAllText(source).Replace(project, "");
+            // A symlinked project root can have a different physical spelling.
+            json = System.Text.RegularExpressions.Regex.Replace(json,
+                @"/[^""\s]*?/(?=ExternalContent/|ThirdParty/|Assets/)", "");
             File.WriteAllText(destination, json);
         }
 

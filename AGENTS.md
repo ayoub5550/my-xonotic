@@ -1,14 +1,27 @@
 # my-xonotic — developer and agent handoff
 
-## Continuation in progress — 2026-09-21
+## Verified continuation checkpoint — 2026-09-21
 
 Current working branch: `feat/unity-android-continuation`, based on `f59e34a`.
 Read this section and `docs/LOCAL_BUILD.md` before historical notes below.
-No new APK or complete-game claim follows merely from the code changes.
+New bounded dev.3 APK built and verified; NOT complete Xonotic.
+Read `docs/UNITY-CONTINUATION.md` and the dated build receipt for evidence.
 
-Current work: correct sky editor-preview rendering, add static original MD3
-weapon support, prepare required DDS skins with provenance, and harden local
-build verification. Only the parent launches Unity.
+- APK 72,332,393 bytes; SHA256
+  `cca7f66e67f18c229f889cca1b70a3427943ee1217f3fc650c5aafa4c3bd33c0`.
+- Build source `45e7e1c9c711142b8c4037023b6b0eaa04b6c4c8`; versionCode 3.
+- 55 BSP checks, 36 synthetic MD3 / 40 with real Rocket, 90 Python, 22 Editor,
+  59 sky-import, 12 synthetic Play Mode checks passed; Boil seven-spawn smoke passed.
+- Actual Unity weapon manifest confirms static view-model IQM Blaster + MD3 Rocket,
+  both resolved original diffuse skins. No animation or full-game claim.
+- APK v2 debug signature verified. Certificate differs from released dev.2:
+  in-place update will fail; never silently uninstall/delete app data.
+- Graphical Camera.Render still hangs in llvmpipe; no visual/device validation.
+- Complete official 0.8.6 archive SHA512 verified, selected extraction only.
+
+Completed scope: sky editor-preview routing, static original MD3 weapon support,
+selected DDS skins with provenance, and hardened local build verification.
+Only the parent launches Unity; workers finished.
 
 - `tools/local_unity.py` now requires a fresh invocation-bound build receipt,
   matching target/output, nonempty artifact, byte count and SHA256 for Android

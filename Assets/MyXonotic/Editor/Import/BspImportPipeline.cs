@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -79,34 +80,39 @@ namespace MyXonotic.EditorTools
             var arena = root.AddComponent<ImportedArena>();
             arena.sourceName = sourceName;
 
+            MeshBuildContext ctx = null;
             if (doc.Models.Length == 0)
             {
                 warnings.Add("No models found; imported arena has no static geometry.");
             }
             else
             {
-                // Model 0 is worldspawn: the only model treated as static
-                // level geometry. Models 1..N are inline brush submodels
-                // referenced by mover/trigger entities (doors, platforms,
-                // trigger volumes) and must NOT be merged into the static
-                // world mesh, or doors/lifts would render baked shut/open
-                // and triggers would become solid world geometry.
-                if (doc.Models.Length > 1)
-                {
-                    warnings.Add(string.Format(
-                        "{0} inline brush submodel(s) (movers/triggers) found; only worldspawn (model 0) geometry was imported here (see BspGameplayImporter for trigger_* volumes built from a subset of these submodels).",
-                        doc.Models.Length - 1));
-                }
-
+                // Model 0 is worldspawn: static level geometry. Models 1..N are
+                // inline brush submodels referenced by entities ("model" "*N").
+                // Trigger volumes must stay invisible (BspGameplayImporter builds
+                // them), but func_wall/func_door/func_rotating/... are VISIBLE
+                // world pieces (walls, doors, platforms, decorative structures);
+                // leaving them out produced visibly empty areas in dev.5. They
+                // are imported here as static geometry at their BSP position
+                // (doors closed, movers at rest); no mover motion yet.
+                ctx = new MeshBuildContext(GeneratedRoot + "/" + safeName, mapName, warnings);
                 var meshData = BspGeometryBuilder.BuildModel(doc, 0, warnings);
                 if (meshData.Positions.Count > 0 &&
                     (meshData.Triangles.Count > 0 || meshData.CollisionTriangles.Count > 0))
                 {
-                    BuildMeshChild(root.transform, safeName, mapName, doc, meshData, warnings, manifestEntries);
+                    BuildMeshChild(root.transform, safeName, safeName + "_world", doc, meshData, ctx, manifestEntries, true);
                 }
                 else
                 {
                     warnings.Add("Worldspawn produced zero renderable triangles.");
+                }
+
+                if (doc.Models.Length > 1)
+                {
+                    int built = BuildVisibleSubmodels(doc, root.transform, safeName, ctx, manifestEntries, warnings);
+                    warnings.Add(string.Format(
+                        "{0} inline brush submodel(s) found; {1} imported as static visible geometry (func_* entities, movers at rest), the rest are trigger/invisible volumes (see BspGameplayImporter).",
+                        doc.Models.Length - 1, built));
                 }
             }
 
@@ -123,6 +129,18 @@ namespace MyXonotic.EditorTools
             {
                 warnings.Add("BspGameplayImporter.Import threw and was skipped: " + e.Message);
             }
+            // Original MD3 map decorations (misc_gamemodel & co).
+            try
+            {
+                int placedModels;
+                warnings.AddRange(BspMapModelImporter.Import(doc, root.transform, ctx != null ? ctx.Resolver : new XonoticContentResolver(), out placedModels));
+                arena.mapModelCount = placedModels;
+            }
+            catch (Exception e)
+            {
+                warnings.Add("BspMapModelImporter.Import threw and was skipped: " + e.Message);
+            }
+
             var pickups = new List<Pickup>();
             warnings.AddRange(BspPickupImporter.Import(doc, root.transform, pickups));
             PersistPickupVisuals(pickups);
@@ -148,7 +166,7 @@ namespace MyXonotic.EditorTools
             {
                 var filter = pickup.GetComponent<MeshFilter>();
                 var renderer = pickup.GetComponent<MeshRenderer>();
-                if (filter != null && filter.sharedMesh != null)
+                if (filter != null && filter.sharedMesh != null && !AssetDatabase.Contains(filter.sharedMesh))
                 {
                     string path = folder + "/PlaceholderSphere.asset";
                     var saved = AssetDatabase.LoadAssetAtPath<Mesh>(path);
@@ -159,7 +177,7 @@ namespace MyXonotic.EditorTools
                     }
                     filter.sharedMesh = saved;
                 }
-                if (renderer != null && renderer.sharedMaterial != null)
+                if (renderer != null && renderer.sharedMaterial != null && !AssetDatabase.Contains(renderer.sharedMaterial))
                 {
                     string path = folder + "/" + pickup.Type + ".mat";
                     var saved = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -178,17 +196,144 @@ namespace MyXonotic.EditorTools
         // World mesh: geometry + per-(shader,lightmap) submeshes/materials
         // --------------------------------------------------------------
 
-        private static void BuildMeshChild(
-            Transform parent, string safeName, string mapName, BspDocument doc, BspMeshData meshData,
-            List<string> warnings, List<ManifestEntry> manifestEntries)
+        /// <summary>
+        /// Shared per-map state for building world and submodel meshes so
+        /// textures/lightmaps/materials are resolved once per map and reused
+        /// by every brush submodel (same folder, same caches).
+        /// </summary>
+        private sealed class MeshBuildContext
         {
-            string folder = GeneratedRoot + "/" + safeName;
-            EnsureFolder(folder);
-            EnsureFolder(folder + "/textures");
-            EnsureFolder(folder + "/materials");
+            public readonly string Folder;
+            public readonly string MapName;
+            public readonly XonoticContentResolver Resolver = new XonoticContentResolver();
+            public readonly Dictionary<string, Texture2D> DiffuseCache = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
+            public readonly Dictionary<int, Texture2D> LightmapCache = new Dictionary<int, Texture2D>();
+            public readonly Shader FallbackShader;
+            public readonly Shader LightmappedShader;
+            public readonly bool HasDeluxemaps;
+            public readonly List<string> Warnings;
+
+            public MeshBuildContext(string folder, string mapName, List<string> warnings)
+            {
+                Folder = folder;
+                MapName = mapName;
+                Warnings = warnings;
+                EnsureFolder(folder);
+                EnsureFolder(folder + "/textures");
+                EnsureFolder(folder + "/materials");
+                if (Resolver.Roots.Count == 0)
+                {
+                    warnings.Add(
+                        "XonoticContentResolver found no existing content roots (checked XONOTIC_CONTENT_ROOTS, then " +
+                        "ExternalContent/maps, ExternalContent/data, ThirdParty/Xonotic/maps-pk3, ThirdParty/Xonotic/data); " +
+                        "world geometry will use the flat vertex-colour fallback material for every surface.");
+                }
+                HasDeluxemaps = HasLikelyDeluxemaps(Resolver, mapName);
+                if (HasDeluxemaps)
+                {
+                    warnings.Add(
+                        "External lightmap directory for '" + mapName + "' looks deluxemapped (alternating lighting/normal " +
+                        "images); only the even lighting lightmaps referenced directly by face data are used, deluxemap " +
+                        "(bumped specular) images are intentionally not sampled by this pass.");
+                }
+                FallbackShader = Shader.Find(VertexColorShaderName);
+                LightmappedShader = Shader.Find(LightmappedShaderName);
+                if (LightmappedShader == null)
+                {
+                    warnings.Add("Shader '" + LightmappedShaderName + "' not found; all groups fall back to '" + VertexColorShaderName + "'.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Entity classes whose brush submodel is visible world geometry. Value
+        /// = whether the piece is solid (gets a MeshCollider). Triggers and
+        /// invisible helpers are intentionally absent.
+        /// </summary>
+        public static readonly Dictionary<string, bool> VisibleSubmodelClasses =
+            new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "func_wall", true },
+                { "func_static", true },
+                { "func_door", true },
+                { "func_door_secret", true },
+                { "func_door_rotating", true },
+                { "func_rotating", true },
+                { "func_bobbing", true },
+                { "func_plat", true },
+                { "func_train", true },
+                { "func_button", true },
+                { "func_ladder", false },
+                { "func_breakable", true },
+                { "func_assault_destructible", true },
+                { "func_assault_wall", true },
+                { "func_illusionary", false },
+                { "func_clientillusionary", false },
+                { "func_clientwall", true },
+                { "func_conveyor", true },
+                { "func_pendulum", true },
+                { "misc_clientmodel", false },
+                { "misc_model", true },
+            };
+
+        private static int BuildVisibleSubmodels(BspDocument doc, Transform parent, string safeName,
+            MeshBuildContext ctx, List<ManifestEntry> manifestEntries, List<string> warnings)
+        {
+            int built = 0;
+            var seen = new HashSet<int>();
+            foreach (var entity in doc.Entities)
+            {
+                string classname = entity.Get("classname") ?? "";
+                bool solid;
+                if (!VisibleSubmodelClasses.TryGetValue(classname, out solid)) continue;
+                string modelStr = entity.Get("model");
+                if (string.IsNullOrEmpty(modelStr) || modelStr[0] != '*') continue;
+                int modelIndex;
+                if (!int.TryParse(modelStr.Substring(1), NumberStyles.Integer, CultureInfo.InvariantCulture, out modelIndex) ||
+                    modelIndex <= 0 || modelIndex >= doc.Models.Length)
+                {
+                    warnings.Add("Entity '" + classname + "' references invalid submodel '" + modelStr + "'; skipped.");
+                    continue;
+                }
+                if (!seen.Add(modelIndex)) continue;
+
+                var data = BspGeometryBuilder.BuildModel(doc, modelIndex, warnings);
+                if (data.Positions.Count == 0 || data.Triangles.Count == 0)
+                {
+                    warnings.Add(string.Format("Submodel *{0} ({1}) produced no renderable triangles; skipped.", modelIndex, classname));
+                    continue;
+                }
+                string childName = safeName + "_model" + modelIndex + "_" + MakeSafeFolderName(classname);
+                var go = BuildMeshChild(parent, safeName, childName, doc, data, ctx, manifestEntries, solid);
+                // BSP inline vertices are local to the entity's pivot when an
+                // origin brush exists. E.g. afterslime *7 is near (0,0,0),
+                // while its entity origin is (184,-224,-168). Omitting this
+                // translation piles rotating/bobbing pieces at world zero.
+                if (TryParseVec3(entity.Get("origin", "0 0 0"), out BspVec3 pivot))
+                {
+                    var u = BspCoordinateSpace.QuakeToUnity(pivot);
+                    go.transform.localPosition = new Vector3(u.X, u.Y, u.Z);
+                }
+                else warnings.Add("Invalid submodel origin for " + modelStr + "; using zero.");
+                var marker = go.AddComponent<ImportedSubmodel>();
+                marker.classname = classname;
+                marker.modelIndex = modelIndex;
+                marker.targetName = entity.Get("targetname");
+                built++;
+            }
+            return built;
+        }
+
+        private static GameObject BuildMeshChild(
+            Transform parent, string safeName, string meshName, BspDocument doc, BspMeshData meshData,
+            MeshBuildContext ctx, List<ManifestEntry> manifestEntries, bool solid)
+        {
+            string folder = ctx.Folder;
+            string mapName = ctx.MapName;
+            List<string> warnings = new List<string>();
 
             var mesh = new Mesh();
-            mesh.name = safeName + "_world";
+            mesh.name = meshName;
             mesh.indexFormat = meshData.Positions.Count > 65000
                 ? UnityEngine.Rendering.IndexFormat.UInt32
                 : UnityEngine.Rendering.IndexFormat.UInt16;
@@ -231,32 +376,11 @@ namespace MyXonotic.EditorTools
             mesh.uv = surfaceUvs;
             mesh.uv2 = lightmapUvs;
 
-            var resolver = new XonoticContentResolver();
-            if (resolver.Roots.Count == 0)
-            {
-                warnings.Add(
-                    "XonoticContentResolver found no existing content roots (checked XONOTIC_CONTENT_ROOTS, then " +
-                    "ExternalContent/maps, ExternalContent/data, ThirdParty/Xonotic/maps-pk3, ThirdParty/Xonotic/data); " +
-                    "world geometry will use the flat vertex-colour fallback material for every surface.");
-            }
-
-            bool hasDeluxemaps = HasLikelyDeluxemaps(resolver, mapName);
-            if (hasDeluxemaps)
-            {
-                warnings.Add(
-                    "External lightmap directory for '" + mapName + "' looks deluxemapped (alternating lighting/normal " +
-                    "images); only the even lighting lightmaps referenced directly by face data are used, deluxemap " +
-                    "(bumped specular) images are intentionally not sampled by this pass.");
-            }
-
-            var diffuseCache = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
-            var lightmapCache = new Dictionary<int, Texture2D>();
-            var fallbackShader = Shader.Find(VertexColorShaderName);
-            var lightmappedShader = Shader.Find(LightmappedShaderName);
-            if (lightmappedShader == null)
-            {
-                warnings.Add("Shader '" + LightmappedShaderName + "' not found; all groups fall back to '" + VertexColorShaderName + "'.");
-            }
+            var resolver = ctx.Resolver;
+            var diffuseCache = ctx.DiffuseCache;
+            var lightmapCache = ctx.LightmapCache;
+            var fallbackShader = ctx.FallbackShader;
+            var lightmappedShader = ctx.LightmappedShader;
 
             int groupCount = Math.Max(meshData.Groups.Count, 1);
             mesh.subMeshCount = groupCount;
@@ -290,10 +414,10 @@ namespace MyXonotic.EditorTools
             }
             mesh.RecalculateBounds();
 
-            string meshAssetPath = folder + "/" + safeName + "_world.asset";
+            string meshAssetPath = folder + "/" + meshName + ".asset";
             mesh = CreateOrReplaceAsset(mesh, meshAssetPath);
 
-            var go = new GameObject(safeName + "_World");
+            var go = new GameObject(meshName);
             go.transform.SetParent(parent, false);
             var mf = go.AddComponent<MeshFilter>();
             mf.sharedMesh = mesh;
@@ -302,28 +426,30 @@ namespace MyXonotic.EditorTools
             mr.enabled = meshData.Triangles.Count > 0;
             mr.sharedMaterials = materials;
 
-            if (meshData.CollisionTriangles.Count >= 3)
+            if (solid && meshData.CollisionTriangles.Count >= 3)
             {
                 var collisionMesh = new Mesh();
-                collisionMesh.name = safeName + "_collision";
+                collisionMesh.name = meshName + "_collision";
                 collisionMesh.indexFormat = mesh.indexFormat;
                 collisionMesh.vertices = positions;
                 collisionMesh.triangles = meshData.CollisionTriangles.ToArray();
                 collisionMesh.RecalculateBounds();
 
-                string colliderMeshPath = folder + "/" + safeName + "_collision.asset";
+                string colliderMeshPath = folder + "/" + meshName + "_collision.asset";
                 collisionMesh = CreateOrReplaceAsset(collisionMesh, colliderMeshPath);
 
                 var collider = go.AddComponent<MeshCollider>();
                 collider.sharedMesh = collisionMesh;
                 collider.convex = false;
             }
-            else
+            else if (solid)
             {
                 warnings.Add(
-                    "No collision-eligible (CONTENTS_SOLID) surfaces found; world has no MeshCollider. Collision, when " +
+                    "No collision-eligible (CONTENTS_SOLID) surfaces found; " + meshName + " has no MeshCollider. Collision, when " +
                     "present, still only covers eligible face triangles, not the original brush volumes — see AGENTS.md.");
             }
+            ctx.Warnings.AddRange(warnings);
+            return go;
         }
 
         /// <summary>
@@ -444,7 +570,13 @@ namespace MyXonotic.EditorTools
             bool cullNone = script != null && script.CullNone;
             mat.SetFloat("_Cull", cullNone ? 0f : 2f);
 
-            bool wantsAlphaTest = script != null && script.Stages.Any(s => !string.IsNullOrEmpty(s.AlphaFunc) || !string.IsNullOrEmpty(s.BlendFunc));
+            // Only a real alpha test or a source-alpha blend on a NON-lightmap
+            // stage means "this texture's alpha carves holes". dev.5 keyed on
+            // any blendfunc at all — including the ubiquitous "$lightmap /
+            // blendfunc filter" and additive glow stages — so every lightmapped
+            // wall became a 0.5 alpha-cutout and any diffuse whose alpha
+            // channel carries gloss/other data disappeared (empty areas).
+            bool wantsAlphaTest = script != null && script.Stages.Any(st => !st.UsesLightmap && StageCarvesAlpha(st));
             if (wantsAlphaTest)
             {
                 mat.EnableKeyword("_ALPHATEST_ON");
@@ -455,15 +587,18 @@ namespace MyXonotic.EditorTools
             return CreateOrReplaceAsset(mat, folder + "/materials/" + materialName + ".mat");
         }
 
-        /// <summary>
-        /// Never-Standard, always-cheap opaque fallback material shared by
-        /// every "could not resolve real content" path (missing content
-        /// roots, unloadable image, unresolved sky env, missing
-        /// Sky6Sided/Lightmapped shader, ...). "Hidden/InternalErrorShader"
-        /// is Unity's always-available, trivially cheap built-in error
-        /// shader; "Standard" is never used here (AGENTS.md documents it as
-        /// a ~1h shader-variant-compile trap in this sandboxed toolchain).
-        /// </summary>
+        /// <summary>True when a stage's alphaFunc/blendFunc uses the texture alpha as coverage.</summary>
+        internal static bool StageCarvesAlpha(MaterialScript.StageInfo stage)
+        {
+            if (stage == null) return false;
+            if (!string.IsNullOrEmpty(stage.AlphaFunc)) return true;
+            string bf = stage.BlendFunc;
+            if (string.IsNullOrEmpty(bf)) return false;
+            if (bf == "BLEND") return true;
+            return bf.Contains("GL_SRC_ALPHA") || bf.Contains("GL_ONE_MINUS_SRC_ALPHA");
+        }
+
+        /// <summary>Cheap fallback: never use Standard (see shader-variant trap in AGENTS.md).</summary>
         private static Material BuildFallbackMaterial(string materialName, Shader fallbackShader, string folder)
         {
             var fallbackShaderChoice = fallbackShader != null ? fallbackShader : Shader.Find("Hidden/InternalErrorShader");
@@ -620,13 +755,25 @@ namespace MyXonotic.EditorTools
         // Entities: spawn markers + unsupported-class reporting
         // --------------------------------------------------------------
 
+        /// <summary>
+        /// Player spawn classnames accepted as Deathmatch spawns. Xonotic's
+        /// own DM rules fall back to team/race/assault spawns on maps that
+        /// have no info_player_deathmatch (CTF, Nexball, Race, Assault maps).
+        /// </summary>
+        public static readonly HashSet<string> SpawnClasses = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "info_player_deathmatch", "info_player_start",
+            "info_player_team1", "info_player_team2", "info_player_team3", "info_player_team4",
+            "info_player_race", "info_player_attacker", "info_player_defender",
+        };
+
         private static void BuildSpawnMarkers(BspDocument doc, Transform parent, List<string> warnings)
         {
             int spawnCount = 0;
             foreach (var entity in doc.Entities)
             {
                 string classname = entity.Get("classname");
-                if (classname != "info_player_deathmatch" && classname != "info_player_start")
+                if (classname == null || !SpawnClasses.Contains(classname))
                 {
                     continue;
                 }
@@ -671,7 +818,7 @@ namespace MyXonotic.EditorTools
 
             if (spawnCount == 0)
             {
-                warnings.Add("No info_player_deathmatch/info_player_start entities found; arena has no spawn markers.");
+                warnings.Add("No info_player_* spawn entities found; arena has no spawn markers.");
             }
 
             // Flag other gameplay-relevant entity classes this pass does not
@@ -682,7 +829,7 @@ namespace MyXonotic.EditorTools
             {
                 string classname = entity.Get("classname");
                 if (string.IsNullOrEmpty(classname)) continue;
-                if (classname == "info_player_deathmatch" || classname == "info_player_start" || classname == "worldspawn")
+                if (SpawnClasses.Contains(classname) || classname == "worldspawn")
                 {
                     continue;
                 }

@@ -134,6 +134,9 @@ namespace MyXonotic.EditorTools
 
             var warnings = new List<string>();
             var unsupported = new SortedSet<string>(StringComparer.Ordinal);
+            var resolver = new XonoticContentResolver();
+            var decorations = new GameObject("PickupDecorations");
+            decorations.transform.SetParent(root, false);
 
             int considered = 0;
             int importedCount = 0;
@@ -159,6 +162,7 @@ namespace MyXonotic.EditorTools
                 if (!ClassToPlan.TryGetValue(classname, out PickupPlan plan))
                 {
                     unsupported.Add(classname);
+                    PlaceDecorationOnly(entity, classname, resolver, decorations, warnings);
                     continue;
                 }
 
@@ -185,11 +189,16 @@ namespace MyXonotic.EditorTools
                 go.transform.localScale = Vector3.one * 0.6f;
 
                 var mf = go.AddComponent<MeshFilter>();
-                mf.mesh = ArenaPrimitives.SphereMesh;
                 var mr = go.AddComponent<MeshRenderer>();
-                mr.sharedMaterial = ArenaMaterials.Get(DevelopmentColorFor(plan.Type));
+                bool originalArt = ApplyOriginalModel(go, mf, mr, classname, resolver, warnings);
+                if (!originalArt)
+                {
+                    mf.mesh = ArenaPrimitives.SphereMesh;
+                    mr.sharedMaterial = ArenaMaterials.Get(DevelopmentColorFor(plan.Type));
+                }
                 var col = go.AddComponent<SphereCollider>();
                 col.isTrigger = true;
+                if (originalArt) col.radius = 0.9f;
                 // Kinematic Rigidbody for reliable OnTrigger callbacks, same
                 // reasoning as BspGameplayImporter's trigger volumes.
                 var body = go.AddComponent<Rigidbody>();
@@ -204,8 +213,9 @@ namespace MyXonotic.EditorTools
                 importedCount++;
 
                 warnings.Add(string.Format(
-                    "Entity '{0}': mapped to a {1} pickup (amount {2}, provisional) at its real map position; visual is a development placeholder sphere, not original item art.",
-                    classname, plan.Type, plan.Amount));
+                    "Entity '{0}': mapped to a {1} pickup (amount {2}, provisional) at its real map position; visual is {3}.",
+                    classname, plan.Type, plan.Amount,
+                    originalArt ? "the original MD3 item model (static frame 0)" : "a development placeholder sphere, not original item art"));
             }
 
             foreach (var c in unsupported)
@@ -242,6 +252,108 @@ namespace MyXonotic.EditorTools
                 return "power-up items are out of scope; Actor/WeaponController expose no such stat.";
             }
             return "unrecognized item_* class outside the mapped health/armor/rocket-ammo subset.";
+        }
+
+        /// <summary>
+        /// Original Xonotic item/weapon world models by entity class. Names
+        /// come from the official data pack's models/items and models/weapons
+        /// folders; no model is substituted when the mapped file is absent.
+        /// </summary>
+        public static readonly Dictionary<string, string> OriginalModelByClass =
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["item_health_small"] = "models/items/g_h1.md3",
+                ["item_health_medium"] = "models/items/g_h25.md3",
+                ["item_health_big"] = "models/items/g_h50.md3",
+                ["item_health_large"] = "models/items/g_h50.md3",
+                ["item_health_mega"] = "models/items/g_h100.md3",
+                ["item_armor_small"] = "models/items/item_armor_small.md3",
+                ["item_armor_medium"] = "models/items/item_armor_medium.md3",
+                ["item_armor_big"] = "models/items/item_armor_big.md3",
+                ["item_armor_large"] = "models/items/item_armor_large.md3",
+                ["item_armor_mega"] = "models/items/item_armor_large.md3",
+                ["item_rockets"] = "models/items/a_rockets.md3",
+                ["item_bullets"] = "models/items/a_bullets.md3",
+                ["item_cells"] = "models/items/a_cells.md3",
+                ["item_plasma"] = "models/items/a_cells.md3",
+                ["item_shells"] = "models/items/a_shells.md3",
+                ["item_fuel"] = "models/items/g_fuel.md3",
+                ["item_fuel_regen"] = "models/items/g_fuelregen.md3",
+                ["item_strength"] = "models/items/g_strength.md3",
+                ["item_invincible"] = "models/items/g_invincible.md3",
+                ["item_shield"] = "models/items/g_invincible.md3",
+                ["item_jetpack"] = "models/items/g_jetpack.md3",
+                ["weapon_blaster"] = "models/weapons/g_laser.md3",
+                ["weapon_laser"] = "models/weapons/g_laser.md3",
+                ["weapon_shotgun"] = "models/weapons/g_shotgun.md3",
+                ["weapon_machinegun"] = "models/weapons/g_uzi.md3",
+                ["weapon_uzi"] = "models/weapons/g_uzi.md3",
+                ["weapon_mortar"] = "models/weapons/g_gl.md3",
+                ["weapon_grenadelauncher"] = "models/weapons/g_gl.md3",
+                ["weapon_electro"] = "models/weapons/g_electro.md3",
+                ["weapon_crylink"] = "models/weapons/g_crylink.md3",
+                ["weapon_vortex"] = "models/weapons/g_nex.md3",
+                ["weapon_nex"] = "models/weapons/g_nex.md3",
+                ["weapon_hagar"] = "models/weapons/g_hagar.md3",
+                ["weapon_devastator"] = "models/weapons/g_rl.md3",
+                ["weapon_rocketlauncher"] = "models/weapons/g_rl.md3",
+                ["weapon_arc"] = "models/weapons/g_arc.md3",
+                ["weapon_minelayer"] = "models/weapons/g_minelayer.md3",
+                ["weapon_rifle"] = "models/weapons/g_campingrifle.md3",
+                ["weapon_campingrifle"] = "models/weapons/g_campingrifle.md3",
+                ["weapon_seeker"] = "models/weapons/g_seeker.md3",
+                ["weapon_fireball"] = "models/weapons/g_fireball.md3",
+                ["weapon_hlac"] = "models/weapons/g_hlac.md3",
+                ["weapon_hook"] = "models/weapons/g_hookgun.md3",
+                ["weapon_porto"] = "models/weapons/g_porto.md3",
+                ["weapon_tuba"] = "models/weapons/g_tuba.md3",
+                ["weapon_vaporizer"] = "models/weapons/g_minstanex.md3",
+                ["weapon_minstanex"] = "models/weapons/g_minstanex.md3",
+            };
+
+        static bool ApplyOriginalModel(GameObject go, MeshFilter mf, MeshRenderer mr, string classname,
+            XonoticContentResolver resolver, List<string> warnings)
+        {
+            string modelPath;
+            if (!OriginalModelByClass.TryGetValue(classname, out modelPath)) return false;
+            Mesh mesh; Material[] mats; string error;
+            if (!BspMapModelImporter.TryGetModel(modelPath, resolver, out mesh, out mats, out error))
+            {
+                warnings.Add(string.Format("Entity '{0}': original model '{1}' unavailable ({2}); placeholder used.", classname, modelPath, error));
+                return false;
+            }
+            mf.sharedMesh = mesh;
+            mr.sharedMaterials = mats;
+            go.transform.localScale = Vector3.one;
+            return true;
+        }
+
+        /// <summary>
+        /// For item/weapon classes that have no gameplay yet: place the
+        /// original model as a visual-only, non-collectible decoration so the
+        /// map does not look emptier than the original. Explicitly reported.
+        /// </summary>
+        static void PlaceDecorationOnly(BspEntity entity, string classname,
+            XonoticContentResolver resolver, GameObject decorations, List<string> warnings)
+        {
+            string modelPath;
+            if (!OriginalModelByClass.TryGetValue(classname, out modelPath)) return;
+            string originStr = entity.Get("origin");
+            BspVec3 quakeOrigin;
+            if (originStr == null || !TryParseVec3(originStr, out quakeOrigin) || !IsFiniteAndBounded(quakeOrigin)) return;
+            Mesh mesh; Material[] mats; string error;
+            if (!BspMapModelImporter.TryGetModel(modelPath, resolver, out mesh, out mats, out error))
+            {
+                warnings.Add(string.Format("Entity '{0}': decoration model '{1}' unavailable ({2}).", classname, modelPath, error));
+                return;
+            }
+            var u = BspCoordinateSpace.QuakeToUnity(quakeOrigin);
+            var go = new GameObject(classname + "_visualonly");
+            go.transform.SetParent(decorations.transform, false);
+            go.transform.localPosition = new Vector3(u.X, u.Y, u.Z);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>().sharedMaterials = mats;
+            go.AddComponent<PickupDecoration>();
         }
 
         static Color DevelopmentColorFor(PickupType type)

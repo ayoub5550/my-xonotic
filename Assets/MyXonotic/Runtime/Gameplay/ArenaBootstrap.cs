@@ -378,6 +378,16 @@ namespace MyXonotic
                 body.mesh = ArenaPrimitives.CapsuleMesh;
                 var bodyRenderer = visual.AddComponent<MeshRenderer>();
                 bodyRenderer.sharedMaterial = ArenaMaterials.Get(new Color(0.9f, 0.35f, 0.2f));
+                // Original Xonotic character (static idle pose) when imported;
+                // the capsule stays as the fallback and is hidden otherwise.
+                string characterName = CharacterModels.PickForIndex(i);
+                GameObject characterBody;
+                if (characterName != null && CharacterModels.TryAttach(go.transform, characterName, out characterBody))
+                {
+                    // Actor.Respawn re-enables every child renderer, so remove
+                    // the capsule outright rather than disabling it.
+                    Destroy(visual);
+                }
 
                 var actor = go.AddComponent<Actor>();
                 actor.DisplayName = $"Bot_{i}";

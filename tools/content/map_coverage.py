@@ -131,7 +131,10 @@ _EXACT_SPAWN_CLASSES = {"info_player_deathmatch", "info_player_start"}
 SUPPORTED_TRIGGER_CLASSES = {"trigger_push", "trigger_teleport", "trigger_hurt"}
 # The exact classnames BspImportPipeline.cs actually builds BspSpawnPoint
 # markers for today.
-SUPPORTED_SPAWN_CLASSES = set(_EXACT_SPAWN_CLASSES)
+SUPPORTED_SPAWN_CLASSES = set(_EXACT_SPAWN_CLASSES) | {
+    "info_player_team1", "info_player_team2", "info_player_team3", "info_player_team4",
+    "info_player_race", "info_player_attacker", "info_player_defender",
+}
 # dev.4 BspPickupImporter mappings, verified on Boil in Editor/Play Mode.
 # Presence in this set means a code path exists, NOT that every map works.
 SUPPORTED_PICKUP_CLASSES = {

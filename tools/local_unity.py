@@ -27,6 +27,8 @@ METHODS = {
     "gameplay-playtest": "MyXonotic.EditorTools.GameplayPlaytest.Run",
     "playtest": "MyXonotic.EditorTools.LocalPlaytest.Run",
     "original-playtest": "MyXonotic.EditorTools.OriginalMapPlaytest.Run",
+    "all-maps-playtest": "MyXonotic.EditorTools.AllMapsPlaytest.Run",
+    "content-test": "MyXonotic.EditorTools.ContentRegressionTests.Run",
 }
 
 
@@ -91,7 +93,7 @@ def main():
     log = artifacts / (args.task + ".log")
     command = [args.unity, "-batchmode", "-projectPath", str(ROOT), "-logFile", str(log)]
     command += ["-force-glcore"] if args.graphics else ["-nographics"]
-    if args.task not in ("playtest", "original-playtest", "gameplay-playtest"):
+    if args.task not in ("playtest", "original-playtest", "gameplay-playtest", "all-maps-playtest"):
         command += ["-quit"]
     if args.task == "android":
         command += ["-buildTarget", "Android"]
@@ -117,17 +119,18 @@ def main():
             # Keep any previous artifact, but never allow its old receipt to
             # make an activation/early-exit failure look like a new build.
             (ROOT / "Builds/build-receipt.json").unlink(missing_ok=True)
-        test_reports = {"test": "editor-tests.txt", "sky-test": "sky-import-regression-tests.txt",
+        test_reports = {"test": "editor-tests.txt", "content-test": "content-regression-tests.txt", "sky-test": "sky-import-regression-tests.txt",
                         "gameplay-test": "gameplay-integration-tests.txt"}
         if args.task in test_reports:
             (artifacts / test_reports[args.task]).unlink(missing_ok=True)
         if args.task == "compile":
             (artifacts / "compile-result.json").unlink(missing_ok=True)
-        if args.task in ("playtest", "original-playtest", "gameplay-playtest"):
+        if args.task in ("playtest", "original-playtest", "gameplay-playtest", "all-maps-playtest"):
             # A previous successful run must not mask an early zero-exit failure.
             report_name = {"playtest": "playtest-result.json",
                            "original-playtest": "original-playtest.json",
-                           "gameplay-playtest": "gameplay-playtest.json"}[args.task]
+                           "gameplay-playtest": "gameplay-playtest.json",
+                           "all-maps-playtest": "all-maps-playtest.json"}[args.task]
             (artifacts / report_name).unlink(missing_ok=True)
         # Account/licensing diagnostics must remain local and private.
         log_fd = os.open(log, os.O_CREAT | os.O_TRUNC | os.O_WRONLY |
@@ -154,7 +157,7 @@ def main():
                     process.kill()
                 process.wait()
             code = 124
-        if code == 0 and args.task in ("playtest", "original-playtest", "gameplay-playtest"):
+        if code == 0 and args.task in ("playtest", "original-playtest", "gameplay-playtest", "all-maps-playtest"):
             result = artifacts / report_name
             try:
                 passed = json.loads(result.read_text()).get("passed") is True

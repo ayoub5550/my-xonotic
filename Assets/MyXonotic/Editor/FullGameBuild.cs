@@ -37,14 +37,31 @@ namespace MyXonotic.EditorTools
         public sealed class MapReport
         {
             public string map, scene, title, status, error;
-            public int spawnPoints, warnings, pickups, triggers;
+            public int spawnPoints, warnings, pickups, triggers, mapModels, submodels, decorations;
             public float seconds;
             public string[] warningSamples;
         }
 
         [Serializable]
+        public class CharacterReport
+        {
+            public string name;
+            public bool ok;
+            public string error;
+            public int vertices;
+            public int triangles;
+            public int joints;
+            public string poseAnim;
+            public int poseFrame;
+            public string[] materials;
+            public string[] notes;
+        }
+
+        [Serializable]
         public sealed class Report
         {
+            public int charactersImported;
+            public List<CharacterReport> characters = new List<CharacterReport>();
             public string utc, mapsRoot, contentRoots, textureFormat;
             public int requested, imported, failed;
             public List<MapReport> maps = new List<MapReport>();
@@ -85,6 +102,22 @@ namespace MyXonotic.EditorTools
                 AssetDatabase.CreateAsset(catalog, CatalogPath);
             }
             var entries = new List<MapCatalog.Entry>();
+
+            // Original player models (static idle pose) for bots, shared by all maps.
+            var characterWarnings = new List<string>();
+            var characterResults = IqmCharacterImporter.ImportAll(new XonoticContentResolver(), characterWarnings);
+            foreach (var cr in characterResults)
+            {
+                report.characters.Add(new CharacterReport
+                {
+                    name = cr.Name, ok = cr.Ok, error = cr.Error, vertices = cr.Vertices, triangles = cr.Triangles,
+                    joints = cr.Joints, poseAnim = cr.PoseAnim, poseFrame = cr.PoseFrame,
+                    materials = cr.Materials.ToArray(), notes = cr.Notes.ToArray()
+                });
+                if (cr.Ok) report.charactersImported++;
+                Debug.Log("[FullGameBuild] character " + cr.Name + " -> " + (cr.Ok ? "ok" : "FAILED: " + cr.Error));
+            }
+            BspMapModelImporter.ClearCache();
 
             var scenes = new List<EditorBuildSettingsScene>();
             foreach (var bsp in bsps)
@@ -166,6 +199,9 @@ namespace MyXonotic.EditorTools
             mr.spawnPoints = root.GetComponentsInChildren<BspSpawnPoint>(true).Length;
             mr.pickups = root.GetComponentsInChildren<Pickup>(true).Length;
             mr.triggers = root.GetComponentsInChildren<MapTrigger>(true).Length;
+            mr.mapModels = arena != null ? arena.mapModelCount : 0;
+            mr.submodels = root.GetComponentsInChildren<MyXonotic.Content.ImportedSubmodel>(true).Length;
+            mr.decorations = root.GetComponentsInChildren<PickupDecoration>(true).Length;
             if (mr.spawnPoints == 0)
                 Debug.LogWarning("[FullGameBuild] '" + map + "' has no info_player_* spawn; ArenaBootstrap will use its origin fallback.");
 

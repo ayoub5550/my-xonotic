@@ -15,6 +15,9 @@
 
 ## استعادة الحالة الحالية
 
+المتابعة الحالية متعددة الخرائط على `feat/unity-dev5-full-game`؛ راجع
+`UNITY-DEV6.md` للأوامر والأدلة الأحدث. ما يلي يشرح أيضًا مسار Boil التاريخي.
+
 الفرع `main` تعريفي فقط. مصدر نقطة البداية `unity-v0.1.0-dev.2` موجود
 على `feat/unity-original-map`؛ متابعة الإصلاحات على فرع منفصل
 `feat/unity-android-continuation`. اقرأ `AGENTS.md` قبل التعديل.
@@ -73,6 +76,8 @@ python3 tools/local_unity.py android --timeout 3600
 ```
 
 بدون `XONOTIC_INCLUDE_EXTERNAL=1` يبني أمر Android ساحة التطوير المصطنعة.
+الاستثناء هو `XONOTIC_ALL_MAPS=1`، الذي يختار حزمة كل الخرائط والقائمة؛
+استعمل `XONOTIC_VERSION_CODE` المناسب كما في وثيقة الإصدار.
 عند تفعيله يستورد مسار `XONOTIC_BSP` ويولّد موارد الخريطة الأصلية قبل
 البناء؛ المخرج الحالي اسمه `my-xonotic-unity-boil.apk`، وليس لعبة كاملة.
 

@@ -17,5 +17,8 @@ namespace MyXonotic.Content
 
         [Tooltip("Non-fatal diagnostics collected during import: unsupported surfaces, missing shaders/entities, skipped patches, etc.")]
         public string[] warnings = System.Array.Empty<string>();
+
+        /// <summary>Number of original MD3 map decorations placed by BspMapModelImporter.</summary>
+        public int mapModelCount;
     }
 }

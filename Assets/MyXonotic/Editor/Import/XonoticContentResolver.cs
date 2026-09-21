@@ -108,6 +108,19 @@ namespace MyXonotic.EditorTools
             return _scripts.TryGetValue(name, out s) ? s : null;
         }
 
+        /// <summary>Find any content file by exact relative path (e.g. "models/foo.md3"); null when absent.</summary>
+        public string FindFile(string contentPath)
+        {
+            if (string.IsNullOrEmpty(contentPath)) return null;
+            contentPath = contentPath.Replace('\\', '/');
+            foreach (var root in Roots)
+            {
+                var exact = Path.Combine(root, contentPath);
+                if (File.Exists(exact)) return exact;
+            }
+            return null;
+        }
+
         /// <summary>Find an image for a bare content path such as "textures/exx/base-metal01" (no extension).</summary>
         public string FindImage(string contentPath)
         {

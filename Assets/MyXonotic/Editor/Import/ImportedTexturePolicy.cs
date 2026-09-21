@@ -62,8 +62,12 @@ namespace MyXonotic.EditorTools
             }
             if (target.HasValue)
             {
+                // Base-level alignment alone is insufficient: e.g. 600x600
+                // has a 150x150 mip and Unity's ETC compressor fails internally
+                // without throwing. Preserve the NPOT mip chain as RGBA32.
                 bool blockAligned = target.Value != TextureFormat.ETC2_RGBA8 ||
-                                    (result.width % 4 == 0 && result.height % 4 == 0);
+                                    (Mathf.IsPowerOfTwo(result.width) && Mathf.IsPowerOfTwo(result.height) &&
+                                     result.width >= 4 && result.height >= 4);
                 if (blockAligned)
                 {
                     try

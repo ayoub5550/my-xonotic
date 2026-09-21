@@ -1,0 +1,170 @@
+[
+  {
+    "source": "dds/textures/rl_new.dds",
+    "source_sha256": "dfc5afe2def7ec9064698d13a84b4791a4f7513bd3a84e3f0e29f05a43734a79",
+    "derived": "ExternalContent/decoded/textures/rl_new.png",
+    "derived_sha256": "66f9f8564f5bf70a0d5a9425091e19239ecc8865c15cc914c561d3e79f0394a6",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/crylink_new.dds",
+    "source_sha256": "9b45bbd73ab460dd244e60f98d3668b7b8f53b09114e6f0488dca6ffe3f27d7c",
+    "derived": "ExternalContent/decoded/textures/crylink_new.png",
+    "derived_sha256": "8c71eac7eb715186d4d39238e9ec19a21a011f6ed14aaa5c99e956634d7a9920",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/umbra.dds",
+    "source_sha256": "4d8a030914c2a3fb01bfcc834fd57fdd35716f1e98b5163e082eaca987d7aa4f",
+    "derived": "ExternalContent/decoded/umbra.png",
+    "derived_sha256": "d897227b1549b35b0e0475be4f7345cca9fa4a7adfd2292ec79714c0a2be7281",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/pyria.dds",
+    "source_sha256": "b2a7b043cf20c259e9b9ec8d250404c36b56119ae1a30759f8ae8f8daea6ff33",
+    "derived": "ExternalContent/decoded/pyria.png",
+    "derived_sha256": "af419fd8e34a41499ef46b2ab56b62c5769351ac05c953c9e4078083e9016bab",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/ignis.dds",
+    "source_sha256": "cc1330b770612f5a32da22f9dc61479dbf3e059338df55a8694071772d471ac8",
+    "derived": "ExternalContent/decoded/ignis.png",
+    "derived_sha256": "afae976cc6afc5ef02e19624114e8de8236c19615d2333db46b0d6b32beff792",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/nyx.dds",
+    "source_sha256": "6efde0c8cf6f9bf7e677b9a41b6ead9433b479488638b148a22b2d115f9def7b",
+    "derived": "ExternalContent/decoded/nyx.png",
+    "derived_sha256": "080de7c38f2fa24f20c04e4fc3377922f68b45a043c099a148f0bc3307ba1485",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/gakarmor.dds",
+    "source_sha256": "b6eb26992cb93595791c73b4d6b539507fe229aab106f3f54fb771f255f9beb5",
+    "derived": "ExternalContent/decoded/gakarmor.png",
+    "derived_sha256": "3eafb09d60a25ca1ac2cc3f467486a7112f6fd5d460827a8dab290496cd90b45",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/seraphina.dds",
+    "source_sha256": "aa744b237ca0c218e6e9cbb308d3cf183c663a96b475843b4cba769868795789",
+    "derived": "ExternalContent/decoded/seraphina.png",
+    "derived_sha256": "e9d45ae9ba82d6ed416d0916581e9440a5639992fe9b61e3930cdeb1039a8846",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/pyriahair.dds",
+    "source_sha256": "9b0f5b6c5ea034484fa3a0d2f0a009b65d8e318f1e5b71597ec4522bdf2450a2",
+    "derived": "ExternalContent/decoded/pyriahair.png",
+    "derived_sha256": "b315e2a7a2704d6e881f9022ebfe109cc685c5353705cf70c879ffd589c301de",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/shadowhead.dds",
+    "source_sha256": "fe01983f60e5551c4205347184aaf32e4d92c077aa35fbb81f8aa9cee5d5f6b6",
+    "derived": "ExternalContent/decoded/shadowhead.png",
+    "derived_sha256": "31440c9d1af9d232fd74ac1a75990bb9e1d0655a18164615848d20c680bc62fb",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/erebus.dds",
+    "source_sha256": "267df11dbe50215a8cdcbefbe17344d4f240037320fb7589fbbdcdc8ec5d95b0",
+    "derived": "ExternalContent/decoded/erebus.png",
+    "derived_sha256": "ec2bd462bb15a1a2d828b22e0a6634a4553e18474000ddf8e61f71dcf6205ffd",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/gak.dds",
+    "source_sha256": "69e42831a1e41f40149ba81e5f5bf2a726c8dec77e391fc0091a8c37cec4ebea",
+    "derived": "ExternalContent/decoded/gak.png",
+    "derived_sha256": "23c326199149b26590098d605e1e7c095e7c7578f9dbeb5a996d9c04727b0096",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/ignishead.dds",
+    "source_sha256": "e9ab6d55f8717a2d0438e48a475d2ebb140028e5b60280ce4bc5a226b96bd3e3",
+    "derived": "ExternalContent/decoded/ignishead.png",
+    "derived_sha256": "24922c68e636a2b83aca07a441e538b728f0fb5192f1b6064e8bccef1a64d3f0",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/items/a_bullets.dds",
+    "source_sha256": "a2bc6da4e0561c56accdcbd74ad12ee12bedf5a1a2a401f75d0706287ab66b61",
+    "derived": "ExternalContent/decoded/textures/items/a_bullets.png",
+    "derived_sha256": "5abf19f60230836e7fb6a399923c5ca77b976d59417f22f020d66af60f1597b4",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/items/cellammo.dds",
+    "source_sha256": "4bcd1470bc9392287ecff2c3558cd913ba7cf26d5e79502a72513f3a277a89c8",
+    "derived": "ExternalContent/decoded/textures/items/cellammo.png",
+    "derived_sha256": "bb9d4ebd40af0ed034033961c944d121b5a4a8d26b7d65f3b18cfbe87251619f",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/items/explosiveammo.dds",
+    "source_sha256": "9a50c1029a549a065afdceac3ed15f722fa33a9ebe4aa4dcf2f320f7f693584f",
+    "derived": "ExternalContent/decoded/textures/items/explosiveammo.png",
+    "derived_sha256": "aea909f22c871d916ce5b610bdfb6f4316c1d8e2215b702df214b9aba720798c",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/items/explosiveammo_icon_01.dds",
+    "source_sha256": "01a83dafa589528987d2fa99c3a2ea3f8bdb820eac11abaac0fab9b8cf7f1a7c",
+    "derived": "ExternalContent/decoded/textures/items/explosiveammo_icon_01.png",
+    "derived_sha256": "8fc79f5e2d71a3cf5cfd6c8f2ceea6f9eb529f647e7de97bd6a8b3f3f4e34274",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/shellsammo.dds",
+    "source_sha256": "0909ffff85b9b3ff413aa6bd3edfb1eaa6a17473edcb9f357660879d55f6c5bc",
+    "derived": "ExternalContent/decoded/shellsammo.png",
+    "derived_sha256": "61be7a58aecf64ed66f36ccee0eddd7507d61d365dd57d5ab548f47b944369b8",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/models/items/red.dds",
+    "source_sha256": "b3d0334181593290833dec8b794670af6e92f26a4defb0f7c71965423f9784a7",
+    "derived": "ExternalContent/decoded/models/items/red.png",
+    "derived_sha256": "ce75997479da8e0c9f1239e8e04ff1e4758a1af985d2540f78585ed848132cde",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/invincible.dds",
+    "source_sha256": "aaf98eeb589af30ec8f7499a6209923402a9a78e303004a389c92af192efd671",
+    "derived": "ExternalContent/decoded/invincible.png",
+    "derived_sha256": "ab5afd1a6e93715d9fcccc26c36b03b75a29c2d07c7cd35b73273855a016aa5f",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/strength.dds",
+    "source_sha256": "20aba38448e4b18f9a89a214f59a7001d92f45a351464fb114a36853d21903c4",
+    "derived": "ExternalContent/decoded/strength.png",
+    "derived_sha256": "6b797a216bc8183b61fa8f5e4a13b324725409085848536acca762b4765fa33a",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/sniperrifle.dds",
+    "source_sha256": "3f622abbadeadd44c589b2eaa7a9da98ebbdd4666966a98fd3f7d3213e04e3a2",
+    "derived": "ExternalContent/decoded/textures/sniperrifle.png",
+    "derived_sha256": "4e0bf509de84ec706bfe52fb1613b887d8437eac883fa9d90c483b2ab55330c4",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/minelayer.dds",
+    "source_sha256": "05da49fb61ae2f2ad46a2857c786f99f9b1db3e19cabbcbc496cbd8f094102fe",
+    "derived": "ExternalContent/decoded/textures/minelayer.png",
+    "derived_sha256": "54e70ce4512dad21e4212563438e0833c592171c424d8f59fc2b2246968af92a",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/tuba.dds",
+    "source_sha256": "6ba0266905f863532b4aa66064cca56c727979c495678b3fe9ecb094c3c5b1c3",
+    "derived": "ExternalContent/decoded/textures/tuba.png",
+    "derived_sha256": "7bb3636d5b1a49c5492de7d2b595df0b9e12f429da4197169bfa9876e4e723d5",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  }
+]

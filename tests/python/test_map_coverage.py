@@ -97,10 +97,14 @@ class TestClassification(unittest.TestCase):
         self.assertEqual(mc.classify_classname(""), mc.CATEGORY_OTHER)
 
     def test_supported_classnames_are_exactly_the_current_source_subset(self):
-        # dev.4 import paths; does not assert map-wide gameplay parity.
+        # dev.4 import paths + dev.5 team/race/assault spawns; does not
+        # assert map-wide gameplay parity.
         self.assertEqual(
             mc.SUPPORTED_CLASSNAMES,
-            {"info_player_deathmatch", "info_player_start", "trigger_push",
+            {"info_player_deathmatch", "info_player_start",
+             "info_player_team1", "info_player_team2", "info_player_team3",
+             "info_player_team4", "info_player_race", "info_player_attacker",
+             "info_player_defender", "trigger_push",
              "trigger_teleport", "trigger_hurt", "item_health_small",
              "item_health_medium", "item_health_big", "item_health_mega",
              "item_armor_small", "item_armor_medium", "item_armor_big",

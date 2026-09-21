@@ -39,6 +39,9 @@ namespace MyXonotic.Menu
             {
                 var es = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
                 es.transform.SetParent(transform, false);
+                // Touch/pointer menu only: keyboard/gamepad navigation would
+                // poll the Submit/Cancel/Horizontal/Vertical axes every frame.
+                es.GetComponent<EventSystem>().sendNavigationEvents = false;
             }
             var cam = new GameObject("MenuCamera", typeof(Camera));
             cam.transform.SetParent(transform, false);

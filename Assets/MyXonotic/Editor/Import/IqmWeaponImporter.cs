@@ -601,6 +601,21 @@ namespace MyXonotic.EditorTools
 
         public static IqmStaticModel ReadStatic(byte[] data, string sourcePathForErrors)
         {
+            var all = ReadStaticAll(data, sourcePathForErrors, allowAnimated: false);
+            if (all.Length != 1)
+                throw new InvalidDataException("This importer only supports single-mesh IQM files; found " + all.Length + " in " + sourcePathForErrors);
+            return all[0];
+        }
+
+        /// <summary>
+        /// Reads every mesh of an IQM file as static bind-pose geometry (one
+        /// <see cref="IqmStaticModel"/> per mesh, sharing the file's vertex
+        /// arrays sliced per mesh). With <paramref name="allowAnimated"/> the
+        /// pose/anim data is ignored rather than refused (bind pose only, no
+        /// skinning) — used for multi-mesh item/weapon world models.
+        /// </summary>
+        public static IqmStaticModel[] ReadStaticAll(byte[] data, string sourcePathForErrors, bool allowAnimated)
+        {
             if (data.Length < 16 + 4 * (3 + HeaderIntCount))
                 throw new InvalidDataException("File too short for an IQM header: " + sourcePathForErrors);
 
@@ -631,22 +646,12 @@ namespace MyXonotic.EditorTools
             uint numComment = ReadU32(data, ref p), ofsComment = ReadU32(data, ref p);
             uint numExtensions = ReadU32(data, ref p), ofsExtensions = ReadU32(data, ref p);
 
-            if (numMeshes != 1)
-                throw new InvalidDataException("This importer only supports single-mesh IQM files; found " + numMeshes + " in " + sourcePathForErrors);
-            if (numPoses != 0 || numAnims != 0 || numFrames != 0)
+            if (numMeshes == 0)
+                throw new InvalidDataException("IQM file has no meshes: " + sourcePathForErrors);
+            if (!allowAnimated && (numPoses != 0 || numAnims != 0 || numFrames != 0))
                 throw new InvalidDataException("This importer only supports static (non-animated) IQM files; " + sourcePathForErrors + " has pose/anim/frame data.");
 
-            RequireRange(data, ofsMeshes, 6 * 4, "mesh record");
-            uint meshNameIdx = ReadU32At(data, ofsMeshes + 0);
-            uint meshMaterialIdx = ReadU32At(data, ofsMeshes + 4);
-            uint firstVertex = ReadU32At(data, ofsMeshes + 8);
-            uint meshNumVertexes = ReadU32At(data, ofsMeshes + 12);
-            uint firstTriangle = ReadU32At(data, ofsMeshes + 16);
-            uint meshNumTriangles = ReadU32At(data, ofsMeshes + 20);
-
             RequireRange(data, ofsText, numText, "text section");
-            string meshName = ReadCString(data, ofsText, meshNameIdx);
-            string materialName = ReadCString(data, ofsText, meshMaterialIdx);
 
             Vector3[] positions = null;
             Vector2[] uvs = null;
@@ -704,39 +709,51 @@ namespace MyXonotic.EditorTools
             }
 
             if (positions == null) throw new InvalidDataException("IQM file has no position vertex array: " + sourcePathForErrors);
-
             RequireRange(data, ofsTriangles, numTriangles * 12, "triangle table");
-            var triangles = new int[meshNumTriangles * 3];
-            for (int t = 0; t < meshNumTriangles; t++)
-            {
-                uint o = ofsTriangles + (firstTriangle + (uint)t) * 12;
-                uint a = ReadU32At(data, o), b = ReadU32At(data, o + 4), c = ReadU32At(data, o + 8);
-                // Same winding flip as BspCoordinateSpace's Y/Z axis swap requires.
-                triangles[t * 3 + 0] = (int)a;
-                triangles[t * 3 + 1] = (int)b;
-                triangles[t * 3 + 2] = (int)c;
-            }
+            RequireRange(data, ofsMeshes, numMeshes * 6 * 4, "mesh records");
 
-            // Meshes in this bounded set start at vertex 0 for the (only) mesh,
-            // but slice defensively in case a future file has firstVertex > 0.
-            if (firstVertex != 0 || meshNumVertexes != numVertexes)
+            var result = new IqmStaticModel[numMeshes];
+            for (uint m = 0; m < numMeshes; m++)
             {
-                positions = Slice(positions, firstVertex, meshNumVertexes);
-                if (uvs != null) uvs = Slice(uvs, firstVertex, meshNumVertexes);
-                if (normals != null) normals = Slice(normals, firstVertex, meshNumVertexes);
-                for (int i = 0; i < triangles.Length; i++) triangles[i] -= (int)firstVertex;
-            }
+                uint rec = ofsMeshes + m * 24;
+                uint meshNameIdx = ReadU32At(data, rec + 0);
+                uint meshMaterialIdx = ReadU32At(data, rec + 4);
+                uint firstVertex = ReadU32At(data, rec + 8);
+                uint meshNumVertexes = ReadU32At(data, rec + 12);
+                uint firstTriangle = ReadU32At(data, rec + 16);
+                uint meshNumTriangles = ReadU32At(data, rec + 20);
+                if (firstVertex + meshNumVertexes > numVertexes || firstTriangle + meshNumTriangles > numTriangles)
+                    throw new InvalidDataException("IQM mesh #" + m + " references vertices/triangles out of range: " + sourcePathForErrors);
 
-            return new IqmStaticModel
-            {
-                MeshName = meshName,
-                MaterialName = materialName,
-                Positions = positions,
-                TexCoords = uvs ?? new Vector2[positions.Length],
-                Normals = normals ?? Array.Empty<Vector3>(),
-                Triangles = triangles,
-                JointCount = (int)numJoints
-            };
+                string meshName = ReadCString(data, ofsText, meshNameIdx);
+                string materialName = ReadCString(data, ofsText, meshMaterialIdx);
+
+                var triangles = new int[meshNumTriangles * 3];
+                for (int t = 0; t < meshNumTriangles; t++)
+                {
+                    uint o = ofsTriangles + (firstTriangle + (uint)t) * 12;
+                    uint a = ReadU32At(data, o), b = ReadU32At(data, o + 4), c = ReadU32At(data, o + 8);
+                    triangles[t * 3 + 0] = (int)a - (int)firstVertex;
+                    triangles[t * 3 + 1] = (int)b - (int)firstVertex;
+                    triangles[t * 3 + 2] = (int)c - (int)firstVertex;
+                }
+
+                var mp = (firstVertex != 0 || meshNumVertexes != numVertexes) ? Slice(positions, firstVertex, meshNumVertexes) : positions;
+                var mu = uvs == null ? null : ((firstVertex != 0 || meshNumVertexes != numVertexes) ? Slice(uvs, firstVertex, meshNumVertexes) : uvs);
+                var mn = normals == null ? null : ((firstVertex != 0 || meshNumVertexes != numVertexes) ? Slice(normals, firstVertex, meshNumVertexes) : normals);
+
+                result[m] = new IqmStaticModel
+                {
+                    MeshName = meshName,
+                    MaterialName = materialName,
+                    Positions = mp,
+                    TexCoords = mu ?? new Vector2[mp.Length],
+                    Normals = mn ?? Array.Empty<Vector3>(),
+                    Triangles = triangles,
+                    JointCount = (int)numJoints
+                };
+            }
+            return result;
         }
 
         static T[] Slice<T>(T[] source, uint start, uint count)

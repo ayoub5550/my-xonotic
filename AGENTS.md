@@ -1,5 +1,43 @@
 # my-xonotic — developer and agent handoff
 
+## dev.6 content-fix checkpoint — 2026-09-21 (branch `feat/unity-dev5-full-game`)
+
+Read `docs/UNITY-DEV6.md` first; it supersedes dev.5's absence claims for
+character art / map props / item visuals, not the remaining gameplay gates.
+Local APK vc7, `0.1.0-dev.6`, 400,459,348 bytes, SHA256
+`ef140281d7639840c9b3d75b9631c1b28fad5784bdd73e32f56ccd6905ee7be5`.
+Receipt `docs/unity-dev6-build-2026-09-21.json`; the receipt revision is the
+pre-change base (`deea0ed6`), NOT the full clean source revision. Source-file
+fingerprints are in `docs/unity-dev6-source-2026-09-21.json`.
+CRC/manifest/ARM64/v2 debug signature verified (same cert as vc6); no device test.
+
+Map report `docs/unity-dev6-maps-2026-09-21.json`: 29 maps, 583 spawns,
+1,562 pickups, 304 original props, 117 visible inline submodels (STATIC),
+577 visual-only unsupported items, 11 original IQM player models (STATIC idle).
+Only three bots currently spawn, choosing the first three character resources.
+12 OBJ entities skipped; 23 submodels have no renderable triangles. 13 jump-pad
+material assets remain untextured (366 references across scenes). No parity claim.
+Full-game arsenal, skeletal animation, mover behavior, modes/network still absent.
+
+Regression lesson: `PersistPickupVisuals` must only persist TRANSIENT assets
+(`!AssetDatabase.Contains`); otherwise it silently replaces original models
+with the old sphere after import. `python3 tools/local_unity.py content-test`
+reopens all saved scenes and checks actual mesh/material references: 157 checks,
+including all 1,562 originals, zero placeholder spheres, all character resources.
+Run it after prepare-maps/build; it requires the full resource set.
+ETC2 mip compression may fail internally for NPOT 600x600 despite base-level
+4-block alignment; retain raw mipmapped RGBA32 for NPOT textures.
+New model/character persistence preserves GUIDs on reimport.
+Inline model vertices are pivot-local when the entity has an origin brush:
+apply the entity origin (e.g. afterslime *7); do NOT assume every submodel
+is already world-space. Content tests check all saved pivots against BSP.
+Python 154 and basic Editor 22 checks pass. Runtime evidence is separate:
+`all-maps-playtest` is headless simulation, not rendering or full-map traversal.
+Final dev.6 run: 30/30 scenes, 0 runtime errors/warnings, 982.4 seconds;
+`docs/unity-dev6-all-maps-playtest-2026-09-21.json`.
+Graphical Linux/Xvfb/llvmpipe tour timed out with zero PNGs; do not fabricate
+visual evidence or reuse upstream screenshots as output from this APK.
+
 ## dev.5 full-map checkpoint — 2026-09-21 (branch `feat/unity-dev5-full-game`)
 
 Read `docs/UNITY-DEV5.md` first. First APK bundling all 29 importable official
@@ -15,6 +53,17 @@ under git-ignored `Assets/MyXonotic/Generated/`, so `prepare-maps` or the
 FullGame build must run before opening the menu scene on a fresh clone.
 `docs/UNITY-DEV5-WIP.md` describes code that was never pushed; do not assume
 weapons/Erebus/doors exist. Still NOT complete Xonotic; no device test of this hash.
+
+versionCode 6 rebuild (same VERSION): SHA256
+`e9e1d8ee84e84610f1847f1039a7110d725f38dd4cfbb926f53520c735add07d`,
+322,902,649 bytes, receipt `docs/unity-dev5-build-2026-09-21-vc6.json`.
+Fixes found by `python3 tools/local_unity.py all-maps-playtest`
+(`Editor/AllMapsPlaytest.cs`, Play Mode over MainMenu + all maps, report
+`Artifacts/all-maps-playtest.json`): default input axes added to
+`ProjectSettings/InputManager.asset` (StandaloneInputModule threw every frame),
+`BspImportPipeline.SpawnClasses` accepts info_player_team1..4/race/attacker/
+defender (10 CTF/Nexball/Race maps had 0 spawns → origin fallback). Run
+all-maps-playtest after any runtime/import change; still no device test.
 
 ## Full-game continuation wave — dev.4 source checkpoint
 

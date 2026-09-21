@@ -1,0 +1,270 @@
+{
+  "utc": "2026-09-21T15:09:27.3456470Z",
+  "textureFormat": "etc2",
+  "requested": 29,
+  "imported": 29,
+  "failed": 0,
+  "maps": [
+    {
+      "map": "afterslime",
+      "status": "imported",
+      "spawnPoints": 10,
+      "pickups": 34,
+      "triggers": 8,
+      "warnings": 176,
+      "seconds": 7.433685779571533
+    },
+    {
+      "map": "atelier",
+      "status": "imported",
+      "spawnPoints": 13,
+      "pickups": 36,
+      "triggers": 6,
+      "warnings": 127,
+      "seconds": 19.601797103881836
+    },
+    {
+      "map": "boil",
+      "status": "imported",
+      "spawnPoints": 7,
+      "pickups": 25,
+      "triggers": 4,
+      "warnings": 112,
+      "seconds": 3.5590391159057617
+    },
+    {
+      "map": "bromine",
+      "status": "imported",
+      "spawnPoints": 11,
+      "pickups": 76,
+      "triggers": 4,
+      "warnings": 191,
+      "seconds": 10.817290306091309
+    },
+    {
+      "map": "catharsis",
+      "status": "imported",
+      "spawnPoints": 0,
+      "pickups": 107,
+      "triggers": 4,
+      "warnings": 240,
+      "seconds": 34.81232452392578
+    },
+    {
+      "map": "courtfun",
+      "status": "imported",
+      "spawnPoints": 45,
+      "pickups": 94,
+      "triggers": 11,
+      "warnings": 202,
+      "seconds": 21.310333251953125
+    },
+    {
+      "map": "dance",
+      "status": "imported",
+      "spawnPoints": 0,
+      "pickups": 66,
+      "triggers": 3,
+      "warnings": 215,
+      "seconds": 22.284038543701172
+    },
+    {
+      "map": "darkzone",
+      "status": "imported",
+      "spawnPoints": 7,
+      "pickups": 21,
+      "triggers": 4,
+      "warnings": 137,
+      "seconds": 23.45633888244629
+    },
+    {
+      "map": "erbium",
+      "status": "imported",
+      "spawnPoints": 7,
+      "pickups": 35,
+      "triggers": 8,
+      "warnings": 205,
+      "seconds": 31.79092025756836
+    },
+    {
+      "map": "finalrage",
+      "status": "imported",
+      "spawnPoints": 12,
+      "pickups": 20,
+      "triggers": 4,
+      "warnings": 91,
+      "seconds": 16.961164474487305
+    },
+    {
+      "map": "fuse",
+      "status": "imported",
+      "spawnPoints": 12,
+      "pickups": 26,
+      "triggers": 3,
+      "warnings": 149,
+      "seconds": 26.661203384399414
+    },
+    {
+      "map": "geoplanetary",
+      "status": "imported",
+      "spawnPoints": 0,
+      "pickups": 144,
+      "triggers": 13,
+      "warnings": 237,
+      "seconds": 20.241966247558594
+    },
+    {
+      "map": "glowplant",
+      "status": "imported",
+      "spawnPoints": 17,
+      "pickups": 37,
+      "triggers": 4,
+      "warnings": 165,
+      "seconds": 29.886503219604492
+    },
+    {
+      "map": "go",
+      "status": "imported",
+      "spawnPoints": 0,
+      "pickups": 115,
+      "triggers": 17,
+      "warnings": 220,
+      "seconds": 9.886392593383789
+    },
+    {
+      "map": "implosion",
+      "status": "imported",
+      "spawnPoints": 0,
+      "pickups": 97,
+      "triggers": 28,
+      "warnings": 246,
+      "seconds": 12.951726913452148
+    },
+    {
+      "map": "leave_em_behind",
+      "status": "imported",
+      "spawnPoints": 0,
+      "pickups": 0,
+      "triggers": 5,
+      "warnings": 58,
+      "seconds": 14.912618637084961
+    },
+    {
+      "map": "nexballarena",
+      "status": "imported",
+      "spawnPoints": 0,
+      "pickups": 0,
+      "triggers": 0,
+      "warnings": 52,
+      "seconds": 18.86919593811035
+    },
+    {
+      "map": "opium",
+      "status": "imported",
+      "spawnPoints": 13,
+      "pickups": 25,
+      "triggers": 5,
+      "warnings": 124,
+      "seconds": 14.666565895080566
+    },
+    {
+      "map": "runningman",
+      "status": "imported",
+      "spawnPoints": 10,
+      "pickups": 20,
+      "triggers": 4,
+      "warnings": 113,
+      "seconds": 35.40794372558594
+    },
+    {
+      "map": "runningmanctf",
+      "status": "imported",
+      "spawnPoints": 26,
+      "pickups": 50,
+      "triggers": 8,
+      "warnings": 196,
+      "seconds": 10.59093189239502
+    },
+    {
+      "map": "silentsiege",
+      "status": "imported",
+      "spawnPoints": 7,
+      "pickups": 43,
+      "triggers": 3,
+      "warnings": 142,
+      "seconds": 20.45779037475586
+    },
+    {
+      "map": "solarium",
+      "status": "imported",
+      "spawnPoints": 19,
+      "pickups": 32,
+      "triggers": 0,
+      "warnings": 123,
+      "seconds": 39.129310607910156
+    },
+    {
+      "map": "space-elevator",
+      "status": "imported",
+      "spawnPoints": 0,
+      "pickups": 115,
+      "triggers": 23,
+      "warnings": 253,
+      "seconds": 13.477712631225586
+    },
+    {
+      "map": "stormkeep",
+      "status": "imported",
+      "spawnPoints": 13,
+      "pickups": 59,
+      "triggers": 6,
+      "warnings": 134,
+      "seconds": 14.431344032287598
+    },
+    {
+      "map": "techassault",
+      "status": "imported",
+      "spawnPoints": 0,
+      "pickups": 124,
+      "triggers": 2,
+      "warnings": 237,
+      "seconds": 22.115333557128906
+    },
+    {
+      "map": "trident",
+      "status": "imported",
+      "spawnPoints": 12,
+      "pickups": 35,
+      "triggers": 10,
+      "warnings": 112,
+      "seconds": 5.900415897369385
+    },
+    {
+      "map": "vorix",
+      "status": "imported",
+      "spawnPoints": 0,
+      "pickups": 93,
+      "triggers": 10,
+      "warnings": 216,
+      "seconds": 10.692901611328125
+    },
+    {
+      "map": "warfare",
+      "status": "imported",
+      "spawnPoints": 9,
+      "pickups": 17,
+      "triggers": 4,
+      "warnings": 78,
+      "seconds": 6.45258903503418
+    },
+    {
+      "map": "xoylent",
+      "status": "imported",
+      "spawnPoints": 8,
+      "pickups": 16,
+      "triggers": 4,
+      "warnings": 113,
+      "seconds": 27.428791046142578
+    }
+  ]
+}

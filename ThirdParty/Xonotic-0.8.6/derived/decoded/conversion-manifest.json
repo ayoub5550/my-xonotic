@@ -1,0 +1,128 @@
+[
+  {
+    "source": "dds/models/weapons/laser.dds",
+    "source_sha256": "48b7f848413276d9faa9dd53e5d72f473aa1b277ad5ba32255208507eb59e159",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/models/weapons/laser.png",
+    "derived_sha256": "cd99b0e9679e21feca9aa23f33775aa34f5ec0c5073648586fa418a3ea1b4edc",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/rl_new.dds",
+    "source_sha256": "dfc5afe2def7ec9064698d13a84b4791a4f7513bd3a84e3f0e29f05a43734a79",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/textures/rl_new.png",
+    "derived_sha256": "66f9f8564f5bf70a0d5a9425091e19239ecc8865c15cc914c561d3e79f0394a6",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/rl_trust01.dds",
+    "source_sha256": "c0c6f973ea058aea962f41f1e8790e858e62016c3630999081ff6cf038644021",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/textures/rl_trust01.png",
+    "derived_sha256": "d8f9acad154292d03ef5af09d99482fecab45c932bd8a54738f39679350f1829",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/crylink_new.dds",
+    "source_sha256": "9b45bbd73ab460dd244e60f98d3668b7b8f53b09114e6f0488dca6ffe3f27d7c",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/textures/crylink_new.png",
+    "derived_sha256": "8c71eac7eb715186d4d39238e9ec19a21a011f6ed14aaa5c99e956634d7a9920",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/electronew.dds",
+    "source_sha256": "9a9ffb019c7363bd384e8ba433a6c5592cb5e7aa60187d9b88c8a5663386655e",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/textures/electronew.png",
+    "derived_sha256": "8106b8ef4dd168c5c8ab4fd00191f6cbbca8d621a85653c5d29c2f5f4c6cadd8",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/electro_plasma.dds",
+    "source_sha256": "31092e728eff17f520fb717e3610487804a939683b5e627df373ac38ce26bf46",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/textures/electro_plasma.png",
+    "derived_sha256": "ca02baa55067be0e072f669883fee059e007c419f37dac7ebab1e3141c04bcf0",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/grenadelauncher.dds",
+    "source_sha256": "3f1d72777e9dedfe884428281bd6cf6ab64173ca68cd6a302a11ee03eadff213",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/textures/grenadelauncher.png",
+    "derived_sha256": "611b93077d01e2860416707ca3f5a4b192c7d3a9577348d80ff56c4824d47356",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/glsight01.dds",
+    "source_sha256": "05b7987493bafe567c3484f740cc526d15f7b0f6509a4fe1242a4c4d8e20b25b",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/textures/glsight01.png",
+    "derived_sha256": "789cc3d7c8416b40a4f20155ece071c362f85d610e71b32b328bfc12b4cf2ead",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/nexgun.dds",
+    "source_sha256": "faf2d6ee3c1ee1a52c22b7a351d082e5d1aad9560845bd5a1b28467254da3ba0",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/textures/nexgun.png",
+    "derived_sha256": "d241254d4a8994dbd414dc73c8953536feb8ea41f0bc0e7b59b16744e720be4e",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/shotgun2.dds",
+    "source_sha256": "1e540477c327f479076bf64b48492958543578c8a81754d595f7d9694010b3d7",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/textures/shotgun2.png",
+    "derived_sha256": "a927492a46d2eab7638cb332d475012170b995d9dc973c70c750ab11385de9b9",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/shotgun_sight.dds",
+    "source_sha256": "34a8f53d2522bd17a48d3cdb34b4cf6b7205cb605a8f1cf1e2d3fd6a3b858c60",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/textures/shotgun_sight.png",
+    "derived_sha256": "25bb9b030154afae1713c5af6bf8f869fc1f125303dcc4b03d177f6d63931f4e",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/uzi.dds",
+    "source_sha256": "a0001742ccaec6d137f3b5dae134332c0992c2322f2dc49e3b27bb6d7a739abe",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/textures/uzi.png",
+    "derived_sha256": "61607daadde13bcdffc5bcd8b0400eb0b59ef5382ea503e94592e57e768553a6",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/textures/hagar.dds",
+    "source_sha256": "7e2ecbf1a5ed7cc0c3226e417d3d45eae290f25a96d876b7b8aab997504a4492",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/textures/hagar.png",
+    "derived_sha256": "ce881abcc709d4c1898b7f6a45cd0c452d45124d1608234bc4b3b87d73d56c7d",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/models/items/5hp.dds",
+    "source_sha256": "d42ce2d62f5a3f07e3cd675b95dc5e328dc93d80b66a5943f5500f9ff7d7bf24",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/models/items/5hp.png",
+    "derived_sha256": "5523b83b7781cddd27537fbbe68b8ade193c19a58b41e685b3b6235367db39ff",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/models/items/h25.dds",
+    "source_sha256": "9749eac1d190b9f6dc831e437d16d69ee7301abe83c28427233f389f47152b53",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/models/items/h25.png",
+    "derived_sha256": "1ca810613038dd7d7579875397d29cf468f7b8e75e7b534c08a2d06dd358700f",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/models/items/h50.dds",
+    "source_sha256": "b0bc84b211260f0bd892b2bae588863a7fc632bd96499b29a2658c5f95927c56",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/models/items/h50.png",
+    "derived_sha256": "4ec94ca9da5e422a6b141f49a05c2b7472f149630bba5db7291194e7e9d3cc15",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/models/items/h_mega.dds",
+    "source_sha256": "6443da286c5e4666ee8ae087d93f22b19cd239ef1146e99854b1200ff0ba091c",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/models/items/h_mega.png",
+    "derived_sha256": "9aa740ac0936b1cdca840c50260d2c8390027f91fcc839e4808fd478bd1fd6c3",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "dds/models/items/armor.dds",
+    "source_sha256": "062c0755eaa098ce73c360f50789b3b844d387b6aaa96c89894ae14c333bb91f",
+    "derived": "/__modal/volumes/vo-1uK0G1PPFClibnOqszSGDM/repos/my-xonotic/.worktrees/unity-continue/ExternalContent/decoded/models/items/armor.png",
+    "derived_sha256": "efd7eee5dde5a1eafa15c23be56728d0a9d2dd909009a18a46f18bd604c36482",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  }
+]

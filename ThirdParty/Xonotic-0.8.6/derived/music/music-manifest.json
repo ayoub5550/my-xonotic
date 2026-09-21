@@ -1,0 +1,161 @@
+{
+  "archive": "xonotic-20230620-music.pk3",
+  "archive_sha256": "133fbcfa5766cd6849c2918bb34ce4d749aeafcbf89de54df467a61296353f48",
+  "index_sha256": "b9b8946ffac6b639de4dee57a0e1d4e571d413ee69190cdbd62ac297d7069844",
+  "tracks": [
+    {
+      "number": 1,
+      "name": "rising-of-the-phoenix",
+      "entry": "sound/cdtracks/rising-of-the-phoenix.ogg",
+      "sha256": "42eda25643eefbc544941cce997602a219e94da9c9e2e94c01436ca7c732de84",
+      "bytes": 6603673
+    },
+    {
+      "number": 2,
+      "name": "ninesix",
+      "entry": "sound/cdtracks/ninesix.ogg",
+      "sha256": "36ae5a59c850e401a91e8c1fb98ab2fd916957492e7a9b9cd32970f4d1b576cc",
+      "bytes": 3978907
+    },
+    {
+      "number": 3,
+      "name": "northern-lights",
+      "entry": "sound/cdtracks/northern-lights.ogg",
+      "sha256": "8f2cd13c939a5e3738a36324b84d3daab5d5e619aa79e8ab579bea835fcd046f",
+      "bytes": 9742912
+    },
+    {
+      "number": 4,
+      "name": "meltdown",
+      "entry": "sound/cdtracks/meltdown.ogg",
+      "sha256": "0d7c6224f7c813c1c5c2349edb3c2f26ba83791bf5ff91c45f8a1465c90a99c1",
+      "bytes": 6062850
+    },
+    {
+      "number": 5,
+      "name": "stairs",
+      "entry": "sound/cdtracks/stairs.ogg",
+      "sha256": "beca86e5383505f2536b0d6de1c41dba45d5f315e955d4c6c02a551a3439751f",
+      "bytes": 3350501
+    },
+    {
+      "number": 6,
+      "name": "out-there",
+      "entry": "sound/cdtracks/out-there.ogg",
+      "sha256": "6c73d2cc9d616c51b870d81f7fee97c93408cb6bb7aa4fe26811629a1ae915ad",
+      "bytes": 7679357
+    },
+    {
+      "number": 7,
+      "name": "zzzzz",
+      "entry": "sound/cdtracks/zzzzz.ogg",
+      "sha256": "22ff350f51e7b49254f311146369c988ab2cb02e068be3c357c58bd1992d25c2",
+      "bytes": 4673110
+    },
+    {
+      "number": 8,
+      "name": "mickrippon_jumpinginspace",
+      "entry": "sound/cdtracks/mickrippon_jumpinginspace.ogg",
+      "sha256": "baefb2e20d912004dc4630c3c5767f2ecf8d8da1e3e466e8bc829f61dfa74685",
+      "bytes": 5122092
+    },
+    {
+      "number": 9,
+      "name": "sixtyfour",
+      "entry": "sound/cdtracks/sixtyfour.ogg",
+      "sha256": "a909187697584d5bf4006b14a7a2d815755df72e93fd8fa3494703c3cc146d34",
+      "bytes": 3094313
+    },
+    {
+      "number": 10,
+      "name": "traveler",
+      "entry": "sound/cdtracks/traveler.ogg",
+      "sha256": "19f203514edc23d746ba87578e7ec68ec7d6cf92a987ec10d980398e02c9d4bf",
+      "bytes": 3911960
+    },
+    {
+      "number": 11,
+      "name": "quiet",
+      "entry": "sound/cdtracks/quiet.ogg",
+      "sha256": "ea9d0ea2da8760b1d51507bd5b5b27119d5b2f0abf1cbc3b90aba8fd50e5bb20",
+      "bytes": 5076747
+    },
+    {
+      "number": 12,
+      "name": "neon",
+      "entry": "sound/cdtracks/neon.ogg",
+      "sha256": "3a84bcb2960422b39201da422a74e7c75a424d6b0355c8fbcb1d8459643f20f1",
+      "bytes": 3230059
+    },
+    {
+      "number": 13,
+      "name": "kojinsmokin",
+      "entry": "sound/cdtracks/kojinsmokin.ogg",
+      "sha256": "c6195f76a0f1868422787f19ca55fe46f5e8a5e73322c9d88789fcfdf54505d1",
+      "bytes": 4614600
+    },
+    {
+      "number": 14,
+      "name": "sensation3",
+      "entry": "sound/cdtracks/sensation3.ogg",
+      "sha256": "c426a92bd1f72dd1dae442dfd5b70856a55263cea8ef7f2a4a8f3a22d361bddd",
+      "bytes": 6743640
+    },
+    {
+      "number": 15,
+      "name": "also-t",
+      "entry": "sound/cdtracks/also-t.ogg",
+      "sha256": "f5e77312b5854288d1fa77e22daadbce6d8ec142c3c6fc8662ef40c830b2e59c",
+      "bytes": 4266563
+    },
+    {
+      "number": 16,
+      "name": "heavymetal",
+      "entry": "sound/cdtracks/heavymetal.ogg",
+      "sha256": "c9ef766da7722c68aaf5ba2158439d9d96acf99facd7a94bb5670c0906ddc49b",
+      "bytes": 6584904
+    },
+    {
+      "number": 17,
+      "name": "inner-peace",
+      "entry": "sound/cdtracks/inner-peace.ogg",
+      "sha256": "62de963c360bc5b02961399e93330067ff65c01ee76a4c14351daa2292ec63b2",
+      "bytes": 4712431
+    },
+    {
+      "number": 18,
+      "name": "the-laws-of-physics",
+      "entry": "sound/cdtracks/the-laws-of-physics.ogg",
+      "sha256": "ccdfecab4e5536da7c51ee58a1ebf8e78ab7e02fd9ea5f65783b673ad4651e77",
+      "bytes": 5763491
+    },
+    {
+      "number": 19,
+      "name": "variable",
+      "entry": "sound/cdtracks/variable.ogg",
+      "sha256": "7187b455f356387fa3c62435bc9b24e666fd95c915e23bfcf1d506cce73b5933",
+      "bytes": 3274005
+    },
+    {
+      "number": 20,
+      "name": "x-force",
+      "entry": "sound/cdtracks/x-force.ogg",
+      "sha256": "fa5a9c3cd1dd905c4dbe6a6890856c52f5ad7a4c5f106e20dc7c6480e3930797",
+      "bytes": 3484199
+    },
+    {
+      "number": 21,
+      "name": "nanite",
+      "entry": "sound/cdtracks/nanite.ogg",
+      "sha256": "6ba758cae2bf9d7257feb554cab087c0142dd2c4397b41657e4d45e97ac192ec",
+      "bytes": 5030564
+    },
+    {
+      "number": 22,
+      "name": "gogetem",
+      "entry": "sound/cdtracks/gogetem.ogg",
+      "sha256": "69556604b634c47b3ad9a96b5aadfeff29a47a311507c5626bce6cea30852176",
+      "bytes": 4397606
+    }
+  ]
+}

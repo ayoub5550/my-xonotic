@@ -1,0 +1,158 @@
+PASS filter blend does not carve alpha
+PASS additive glow does not carve alpha
+PASS explicit alpha test carves alpha
+PASS source alpha blend uses coverage approximation
+PASS NPOT texture retains valid raw mip chain without ETC compressor failure
+PASS erebus runtime resource attachment
+PASS erebus finite nonempty character geometry
+PASS erebus all skins persisted
+PASS gak runtime resource attachment
+PASS gak finite nonempty character geometry
+PASS gak all skins persisted
+PASS gakmasked runtime resource attachment
+PASS gakmasked finite nonempty character geometry
+PASS gakmasked all skins persisted
+PASS ignis runtime resource attachment
+PASS ignis finite nonempty character geometry
+PASS ignis all skins persisted
+PASS ignismasked runtime resource attachment
+PASS ignismasked finite nonempty character geometry
+PASS ignismasked all skins persisted
+PASS megaerebus runtime resource attachment
+PASS megaerebus finite nonempty character geometry
+PASS megaerebus all skins persisted
+PASS nyx runtime resource attachment
+PASS nyx finite nonempty character geometry
+PASS nyx all skins persisted
+PASS pyria runtime resource attachment
+PASS pyria finite nonempty character geometry
+PASS pyria all skins persisted
+PASS seraphina runtime resource attachment
+PASS seraphina finite nonempty character geometry
+PASS seraphina all skins persisted
+PASS seraphinamasked runtime resource attachment
+PASS seraphinamasked finite nonempty character geometry
+PASS seraphinamasked all skins persisted
+PASS umbra runtime resource attachment
+PASS umbra finite nonempty character geometry
+PASS umbra all skins persisted
+PASS all 29 official map scenes available
+PASS map_afterslime.unity imported arena deserialized
+PASS map_afterslime.unity pickup meshes/materials remain original after serialization
+PASS map_afterslime.unity unsupported items are visual-only with persisted meshes
+PASS map_afterslime.unity inline model pivots match BSP entity origins
+PASS map_atelier.unity imported arena deserialized
+PASS map_atelier.unity pickup meshes/materials remain original after serialization
+PASS map_atelier.unity unsupported items are visual-only with persisted meshes
+PASS map_atelier.unity inline model pivots match BSP entity origins
+PASS map_boil.unity imported arena deserialized
+PASS map_boil.unity pickup meshes/materials remain original after serialization
+PASS map_boil.unity unsupported items are visual-only with persisted meshes
+PASS map_boil.unity inline model pivots match BSP entity origins
+PASS map_bromine.unity imported arena deserialized
+PASS map_bromine.unity pickup meshes/materials remain original after serialization
+PASS map_bromine.unity unsupported items are visual-only with persisted meshes
+PASS map_bromine.unity inline model pivots match BSP entity origins
+PASS map_catharsis.unity imported arena deserialized
+PASS map_catharsis.unity pickup meshes/materials remain original after serialization
+PASS map_catharsis.unity unsupported items are visual-only with persisted meshes
+PASS map_catharsis.unity inline model pivots match BSP entity origins
+PASS map_courtfun.unity imported arena deserialized
+PASS map_courtfun.unity pickup meshes/materials remain original after serialization
+PASS map_courtfun.unity unsupported items are visual-only with persisted meshes
+PASS map_courtfun.unity inline model pivots match BSP entity origins
+PASS map_dance.unity imported arena deserialized
+PASS map_dance.unity pickup meshes/materials remain original after serialization
+PASS map_dance.unity unsupported items are visual-only with persisted meshes
+PASS map_dance.unity inline model pivots match BSP entity origins
+PASS map_darkzone.unity imported arena deserialized
+PASS map_darkzone.unity pickup meshes/materials remain original after serialization
+PASS map_darkzone.unity unsupported items are visual-only with persisted meshes
+PASS map_darkzone.unity inline model pivots match BSP entity origins
+PASS map_erbium.unity imported arena deserialized
+PASS map_erbium.unity pickup meshes/materials remain original after serialization
+PASS map_erbium.unity unsupported items are visual-only with persisted meshes
+PASS map_erbium.unity inline model pivots match BSP entity origins
+PASS map_finalrage.unity imported arena deserialized
+PASS map_finalrage.unity pickup meshes/materials remain original after serialization
+PASS map_finalrage.unity unsupported items are visual-only with persisted meshes
+PASS map_finalrage.unity inline model pivots match BSP entity origins
+PASS map_fuse.unity imported arena deserialized
+PASS map_fuse.unity pickup meshes/materials remain original after serialization
+PASS map_fuse.unity unsupported items are visual-only with persisted meshes
+PASS map_fuse.unity inline model pivots match BSP entity origins
+PASS map_geoplanetary.unity imported arena deserialized
+PASS map_geoplanetary.unity pickup meshes/materials remain original after serialization
+PASS map_geoplanetary.unity unsupported items are visual-only with persisted meshes
+PASS map_geoplanetary.unity inline model pivots match BSP entity origins
+PASS map_glowplant.unity imported arena deserialized
+PASS map_glowplant.unity pickup meshes/materials remain original after serialization
+PASS map_glowplant.unity unsupported items are visual-only with persisted meshes
+PASS map_glowplant.unity inline model pivots match BSP entity origins
+PASS map_go.unity imported arena deserialized
+PASS map_go.unity pickup meshes/materials remain original after serialization
+PASS map_go.unity unsupported items are visual-only with persisted meshes
+PASS map_go.unity inline model pivots match BSP entity origins
+PASS map_implosion.unity imported arena deserialized
+PASS map_implosion.unity pickup meshes/materials remain original after serialization
+PASS map_implosion.unity unsupported items are visual-only with persisted meshes
+PASS map_implosion.unity inline model pivots match BSP entity origins
+PASS map_leave_em_behind.unity imported arena deserialized
+PASS map_leave_em_behind.unity pickup meshes/materials remain original after serialization
+PASS map_leave_em_behind.unity unsupported items are visual-only with persisted meshes
+PASS map_leave_em_behind.unity inline model pivots match BSP entity origins
+PASS map_nexballarena.unity imported arena deserialized
+PASS map_nexballarena.unity pickup meshes/materials remain original after serialization
+PASS map_nexballarena.unity unsupported items are visual-only with persisted meshes
+PASS map_nexballarena.unity inline model pivots match BSP entity origins
+PASS map_opium.unity imported arena deserialized
+PASS map_opium.unity pickup meshes/materials remain original after serialization
+PASS map_opium.unity unsupported items are visual-only with persisted meshes
+PASS map_opium.unity inline model pivots match BSP entity origins
+PASS map_runningman.unity imported arena deserialized
+PASS map_runningman.unity pickup meshes/materials remain original after serialization
+PASS map_runningman.unity unsupported items are visual-only with persisted meshes
+PASS map_runningman.unity inline model pivots match BSP entity origins
+PASS map_runningmanctf.unity imported arena deserialized
+PASS map_runningmanctf.unity pickup meshes/materials remain original after serialization
+PASS map_runningmanctf.unity unsupported items are visual-only with persisted meshes
+PASS map_runningmanctf.unity inline model pivots match BSP entity origins
+PASS map_silentsiege.unity imported arena deserialized
+PASS map_silentsiege.unity pickup meshes/materials remain original after serialization
+PASS map_silentsiege.unity unsupported items are visual-only with persisted meshes
+PASS map_silentsiege.unity inline model pivots match BSP entity origins
+PASS map_solarium.unity imported arena deserialized
+PASS map_solarium.unity pickup meshes/materials remain original after serialization
+PASS map_solarium.unity unsupported items are visual-only with persisted meshes
+PASS map_solarium.unity inline model pivots match BSP entity origins
+PASS map_space-elevator.unity imported arena deserialized
+PASS map_space-elevator.unity pickup meshes/materials remain original after serialization
+PASS map_space-elevator.unity unsupported items are visual-only with persisted meshes
+PASS map_space-elevator.unity inline model pivots match BSP entity origins
+PASS map_stormkeep.unity imported arena deserialized
+PASS map_stormkeep.unity pickup meshes/materials remain original after serialization
+PASS map_stormkeep.unity unsupported items are visual-only with persisted meshes
+PASS map_stormkeep.unity inline model pivots match BSP entity origins
+PASS map_techassault.unity imported arena deserialized
+PASS map_techassault.unity pickup meshes/materials remain original after serialization
+PASS map_techassault.unity unsupported items are visual-only with persisted meshes
+PASS map_techassault.unity inline model pivots match BSP entity origins
+PASS map_trident.unity imported arena deserialized
+PASS map_trident.unity pickup meshes/materials remain original after serialization
+PASS map_trident.unity unsupported items are visual-only with persisted meshes
+PASS map_trident.unity inline model pivots match BSP entity origins
+PASS map_vorix.unity imported arena deserialized
+PASS map_vorix.unity pickup meshes/materials remain original after serialization
+PASS map_vorix.unity unsupported items are visual-only with persisted meshes
+PASS map_vorix.unity inline model pivots match BSP entity origins
+PASS map_warfare.unity imported arena deserialized
+PASS map_warfare.unity pickup meshes/materials remain original after serialization
+PASS map_warfare.unity unsupported items are visual-only with persisted meshes
+PASS map_warfare.unity inline model pivots match BSP entity origins
+PASS map_xoylent.unity imported arena deserialized
+PASS map_xoylent.unity pickup meshes/materials remain original after serialization
+PASS map_xoylent.unity unsupported items are visual-only with persisted meshes
+PASS map_xoylent.unity inline model pivots match BSP entity origins
+PASS 1562 persisted original pickup meshes; zero placeholder spheres
+PASS 304 props / 117 static submodels / 577 visual-only items persisted
+INFO untextured map/item material references: 366 (reported, not a texture-parity pass)

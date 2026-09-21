@@ -1,15 +1,76 @@
-# my-xonotic
+# my-xonotic — Unity / Android
 
-مشروع مستقل لنقل تجربة **Xonotic** إلى **Unity / Android**، بالبناء المحلي فقط.
+مشروع مستقل لنقل **Xonotic** إلى **Unity** على **Android**، بالبناء المحلي فقط.
+هذا هو مستودع الكود والموارد والتوثيق وخطة التطوير والإصدارات.
 
-التطوير الأول معزول على فرع
-[`feat/local-unity-android`](https://github.com/ayoub5550/my-xonotic/tree/feat/local-unity-android)
-حتى انتهاء المراجعة. يحتوي تسليم هذا الفرع على كود Unity، أدوات البناء المحلي،
-وثائق النطاق والاختبارات، وخطة المتابعة في `AGENTS.md`.
+> **الحالة: تطوير `0.1.0-dev.6` على فرع `feat/unity-dev5-full-game`؛ ليست Xonotic مكتملة.**
+> نجحت أبنية Android محلية متعددة. الخرائط والقائمة والموسيقى مجمّعة في APK،
+> مع إصلاح استيراد الأجزاء والنماذج الأصلية. الأدلة والحدود في
+> [dev.6](docs/UNITY-DEV6.md) و[dev.5](docs/UNITY-DEV5.md).
+> لا يوجد تحقق بصري أو اختبار هاتف موثق للنسخة الجديدة.
 
-**تنبيه:** هذا مشروع قيد التطوير، وليس إصدار Android رسميًا من فريق Xonotic،
-ولا يعني وجود مستودع أو إصدار مصدر أن اللعبة الكاملة تعمل.
+## الموجود الآن
 
-Independent Unity/Android port development. Local builds only. The development
-branch carries the implementation and evidence; upstream Xonotic content keeps
-its original licences.
+- مشروع Unity **2022.3.62f3**، مع إعداد بناء محلي **ARM64 / IL2CPP**.
+- كود ساحة اختبار أصلية: حركة وقفز، تحكم لمس متعدد الأصابع، صحة ودرع وذخيرة،
+  ثلاثة أسلحة تجريبية، ثلاثة خصوم بسيطين، pickups، موت وإعادة ظهور، HUD وإيقاف مؤقت.
+  **هذا كود للاختبار، وليس دليلًا على اكتمال هذه الوظائف على الهاتف.**
+- قارئ **IBSP v46** مع أسطح منحنية وخامات وإضاءة وسماء وتصادم ونقاط ظهور؛
+  حزمة متعددة الخرائط مع قائمة وموسيقى. الأبواب والمنصات المستوردة ساكنة.
+- نماذج عناصر وديكور MD3/IQM وشخصيات IQM بوضع idle ثابت؛ لا تحريك هيكلي بعد.
+- **موارد أصلية فعلية** في [ThirdParty/Xonotic](ThirdParty/Xonotic/README.md):
+  دفعة أولى، إضافة إلى شجرة حزم الإصدار في
+  [ThirdParty/Xonotic-0.8.6](ThirdParty/Xonotic-0.8.6/README.md)،
+  منفصلة عن كودنا وتحت تراخيص أصحابها. وجود الموارد لا يعني تكامل كل وظائفها.
+- أدوات محلية للاختبار والبناء وفحص الموارد، مع توثيق SHA256 والمصدر.
+
+## ما لم يكتمل
+
+لا يوجد نقل كامل لمنطق الخرائط أو الأسلحة أو الحركة أو الشبكة. كل الخرائط
+تستعمل Deathmatch أوفلاين تقريبيًا؛ بعض العناصر زينة غير قابلة للالتقاط.
+لا توجد مطابقة بصرية للفيديو ولا اختبار لمس/أداء على Android.
+نجاح البناء أو الاختبار بلا رسوميات ليس إثباتًا لاكتمال اللعبة.
+
+## البداية السريعة
+
+1. ثبّت Unity **2022.3.62f3** محليًا مع Android Build Support وSDK/NDK/OpenJDK،
+   وفعّل رخصتك عبر Unity Hub. لا تضع بيانات حسابك في المستودع.
+2. افتح جذر المشروع، ثم من قائمة `My Xonotic` اختر
+   `1 - Configure local project` ثم `2 - Create development arena scene`.
+3. بعد نجاح الترجمة، اختبر Play Mode ثم البناء المحلي وفق
+   [دليل البناء](docs/LOCAL_BUILD.md). لا يوجد workflow للبناء السحابي.
+
+```bash
+python3 tools/content/pk3_tool.py fixture
+bash tests/run_all.sh
+python3 tools/content/verify_resources.py
+python3 tools/asset_meta.py
+```
+
+الاختبارات المستقلة تتطلب Python وMono (`mono` و`mcs`). يمكن تحديد مساري Mono
+وملفات الخرائط اختياريًا؛ التفاصيل في [الاختبارات](docs/TESTING.md).
+
+## التحكم في ساحة التطوير
+
+| الوظيفة | الحاسوب | الهاتف |
+|---|---|---|
+| الحركة / النظر | WASD / الفأرة | سحب النصف الأيسر / الأيمن |
+| القفز | Space | JUMP |
+| إطلاق / ثانوي | زرا الفأرة | FIRE / ALT |
+| تبديل السلاح | 1–3 أو Q | NEXT |
+| إيقاف / استئناف | P أو Escape | PAUSE / RESUME |
+| إعادة المباراة | R | RESTART عند الإيقاف |
+
+أرقام وأوضاع الأسلحة تجريبية وليست توازن Xonotic النهائي. الساحة تُظهر ذلك صراحة.
+
+## فهرس العمل
+
+- [AGENTS.md](AGENTS.md) — نقطة الاستئناف، الحقائق والقيود وأوامر التحقق.
+- [البنية](docs/ARCHITECTURE.md) و[الخطة](docs/ROADMAP.md).
+- [البناء المحلي](docs/LOCAL_BUILD.md) و[الاختبارات](docs/TESTING.md).
+- [CHANGELOG](CHANGELOG.md) و[سياسة الإصدارات](docs/RELEASING.md).
+- [مصادر وتراخيص الطرف الثالث](THIRD_PARTY_NOTICES.md).
+- [الفيديو الذي حدده المالك](https://www.youtube.com/watch?v=ze-zRpsVBCA).
+
+كودنا الأصلي MIT؛ موارد `ThirdParty/Xonotic` **ليست MIT**. اقرأ تراخيصها قبل
+التعديل أو إعادة التوزيع. المشروع ليس إصدارًا رسميًا أو معتمدًا من Team Xonotic.

@@ -1,0 +1,18 @@
+[
+  {
+    "source": "ExternalContent/characters/erebus/source/dds/textures/erebusfullbright.dds",
+    "source_sha256": "2ae15cbf2c46ea21df0a0f8dfaf36d75c8178f53929ba637f0adec0d310b2560",
+    "source_size_bytes": 2796344,
+    "derived": "ExternalContent/characters/erebus/textures/erebusfullbright.png",
+    "derived_sha256": "4befa8f78ec1a696990954edcd67f63fb8b2d735bb25bee1a5605cca9857f2fe",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  },
+  {
+    "source": "ExternalContent/characters/erebus/source/dds/textures/shadowhead.dds",
+    "source_sha256": "fe01983f60e5551c4205347184aaf32e4d92c077aa35fbb81f8aa9cee5d5f6b6",
+    "source_size_bytes": 699192,
+    "derived": "ExternalContent/characters/erebus/textures/shadowhead.png",
+    "derived_sha256": "31440c9d1af9d232fd74ac1a75990bb9e1d0655a18164615848d20c680bc62fb",
+    "operation": "Pillow DDS decode to lossless PNG; original upstream licence unchanged"
+  }
+]

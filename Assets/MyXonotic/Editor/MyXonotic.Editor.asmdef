@@ -1,0 +1,8 @@
+{
+  "name": "MyXonotic.Editor",
+  "rootNamespace": "MyXonotic.EditorTools",
+  "references": ["MyXonotic.Runtime", "UnityEngine.UI"],
+  "includePlatforms": ["Editor"],
+  "allowUnsafeCode": false,
+  "autoReferenced": true
+}

@@ -1,0 +1,1540 @@
+{
+  "scope": "Unmodified Boil and _hudsetup release BSPs, editable map source, material scripts and a bounded image-dependency subset.",
+  "completeness": "NOT all Xonotic assets. No unresolved image paths in the intake's recognized direct shader-reference scan. Optional normal/gloss/glow companions and assets for unused materials in complete shader files are incomplete. The scan is not a Unity renderer or proof of every material dependency. Initial raw-download rate limits were resolved for this subset using known GitLab tree paths.",
+  "maps_repository_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+  "maps_release_tag": "xonotic-v0.8.6",
+  "gameplay": "Source/resource presence only; not Unity rendering or gameplay validation",
+  "files": [
+    {
+      "path": "LICENSES/COPYING",
+      "source_url": "https://gitlab.com/xonotic/xonotic/-/raw/0100f2c8d7947267292db66714c1af55039809ad/COPYING",
+      "source_commit": "0100f2c8d7947267292db66714c1af55039809ad",
+      "bytes": 2383,
+      "sha256": "9c6d680aa6e9daac858e86786637043ffd17d4007a20b57871836444ccace4bc",
+      "modifications": "none"
+    },
+    {
+      "path": "LICENSES/GPL-2",
+      "source_url": "https://gitlab.com/xonotic/xonotic/-/raw/0100f2c8d7947267292db66714c1af55039809ad/GPL-2",
+      "source_commit": "0100f2c8d7947267292db66714c1af55039809ad",
+      "bytes": 18092,
+      "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
+      "modifications": "none"
+    },
+    {
+      "path": "LICENSES/GPL-3",
+      "source_url": "https://gitlab.com/xonotic/xonotic/-/raw/0100f2c8d7947267292db66714c1af55039809ad/GPL-3",
+      "source_commit": "0100f2c8d7947267292db66714c1af55039809ad",
+      "bytes": 35147,
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/env/exomorph/exomorphnx.jpg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/env/exomorph/exomorphnx.jpg",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 5236,
+      "sha256": "5341394293933b2126fc3844ca709544bb12100e3ea0d83d33f1e5f4d29b8348",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/env/exomorph/exomorphny.jpg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/env/exomorph/exomorphny.jpg",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 5018,
+      "sha256": "47dcc46d1cd93b99d0b7646a65eec56eabcc9d110593749f2d182c2151a38644",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/env/exomorph/exomorphnz.jpg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/env/exomorph/exomorphnz.jpg",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3328,
+      "sha256": "f17672362d734a4252af6058eae94336c5bdaa78984108c47b8bc8171ae09871",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/env/exomorph/exomorphpx.jpg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/env/exomorph/exomorphpx.jpg",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 5087,
+      "sha256": "77858e14db67603b1f15d7cf58e916bae1f33da57516f364d49d5411eec0acc5",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/env/exomorph/exomorphpy.jpg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/env/exomorph/exomorphpy.jpg",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4339,
+      "sha256": "2507cf1ade6790213a18f800f9f39280c8dbc4395c1828e6a550a0b09a4fff58",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/env/exomorph/exomorphpz.jpg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/env/exomorph/exomorphpz.jpg",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3791,
+      "sha256": "49a16f594dfe14ab7af3479c153399c2abe53a3b02059134f330702f0c9649c5",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/env/polluted_earth/polluted_earth_bk.jpg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/env/polluted_earth/polluted_earth_bk.jpg",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 673136,
+      "sha256": "415afb2eec4990fc35e143e843cca62e79e2765d4e3501c7ee84eb76d964ef86",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/env/polluted_earth/polluted_earth_dn.jpg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/env/polluted_earth/polluted_earth_dn.jpg",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 202108,
+      "sha256": "002305c830600263316cc3a75fdbfdbaacd5d8c2dce89f7285825a2f37081bf2",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/env/polluted_earth/polluted_earth_ft.jpg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/env/polluted_earth/polluted_earth_ft.jpg",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 678348,
+      "sha256": "65044d5da4a4de7438f6396fc49b59dd6e306936a94ab40d18608719cdc24192",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/env/polluted_earth/polluted_earth_lf.jpg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/env/polluted_earth/polluted_earth_lf.jpg",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 684056,
+      "sha256": "587fe1ac8ab7d1a07722ff269f028a3329681986a8512ecb3cb6bffc5f9d7e0a",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/env/polluted_earth/polluted_earth_rt.jpg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/env/polluted_earth/polluted_earth_rt.jpg",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 692903,
+      "sha256": "54caa9251e191d631fdb0fdfc45ab873b8eac362b891a7f26cfe1ae6f3a4d933",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/env/polluted_earth/polluted_earth_up.jpg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/env/polluted_earth/polluted_earth_up.jpg",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1056296,
+      "sha256": "41f0418dd6c0f4e86bdcba9df671b3644e4deebbafeb11bc05ad486fe47301f2",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/maps/_hudsetup.bsp",
+      "source_url": "https://dl.xonotic.org/xonotic-0.8.6.zip",
+      "source_commit": "xonotic-0.8.6 release",
+      "bytes": 347552,
+      "sha256": "d358a3cd897a13f322e271423a6039188026a117082664ba3b3ccde547a561e8",
+      "modifications": "none",
+      "archive_member": "Xonotic/data/xonotic-20230620-maps.pk3!maps/_hudsetup.bsp",
+      "verification": "member CRC and SHA256; full release SHA512 NOT verified"
+    },
+    {
+      "path": "maps-pk3/maps/_hudsetup.jpg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/maps/_hudsetup.jpg",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 42897,
+      "sha256": "186c73986523e2b7efeb80335da9116e29eba68750655b058edcbddf81dd2813",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/maps/_hudsetup.map",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/maps/_hudsetup.map",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 26721,
+      "sha256": "d4f04bb0fe80d157efd5a33069c5fd7006b98d69d54228afc682e6d60dd3fa36",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/maps/_hudsetup.map.options",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/maps/_hudsetup.map.options",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 65,
+      "sha256": "17703056457ae77cb84488082888d8ef4bcb45634cca0b024bec4b77a0d04a30",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/maps/_hudsetup.mapinfo",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/maps/_hudsetup.mapinfo",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 198,
+      "sha256": "8a9001407bde5eb24d4026afac5330aea610897519be8a0ba8d9ee8ef9f4c5ad",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/maps/boil.bsp",
+      "source_url": "https://dl.xonotic.org/xonotic-0.8.6.zip",
+      "source_commit": "xonotic-0.8.6 release",
+      "bytes": 1923316,
+      "sha256": "5edd1224e89eb9d31cfd8a05cb532546d6f5a43e438078f25234b8f2011093fb",
+      "modifications": "none",
+      "archive_member": "Xonotic/data/xonotic-20230620-maps.pk3!maps/boil.bsp",
+      "verification": "member CRC and SHA256; full release SHA512 NOT verified"
+    },
+    {
+      "path": "maps-pk3/maps/boil.jpg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/maps/boil.jpg",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 41449,
+      "sha256": "9301d3021c24fa60543a21b7e1dc0c7e9ebb02be3895a422bcb95fbf19353add",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/maps/boil.map",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/maps/boil.map",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 920132,
+      "sha256": "365d35bb151d63f5e8621b8dac2b6e75f81ac79726df705f0190756ba2492454",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/maps/boil.map.options",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/maps/boil.map.options",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 85,
+      "sha256": "246f357b91411438313d0a20d902d13612470e2fd7b696dec3be35a7b4481583",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/maps/boil.mapinfo",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/maps/boil.mapinfo",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 280,
+      "sha256": "1ca682f614effb0a9bbe218fcb8833783e1bbbdc46cc9da889e9be55d1080231",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/maps/boil.waypoints",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/maps/boil.waypoints",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 2276,
+      "sha256": "a1d601cc7a2e5a04bc83acebf07070ccdcc7968de8bf7fd9effe437aa4fe78f3",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/maps/boil.waypoints.cache",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/maps/boil.waypoints.cache",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 14890,
+      "sha256": "755949e612300e8672a61c2f4354bb6a81a017f31c0338be3cad153cf94e511f",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/maps/boil.waypoints.hardwired",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/maps/boil.waypoints.hardwired",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 204,
+      "sha256": "d682a36d614b33e30d4ecf752d38b98e80265ec07f999496e444c4ddb92f47d2",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/scripts/common.shader",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/scripts/common.shader",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 5897,
+      "sha256": "9f7763ac3b944d85342c4fcd68d1cad301de8fd1383c4e4436ec5c7eabe31238",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/scripts/effects_warpzone.shader",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/scripts/effects_warpzone.shader",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1120,
+      "sha256": "cf490290cac63f1fedb16c03dcb283a2071fcfb5527d6dd1e6578746510a162f",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/scripts/exomorphx.shader",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/scripts/exomorphx.shader",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 48256,
+      "sha256": "9c99ca006d04a4ce5824bdf22fb26162b55de5fd8898a24c80c6d95ee3a433c2",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/scripts/exx.shader",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/scripts/exx.shader",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 32388,
+      "sha256": "8a3bccb45cc4c97df40a826f429de20b03da71dd9a63671612e536c2021c4524",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/scripts/facility114invx.shader",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/scripts/facility114invx.shader",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 7721,
+      "sha256": "6527002583cab6c0a97a7745b4dc67d047061e55b5a5a7482374a7bc2d89ba71",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/scripts/facility114x.shader",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/scripts/facility114x.shader",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 11101,
+      "sha256": "02f8f6cc4db6210a8d06a9d17f049da6f89f2642284a4536b5e600d45f3850cf",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/scripts/map_boil.shader",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/scripts/map_boil.shader",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 748,
+      "sha256": "3fd1c99c9b15d846ab6b7cb4ca25ff6b9fdc04a97bae71030242a9b5142f6985",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/scripts/map_implosion.shader",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/scripts/map_implosion.shader",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3113,
+      "sha256": "352bef253d4551075bd5fa13144d1765b2e5d39c419226ab8f8f49ad2549a0d1",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/scripts/phillipk2x.shader",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/scripts/phillipk2x.shader",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 44952,
+      "sha256": "07e42c08a0cd7e9e723eda833c3f1b62d97568bd5095d7155dd6e8e4ab2ef613",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/scripts/skies_polluted_earth.shader",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/scripts/skies_polluted_earth.shader",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 454,
+      "sha256": "ccadbc6c8e7556ef432da5043bc33a5bf9b2f51e291cdd1587712911590d70f4",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/scripts/trak4x.shader",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/scripts/trak4x.shader",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 21256,
+      "sha256": "23f449a2588258b163e67eee8847dea430b805ede4975b9e984f31224afefcf4",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/scripts/trak5x.shader",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/scripts/trak5x.shader",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 52658,
+      "sha256": "c9b2d0fcfa79bfb42e70e1be5bde24aab39779a72a7b817c5958ce8675784463",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/effects_warpzone/rededge.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/effects_warpzone/rededge.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 264314,
+      "sha256": "b50b2806e58a12c7fc3c8e3c1c292fbed6c90d19ca9bb8a16de9b22328fc22e9",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/base/concrete02.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/base/concrete02.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3145772,
+      "sha256": "8473868ff32632f8be71a08a7cc0d6dfc365dc2806c07c948f058ee925eac62b",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/base/concrete02_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/base/concrete02_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3145772,
+      "sha256": "05c926e489474be11e5e2645946636f254fa5436c275036a8193713db1d23cc3",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/base/concrete02_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/base/concrete02_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "78f8b61f7783d3bc09a224a8a23ee4759c0c66f9e540501a5bbc729bb989e7d9",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/base/concrete03.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/base/concrete03.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3145772,
+      "sha256": "687d7c3b92498910e31d46d87b6dbd11c99d77a3623cd06f5028a8490d017c18",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/base/concrete03_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/base/concrete03_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3145772,
+      "sha256": "05c926e489474be11e5e2645946636f254fa5436c275036a8193713db1d23cc3",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/base/concrete03_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/base/concrete03_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "78f8b61f7783d3bc09a224a8a23ee4759c0c66f9e540501a5bbc729bb989e7d9",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/base/metal01_red.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/base/metal01_red.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 191825,
+      "sha256": "9a57396eef5f2ddfa2cf52e245f4d124318ab6d13665b21000b4d8db1d23d71a",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/base/metal01_red_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/base/metal01_red_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 257600,
+      "sha256": "9ca91af564d1c4fa206dffee8a5e219498f43b577a094886e2603f3f4dd62b8f",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/base/metal01_red_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/base/metal01_red_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 2604,
+      "sha256": "5ccce0b7aeb1a161add4519bc880df950c942a437f2d051eceef4a6e9f6f28f6",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/base/metal02.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/base/metal02.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 236431,
+      "sha256": "fb552680eae2424d4326360eca2e680432a9d80ac0c2168e3ac6d31bf9185a26",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/base/metal02_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/base/metal02_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 259971,
+      "sha256": "ad2967d980cbc6708af9a4826214cd208a97cb2514f8d9422e11b3800d4c412b",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/base/metal02_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/base/metal02_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 13753,
+      "sha256": "8646d894ff224af5ef77a14c366f0ba3fa4711852ca4f11e33cf1ede7f523ab3",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/base/metal03.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/base/metal03.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 232226,
+      "sha256": "d69794fa127fa0562467716939a81121f409f8c923d11ead1dca2ea7e34d046e",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/base/metal03_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/base/metal03_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 259971,
+      "sha256": "ad2967d980cbc6708af9a4826214cd208a97cb2514f8d9422e11b3800d4c412b",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/base/metal03_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/base/metal03_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 13753,
+      "sha256": "8646d894ff224af5ef77a14c366f0ba3fa4711852ca4f11e33cf1ede7f523ab3",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/floor/metal_floor05.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/floor/metal_floor05.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3145772,
+      "sha256": "0edca36130359bc87d8d6d2a8fe02847700eeaa112dbbc267d9e26b96cf7ae8a",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/floor/metal_floor05_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/floor/metal_floor05_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "0b31eff9cef5304cc392c3850684424e995d5dd5f0c4ff8d46867a655763a8c7",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/floor/metal_floor05_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/floor/metal_floor05_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "a2b50d39e6bd35abbc137506e89e3b732e81f48cbce8fc3d272c239c8280a10a",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/floor/metal_panel_floor01.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/floor/metal_panel_floor01.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3145772,
+      "sha256": "c01c0553bf26c57b646d4b0db0fceeca47e543941d0b7b0ec52a402fa089bd53",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/floor/metal_panel_floor01_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/floor/metal_panel_floor01_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "ea0769c07b19b4cbed0d9cf8b0dbfb2c62f03ab971787567b6080610cdea36d7",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/floor/metal_panel_floor01_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/floor/metal_panel_floor01_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "9394be30c8749710ab27514fb364620c72d71a5d7226858af08babb454e2878f",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/floor/metal_panel_floor03b.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/floor/metal_panel_floor03b.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3145772,
+      "sha256": "093f719d72f26a3f79eb50695f24c3f4e0c9fb9532f3407f6c835fc935ed51f7",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/floor/metal_panel_floor03b_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/floor/metal_panel_floor03b_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "5188015d83658c7d4bca85ab64bd91fd31e8550c49096edb71d25d4b1941ec4c",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/floor/metal_panel_floor03b_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/floor/metal_panel_floor03b_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "dc611dfb5fa498061537440708dde7b2a51b2fea6452aadaa36152eddf0f2bff",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light01.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light01.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 786476,
+      "sha256": "e3438feb6a369c77407d4b6ad2107c81963dde9ec7915dc5912769225043be44",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light01_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light01_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1048594,
+      "sha256": "74b14865bba8043ce0c0212ace8f4d3f6373d38a3d83446efd281d388e958c0e",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light01_glow.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light01_glow.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 786476,
+      "sha256": "0818dbfc87929b8ba8749a243e1c71d7336f4673d47228488c40625e31fe5100",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light01_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light01_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1048594,
+      "sha256": "d89e3930c05727eed4c84936c9d9cc0146d184a157735f4a30de34a4705a23c6",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light03.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light03.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 786476,
+      "sha256": "3733b9da931a8d0639457209a15de13d59e8d0a3889e7b9d5a9e2fb79d6aad9e",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light03_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light03_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1048594,
+      "sha256": "9d5f1a5d879db78819f878fcb9c9587a614339a3ced18ab5b1ba62d2c73481d1",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light03_glow.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light03_glow.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 786476,
+      "sha256": "a045ebae99a6753826d8e05e7fbfc258d5885d70f032876cd0591e6b11cdae0c",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light03_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light03_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1048594,
+      "sha256": "9f1e73b1109257a1d06946ff4e54ca4bbd8144ea7fe7a6c2aa23953e9c1d822d",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light04.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light04.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 393260,
+      "sha256": "4ab79110d0c1643f0c531e859f4d94d3dbd97e5194ea5297ce5dadb79603e53e",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light04_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light04_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 524306,
+      "sha256": "7ffdb7b2e20f4b142af9761fdd7964d4aaadbb03a3a20808509f30667948d4fb",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light04_glow.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light04_glow.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 393260,
+      "sha256": "647e9a5f29f9075eaf8070966900ad03a646d7b64f5c8b5b8837aa1cdd28cbc8",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light04_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light04_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 524306,
+      "sha256": "5f3a19863d67e222624586110c9ac01b22efc5df0c4f3fca94e5833b20d18be2",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light05.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light05.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 786476,
+      "sha256": "b99c34c922a60171970b986ab15f691e5c4978133c6eb48fa1a912b856d12834",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light05_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light05_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1048594,
+      "sha256": "5df6021009337e9d6482f76f2493d1cdc4c2500e2400643e0b542c40057b48d1",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light05_glow.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light05_glow.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 786476,
+      "sha256": "fda2167b48a120446b1ea3fcff584f555861df997452220e24e13bef953566b7",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light05_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light05_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1048594,
+      "sha256": "a6305aed5c7bec3f5c3e189db54969456e759eda5d66f371839109048322d0a1",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light08a.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light08a.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 59961,
+      "sha256": "b52a0661e5fdbb8f202ed7a393a6957f4818c64673807f9c8e837b3d9990737e",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light08a_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light08a_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 62753,
+      "sha256": "c1c071e5c9355648549d58cfb04c448f9b38d2d9d90bab133efa4309fee07229",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light08a_glow.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light08a_glow.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 59587,
+      "sha256": "5103f396d39cabdbb7f2bddf10bb8ae9b3b39c2bca2526b65ddce1c96f0992de",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light08a_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light08a_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 43802,
+      "sha256": "3c6eadb8837e2a78047e0c3569442637182d1506fb04511e707b7311c5923a2a",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light08ared.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light08ared.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 57667,
+      "sha256": "c4f7ae29cac7cf7e2789d0de08184996dbf46c9804de16b4f50f6eb380b5cf2d",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light08ared_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light08ared_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 61645,
+      "sha256": "f4aed44b9187b1d0cb24ff5338ed043d0c287fa152f43c3864db27e118ca9f01",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light08ared_glow.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light08ared_glow.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 46013,
+      "sha256": "a483cfe74b89ed8bdb65f7cd81c701ab6507e18b8c65730fa25f7545862f18c9",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_light08ared_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_light08ared_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 43802,
+      "sha256": "3c6eadb8837e2a78047e0c3569442637182d1506fb04511e707b7311c5923a2a",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_panel_light01.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_panel_light01.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1572908,
+      "sha256": "ffdb531cc8f396882041a0353a323a5b0de1614039a574854078ca042e7cb265",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_panel_light01_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_panel_light01_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 2097170,
+      "sha256": "168771585ad0449f455d4bf78d1424a2df3e214f7a87819b5f2d141ff9ca45a8",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_panel_light01_glow.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_panel_light01_glow.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1572908,
+      "sha256": "9fc7ee27ca73c1a5667478047cb5ed52e7835f10689221978a63b55e790f2a1c",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/light/metal_panel_light01_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/light/metal_panel_light01_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 2097170,
+      "sha256": "49fe053c30c70baf208741fdef11ef09242ac28b981fe77eaaed5e71633adaa5",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/panel/concrete_wall_metal02a.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/panel/concrete_wall_metal02a.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1966652,
+      "sha256": "404a868316bd623bc09fc9e3c400b2ab94186afeb71fc37a50c1fb629b8e22ea",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/panel/concrete_wall_metal02a_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/panel/concrete_wall_metal02a_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 2091733,
+      "sha256": "324949a9f4cb1a4d64950b77f5ab10ad562be0ee407e05fcf23bf2710d07d416",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/panel/concrete_wall_metal02a_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/panel/concrete_wall_metal02a_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 366703,
+      "sha256": "9f5a796e3cb969a7b5aabb5240563759429a67e8fc87977ca908e1028f37d221",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/panel/metal_floor04d.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/panel/metal_floor04d.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 442128,
+      "sha256": "945e17de6571e659da023895f2eefaf3786336156c012791707aedb40b33a402",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/panel/metal_floor04d_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/panel/metal_floor04d_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 464386,
+      "sha256": "94425570de4d35a297e9becb49b6cb86e7ae6f2c26dc12a0ac15f53c08f22e87",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/panel/metal_floor04d_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/panel/metal_floor04d_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 154720,
+      "sha256": "b97e982c43510c0f350df79ea377ea4d2f1b4b92eff4310a0cbca76e7e19fd9e",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/panel/metal_panel01a.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/panel/metal_panel01a.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3935121,
+      "sha256": "7abda7ce2da6e9b52a19c1e276097b3ff8de4be2a269d9b9d589696e7c85be65",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/panel/metal_panel01a_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/panel/metal_panel01a_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4168373,
+      "sha256": "81ffd8907cb10830256ea628d82f38a0c9b3e556192bfcfa72ab9d524db4b0e2",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/panel/metal_panel01a_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/panel/metal_panel01a_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 316684,
+      "sha256": "f460c23b7c25bc3a4e5e3484074e2fd216a71f35dfdd482874a5f06fdc402930",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/trim/metal_floor01a.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/trim/metal_floor01a.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 246802,
+      "sha256": "48ea527d45c7c0037fa6738ba5729b7c952b161657034245e44d536e3ec770dd",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/trim/metal_floor01a_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/trim/metal_floor01a_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 249459,
+      "sha256": "9120b74fd4ed4399b64adb37b05c153bff1af74bdf7ece8f013988a44dc09aba",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/trim/metal_floor01a_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/trim/metal_floor01a_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 44408,
+      "sha256": "ed6c25866746c0e0023c557a58a6dd64591e6a7adf7f0528adb4935a7a654f72",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/trim/metal_panel05-1.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/trim/metal_panel05-1.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 123930,
+      "sha256": "6841fca54e5c843cb3fcf5be6c480c741e2604ae2c6918fd3228a86b04ec37ee",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/trim/metal_panel05-1_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/trim/metal_panel05-1_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 125650,
+      "sha256": "2138a20cb0fb1451d904bc8329eee300c54be437c16b8bf5f2cfab4dae4147d7",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/trim/metal_panel05-1_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/trim/metal_panel05-1_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 17639,
+      "sha256": "be4f7843deb9c315762876e273ad5d964130aecf45efbc91a55e7e18c526d8ec",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/trim/metal_panel05_red-1.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/trim/metal_panel05_red-1.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 124448,
+      "sha256": "48bcb435d92aacfe7c0486b7a74acb58de36614423f77e3bba462215b622303c",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/trim/metal_panel05_red-1_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/trim/metal_panel05_red-1_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 123220,
+      "sha256": "b26c41c295947ce6d87d7f1b854ade3ff224835daeaf10eb4978e8f122cd3748",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/trim/metal_panel05_red-1_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/trim/metal_panel05_red-1_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 15678,
+      "sha256": "883c1e9b73afa81990ec75bad0b8704c59d9c0b95f22879d0153a45681cc3ce6",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/concrete_metal_wallplate02.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/concrete_metal_wallplate02.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3145772,
+      "sha256": "21745ddeb8f173dc6c1460a71a6b3d81dc6883a5d43ad941818d83c2e7357c11",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/concrete_metal_wallplate02_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/concrete_metal_wallplate02_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "ecff67f34a96b0375be6a88e63c14d470ad106226b9e0ea42e234bd6b925e923",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/concrete_metal_wallplate02_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/concrete_metal_wallplate02_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "a6182ca6e2e4f3791e363eb174dbdfcbcc4ee49c7c94a7980055dd5ffbef7911",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/concrete_metal_wallplate03.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/concrete_metal_wallplate03.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3145772,
+      "sha256": "f387da44f3a9bde44a68dca6d19a9645ef715d4d285086c4c9e67f4251cebe76",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/concrete_metal_wallplate03_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/concrete_metal_wallplate03_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "ea9f1d3a2ebaed48380054f88ec42ab4bd9e354a4ea0d4939eb674df2b6bcc42",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/concrete_metal_wallplate03_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/concrete_metal_wallplate03_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "dd42b441c9b513934404a1452cb0b4e58fd1ce78880c99766a965202c87f0f60",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/metal_panel01.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/metal_panel01.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3145772,
+      "sha256": "8bd54b3882457a09c57934216a13526c40eb950c7c0b10f04e710031d7dfbe0b",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/metal_panel01_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/metal_panel01_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "78971442abebf8eb175fbbac34e6f8f2babdb42f32b3feb2ea09ec9e4197a141",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/metal_panel01_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/metal_panel01_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "3885b36e5760a3599d044213a5b6f28e3153f167ae5b4100250c6113e7a63292",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/metal_panel03.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/metal_panel03.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3145772,
+      "sha256": "2f482c0be4ae9aa1adba959124bd64d421b3589cfb6fdba128447a96175d6052",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/metal_panel03_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/metal_panel03_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "6f6cf83c49815156df9f1a267a71a9b31f1aabc1e5fbc24903db38761dc8c922",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/metal_panel03_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/metal_panel03_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "7bc4d1987097ce00d548097986b58cca964aea6090ceab1a8bdb97d12255eb11",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/metal_panel05.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/metal_panel05.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1572908,
+      "sha256": "7677f4b588f3ae9ad6df5063f27871682a3df3eb74d4edde607fa7e80031b5e5",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/metal_panel05_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/metal_panel05_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 2097170,
+      "sha256": "b0aaa1af09b0ad0c27784fe9d0b8edb6ea1bce141663d9f4f048d0bbc79ca13a",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/metal_panel05_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/metal_panel05_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 2097170,
+      "sha256": "cc0bf8358fbf7b833b9533ddd100c3d1f4d544b9ea62d863d58a5fd94d0015f0",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/metal_wall02.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/metal_wall02.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3145772,
+      "sha256": "a2e8a5cb884f17e4ad6377c20cccc9a63bb544960d8e94e1773a89f48ef5b2b6",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/metal_wall02_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/metal_wall02_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "18a484b2c8d67a9a2cc2d137cd63077caada44a6f1f321be04d4fab552927c4d",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exomorphx/wall/metal_wall02_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exomorphx/wall/metal_wall02_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 4194322,
+      "sha256": "7c66ae02503df1f06c9837f584d3e67631a673fa9c38feda2dc3210a56e99049",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exx/base/base_metal01.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exx/base/base_metal01.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 786476,
+      "sha256": "2fcb0b6df1c7a029facfb5dff9d23fb0f0a13187096dee1ff26548e7e32f2967",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exx/base/base_metal01_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exx/base/base_metal01_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 786476,
+      "sha256": "7d4ae18230420f9a04b5bdf91111dd660961dfe5a2889810806f17c7fe35c54b",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/exx/base/base_metal01_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/exx/base/base_metal01_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1048620,
+      "sha256": "3685fff3fd2cb91b4103b33118b394eebff62a4362c3e9ae0fa738841d302c3f",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114invx/base/baseblack.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114invx/base/baseblack.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 10284,
+      "sha256": "abbf510ae25ee1e9d421850bed1e703f17c4c5cec825b4e364852052e750f36a",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/base/base.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/base/base.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 10284,
+      "sha256": "6d88e76aa66f5c9a4ad3ff2c006bced593cca528a5b1ecffe01016b0b3ba1d01",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/base/base_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/base/base_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 8236,
+      "sha256": "d0987f714f752b6cd79382741f905f2cea3a1b5967f8a6bc4152381020ef0e51",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/base/basegray.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/base/basegray.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 10284,
+      "sha256": "9eb04a46e2476a60fcaefd3999620f5451b935500f48379ebb1a3f2e3e76eb50",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/base/basegray_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/base/basegray_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 10284,
+      "sha256": "9cda6030005d4fad2e842c06239b3c32f7926a0063dda88b1e6f1fa46072eb66",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/floor/floor00.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/floor/floor00.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 51080,
+      "sha256": "62af8c47beb69e58a2b3c91d07fa33a86c86946f0b63c64aa8a72c557099586b",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/floor/floor00_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/floor/floor00_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 102343,
+      "sha256": "2415c82fefc1268ecf5dfedc6943d728c66faf69600e366a2b5f1269865f47eb",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/floor/floor00_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/floor/floor00_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1048620,
+      "sha256": "ac5cd6a3802ee53e3972ff1aba1cf3c2f355f11ff7efb876635c955f693f6491",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/floor/floor02.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/floor/floor02.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 859391,
+      "sha256": "bb048d325d4d4db00ab5d381c01f22627d97c7daf041bcc38107db30d1f7018f",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/floor/floor02_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/floor/floor02_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 411537,
+      "sha256": "97f6e949eb36f19c77dd4087e01eea70d530a13f1c514bc18029e795e3aa9a65",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/floor/floor02_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/floor/floor02_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1048620,
+      "sha256": "3b6a39bd22031788d4ffb157908f2c46218eecb6b3244e5a5ab4082527854c4f",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/misc/lift00.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/misc/lift00.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 101089,
+      "sha256": "42de18c7c622e0b2557b8b0e6269868abc2426642ec7ced8c48954c159a871c6",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/misc/lift00_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/misc/lift00_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1048620,
+      "sha256": "8fe12bc0ebf791ba302dd7c6a105bcfac93f0c00e73d7d989020b6ec600d28a6",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/misc/lift00_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/misc/lift00_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 1048620,
+      "sha256": "274bb04eac5b5d6a17a5b7732da78d6ee42f1735e73f6793148801355827b4bb",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/misc/tube.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/misc/tube.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 114988,
+      "sha256": "369a7f445f25d2f420155033ced1cb471b277a9acf9c3744e196fd687ffb75b0",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/misc/tube_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/misc/tube_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 238124,
+      "sha256": "a82d83dfbb7ff75f4b046456b5c727dee92ba7ea31aab807af7cf76b619741de",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/misc/tube_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/misc/tube_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 524332,
+      "sha256": "ef4ea02a713ddf5cb985bfa8a30f369d678fd940958b2071de303384c42fa54e",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/trim/trim01.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/trim/trim01.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 5433,
+      "sha256": "107e3bc3f81ed6623e603dd536cd509cbbc965ea0598b41f7d4971838c2ed61a",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/trim/trim01_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/trim/trim01_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 131116,
+      "sha256": "de30727dc65e652c48ee3d37e76d12cc8e03c80f64c7fcda912c7aea9549b389",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/trim/trim01_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/trim/trim01_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 131116,
+      "sha256": "a96b1f567e54e60500a690af304e8bac8463899c3a579e914eafe741cd05a470",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/wall/corridor00.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/wall/corridor00.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 143174,
+      "sha256": "197fc79ab64603a7446eed58b26a4f0d81089f0c3bb50d726334a72cb7fb1e4f",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/wall/corridor00_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/wall/corridor00_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 786476,
+      "sha256": "e3713f487105bc668348d289d63cd07383ca93f5a1c7f3f37d5102945d7172d8",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/wall/corridor00_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/wall/corridor00_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 115060,
+      "sha256": "075fa096d6f9911538228977019667663984f203aaa052d77fb01ebc3ed12ba3",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/wall/corridor01.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/wall/corridor01.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 244716,
+      "sha256": "0565a9e9b70c0b4867007efbae31ca620df59e659529d78bc51a3f4adb2b75d7",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/wall/corridor01_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/wall/corridor01_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 786476,
+      "sha256": "6212ce760747b220980355dd23490c5e1b60335b282e83db0d67301f0bdf7768",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/wall/corridor01_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/wall/corridor01_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 109746,
+      "sha256": "3262dd42fdb0f46534c35ac59d76b1470acdffd8f45ba5cf1e28398e079a9386",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/wall/corridor02.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/wall/corridor02.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 224106,
+      "sha256": "9549e3274ad3e552fc11149678b4888bd67e144f41997b1507a9d473930b6443",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/wall/corridor02_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/wall/corridor02_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 786476,
+      "sha256": "3b11a75214fdb7cf7aa00db11252d5cd86749e9088f7426e2f677cbe94675670",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/wall/corridor02_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/wall/corridor02_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 110000,
+      "sha256": "d7810d13f9013567fce78983da47440015227b8e151a83e264df94998a7495df",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/wall/corridor03.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/wall/corridor03.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 33732,
+      "sha256": "604a0b6616e234f4f2456dd745b01318895bb92fbc38cd4f86a696ad5eb4d253",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/wall/corridor03_gloss.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/wall/corridor03_gloss.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 77515,
+      "sha256": "f8fbef61f1f93ca9f2fe8c72fb3b2565ecd7093277d15b00643689bebe3adedd",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/facility114x/wall/corridor03_norm.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/facility114x/wall/corridor03_norm.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 41337,
+      "sha256": "93b1ccd8ffc1219ced06c17200f30baf460874aca807cb321cc0d6fc0b864c84",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/map_boil/brush.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/map_boil/brush.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 88471,
+      "sha256": "89b1b3c88ed63adb05bcb538151d8c685f9aee4b6f11c47eec00cccbfdf3f845",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/map_boil/credit.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/map_boil/credit.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 32450,
+      "sha256": "1d44c0dfb609d47cdc9000ac30a98537d1906d4713aea76058d41101e7c4f4fc",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/map_boil/frogg.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/map_boil/frogg.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 60367,
+      "sha256": "a77322df9d4131a6b98b7469f3fbb94742a46fee21a7fd470930b96132861c8c",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/map_implosion/terminal_blue.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/map_implosion/terminal_blue.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 2097196,
+      "sha256": "f82d2cd0819490d274a888d1888701ee645a5bccf98131dfe7aea461217c0f26",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/map_implosion/terminal_blue2.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/map_implosion/terminal_blue2.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 2097196,
+      "sha256": "46135545b20eb92e1b5430ae65e2bf84ce1d8c75c557468b3a3a3a42857f7cf0",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/map_implosion/terminal_blue3.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/map_implosion/terminal_blue3.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 2097196,
+      "sha256": "8267132b95350facb8d3023c0cf43f26598b11324c7c1ed9e28f035b7e6d881a",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/phillipk2x/_GPL.txt",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/phillipk2x/_GPL.txt",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 684,
+      "sha256": "1e3c7d9e78d9bc49ad9e6f31f631c84a1df6bbf17549bd85cb7684490bd401e1",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/phillipk2x/_readme.txt",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/phillipk2x/_readme.txt",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 485,
+      "sha256": "70e91b099e60fe6b56ce7aca584076b23526f3f1a405d939a614514d31b72181",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/phillipk2x/computer/pk02_switches01a.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/phillipk2x/computer/pk02_switches01a.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 98348,
+      "sha256": "0439c9da9fe82e7b2612667fc797179eb240d311116fd580609aee602eff79ab",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/phillipk2x/computer/pk02_switches01b.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/phillipk2x/computer/pk02_switches01b.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 98348,
+      "sha256": "6146b7d22a4aa202a5da638f833919828b345e03a86b2b35297aac7a3090ddf6",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/phillipk2x/floor/pk02_floor09a.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/phillipk2x/floor/pk02_floor09a.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 3145772,
+      "sha256": "e4407258cb299682367c78a7875f49c2c4ebae5e350492ad559183a84d17e49c",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/phillipk2x/pipes/pk02_pipes01.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/phillipk2x/pipes/pk02_pipes01.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 786476,
+      "sha256": "e451cc1f83abc9b3fecf88c782359292a5bed1a51c914e603ba303a92e9b6a39",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/skies/polluted_earth.jpg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/skies/polluted_earth.jpg",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 12119,
+      "sha256": "0477c8bc3d11f4ca7bb3989705d981edf417913076ce1ec100b1a7b70786aba9",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/trak4x/decal/decal_theater2.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/trak4x/decal/decal_theater2.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 262188,
+      "sha256": "f61a6faee40c3bdacb3d633b7d6bdd53fe4060211fef4ff176ce0236ec9d4966",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/trak5x/base/base_base1b.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/trak5x/base/base_base1b.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 786476,
+      "sha256": "f12d0839fe73360f78484e0852c0a4854e246bbc58e82e7d46dca01a6633edb7",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/trak5x/base/base_holes1b.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/trak5x/base/base_holes1b.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 786476,
+      "sha256": "b5132d90ab6fe5e9dfdd56ba49d60a5382502c55ad4fa3eb895d98422b647991",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/trak5x/light/light_light3a.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/trak5x/light/light_light3a.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 24620,
+      "sha256": "53d2241a3035790883558c5ee105a9ecdf2b819ae0114d6f9f2450a514cc1c28",
+      "modifications": "none"
+    },
+    {
+      "path": "maps-pk3/textures/trak5x/misc/misc_glass.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-maps.pk3dir/-/raw/1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7/textures/trak5x/misc/misc_glass.tga",
+      "source_commit": "1db540e620c0ea8a71d1e12eb09925ccf4f3fcd7",
+      "bytes": 240740,
+      "sha256": "d988c9c06039d35835edc1ee6c5616647e8a3c632f78c6c43aa6444c2adc0a40",
+      "modifications": "none"
+    }
+  ],
+  "compiled_map_shader_names": [
+    "noshader",
+    "textures/common/caulk",
+    "textures/common/clip",
+    "textures/common/nodrawnonsolid",
+    "textures/common/trigger",
+    "textures/effects_warpzone/rededge",
+    "textures/exomorphx/base-concrete02",
+    "textures/exomorphx/base-concrete03",
+    "textures/exomorphx/base-metal01_red",
+    "textures/exomorphx/base-metal02",
+    "textures/exomorphx/base-metal03",
+    "textures/exomorphx/floor-metal_floor05",
+    "textures/exomorphx/floor-metal_panel_floor01",
+    "textures/exomorphx/floor-metal_panel_floor03b",
+    "textures/exomorphx/light-metal_light01",
+    "textures/exomorphx/light-metal_light03",
+    "textures/exomorphx/light-metal_light04",
+    "textures/exomorphx/light-metal_light05",
+    "textures/exomorphx/light-metal_light08a",
+    "textures/exomorphx/light-metal_light08ared",
+    "textures/exomorphx/light-metal_panel_light01",
+    "textures/exomorphx/panel-concrete_wall_metal02a",
+    "textures/exomorphx/panel-metal_floor04d",
+    "textures/exomorphx/panel-metal_panel01a",
+    "textures/exomorphx/trim-metal_floor01a",
+    "textures/exomorphx/trim-metal_panel05-1",
+    "textures/exomorphx/trim-metal_panel05_red-1",
+    "textures/exomorphx/wall-concrete_metal_wallplate02",
+    "textures/exomorphx/wall-concrete_metal_wallplate03",
+    "textures/exomorphx/wall-metal_panel01",
+    "textures/exomorphx/wall-metal_panel03",
+    "textures/exomorphx/wall-metal_panel05",
+    "textures/exomorphx/wall-metal_wall02",
+    "textures/exx/base-metal01",
+    "textures/facility114invx/base-baseblack",
+    "textures/facility114x/base-base",
+    "textures/facility114x/base-basegray",
+    "textures/facility114x/floor-floor00",
+    "textures/facility114x/floor-floor02",
+    "textures/facility114x/misc-lift00",
+    "textures/facility114x/misc-tube",
+    "textures/facility114x/trim-trim01",
+    "textures/facility114x/wall-corridor00",
+    "textures/facility114x/wall-corridor01",
+    "textures/facility114x/wall-corridor02",
+    "textures/facility114x/wall-corridor03",
+    "textures/map_boil/brush",
+    "textures/map_boil/credit",
+    "textures/map_boil/frogg",
+    "textures/map_implosion/screen",
+    "textures/phillipk2x/computer-pk02_switches01a",
+    "textures/phillipk2x/computer-pk02_switches01b",
+    "textures/phillipk2x/floor-pk02_floor09a",
+    "textures/phillipk2x/pipes-pk02_pipes01",
+    "textures/skies/polluted_earth",
+    "textures/trak4x/decal-theater2",
+    "textures/trak5x/base/base_base1b",
+    "textures/trak5x/base/base_holes1b",
+    "textures/trak5x/light/light_light3a",
+    "textures/trak5x/misc-glass"
+  ],
+  "engine_only_shaders": [
+    "noshader",
+    "textures/common/caulk",
+    "textures/common/clip",
+    "textures/common/nodrawnonsolid",
+    "textures/common/trigger"
+  ],
+  "unresolved_image_paths": [],
+  "bytes": 189674820
+}

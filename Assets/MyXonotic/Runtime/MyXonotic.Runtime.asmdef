@@ -1,0 +1,9 @@
+{
+  "name": "MyXonotic.Runtime",
+  "rootNamespace": "MyXonotic",
+  "references": ["UnityEngine.UI"],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "autoReferenced": true
+}

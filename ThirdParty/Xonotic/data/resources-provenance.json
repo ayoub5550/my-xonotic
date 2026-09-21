@@ -1,0 +1,209 @@
+{
+  "schema_version": 1,
+  "scope": "Unmodified official weapon/projectile exports, icon textures, audio, editable Blender sources and notices; not a complete runtime asset pack.",
+  "mediasource_repository": "https://gitlab.com/xonotic/mediasource",
+  "mediasource_commit": "624caa3e2d5eddb011009ea3a7016b406a7b6d65",
+  "data_release_tag": "xonotic-v0.8.6",
+  "data_release_commit": "45df581bba67832b61e5041f4b7d87cf59c80657",
+  "commit_verification": "GitLab tags API commit.id; target refers to the annotated tag object.",
+  "licence_basis": "Official release COPYING and original notices. No new authorship/SPDX claim; not a distribution clearance.",
+  "correspondence_limit": "Blender sources are genuine upstream files, including interchange-format reconstructions. Exact 0.8.6 MD3/IQM/DPM export matches and texture dependencies are not verified.",
+  "files": [
+    {
+      "path": "data/models/weapons/g_rl.md3",
+      "source_url": "https://gitlab.com/xonotic/xonotic-data.pk3dir/-/raw/45df581bba67832b61e5041f4b7d87cf59c80657/models/weapons/g_rl.md3",
+      "source_commit": "45df581bba67832b61e5041f4b7d87cf59c80657",
+      "bytes": 545576,
+      "sha256": "abaafcd21a5c5b75354c35574acda78dddce9e62fa74fe72bc3b8b6776568a04",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic release COPYING and GPL notices preserved; not project MIT.",
+      "source_review": "Exported/final-form upstream asset; exact preferred-source correspondence not confirmed by this intake. See preserved mediasource README and source links."
+    },
+    {
+      "path": "data/models/weapons/g_laser.md3",
+      "source_url": "https://gitlab.com/xonotic/xonotic-data.pk3dir/-/raw/45df581bba67832b61e5041f4b7d87cf59c80657/models/weapons/g_laser.md3",
+      "source_commit": "45df581bba67832b61e5041f4b7d87cf59c80657",
+      "bytes": 421256,
+      "sha256": "5a12d33f8a44aacfc0f5dbe26a885009ddc163cd7297d4970873a74f63e4645d",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic release COPYING and GPL notices preserved; not project MIT.",
+      "source_review": "Exported/final-form upstream asset; exact preferred-source correspondence not confirmed by this intake. See preserved mediasource README and source links."
+    },
+    {
+      "path": "data/models/rocket.md3",
+      "source_url": "https://gitlab.com/xonotic/xonotic-data.pk3dir/-/raw/45df581bba67832b61e5041f4b7d87cf59c80657/models/rocket.md3",
+      "source_commit": "45df581bba67832b61e5041f4b7d87cf59c80657",
+      "bytes": 68104,
+      "sha256": "8c2f12cac6b8ffbd82740acf186cf5f49130018df69459b5124c500081ab8aec",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic release COPYING and GPL notices preserved; not project MIT.",
+      "source_review": "Exported/final-form upstream asset; exact preferred-source correspondence not confirmed by this intake. See preserved mediasource README and source links."
+    },
+    {
+      "path": "data/models/items/a_rockets.md3",
+      "source_url": "https://gitlab.com/xonotic/xonotic-data.pk3dir/-/raw/45df581bba67832b61e5041f4b7d87cf59c80657/models/items/a_rockets.md3",
+      "source_commit": "45df581bba67832b61e5041f4b7d87cf59c80657",
+      "bytes": 84600,
+      "sha256": "4653780ca0c70d41380ab94e03bb41da5d558f0a113dbbb9a52bdc458f99adad",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic release COPYING and GPL notices preserved; not project MIT.",
+      "source_review": "Exported/final-form upstream asset; exact preferred-source correspondence not confirmed by this intake. See preserved mediasource README and source links."
+    },
+    {
+      "path": "data/models/weapons/g_rl_simple.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-data.pk3dir/-/raw/45df581bba67832b61e5041f4b7d87cf59c80657/models/weapons/g_rl_simple.tga",
+      "source_commit": "45df581bba67832b61e5041f4b7d87cf59c80657",
+      "bytes": 13856,
+      "sha256": "529061eab2c2adf853c284dfb578386aca3102354b89f30bd243dbb4480f1c98",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic release COPYING and GPL notices preserved; not project MIT.",
+      "source_review": "Exported/final-form upstream asset; exact preferred-source correspondence not confirmed by this intake. See preserved mediasource README and source links."
+    },
+    {
+      "path": "data/models/weapons/g_laser_simple.tga",
+      "source_url": "https://gitlab.com/xonotic/xonotic-data.pk3dir/-/raw/45df581bba67832b61e5041f4b7d87cf59c80657/models/weapons/g_laser_simple.tga",
+      "source_commit": "45df581bba67832b61e5041f4b7d87cf59c80657",
+      "bytes": 13921,
+      "sha256": "904f970e69b4f7941ed40f4d267f217297188406d39793fe99b0c7603f3694c1",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic release COPYING and GPL notices preserved; not project MIT.",
+      "source_review": "Exported/final-form upstream asset; exact preferred-source correspondence not confirmed by this intake. See preserved mediasource README and source links."
+    },
+    {
+      "path": "data/sound/weapons/rocket_fire.ogg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-data.pk3dir/-/raw/45df581bba67832b61e5041f4b7d87cf59c80657/sound/weapons/rocket_fire.ogg",
+      "source_commit": "45df581bba67832b61e5041f4b7d87cf59c80657",
+      "bytes": 49200,
+      "sha256": "7094245df730b07267ace696cf2a69a246d2ee123714647d913c419648eddd3d",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic release COPYING and GPL notices preserved; not project MIT.",
+      "source_review": "Exported/final-form upstream asset; exact preferred-source correspondence not confirmed by this intake. See preserved mediasource README and source links."
+    },
+    {
+      "path": "data/sound/weapons/rocket_fly.ogg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-data.pk3dir/-/raw/45df581bba67832b61e5041f4b7d87cf59c80657/sound/weapons/rocket_fly.ogg",
+      "source_commit": "45df581bba67832b61e5041f4b7d87cf59c80657",
+      "bytes": 29066,
+      "sha256": "c0b74334adc04401f97c962d928e9681c6f951346cb91940aeaff4a370245a27",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic release COPYING and GPL notices preserved; not project MIT.",
+      "source_review": "Exported/final-form upstream asset; exact preferred-source correspondence not confirmed by this intake. See preserved mediasource README and source links."
+    },
+    {
+      "path": "data/sound/weapons/rocket_impact.ogg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-data.pk3dir/-/raw/45df581bba67832b61e5041f4b7d87cf59c80657/sound/weapons/rocket_impact.ogg",
+      "source_commit": "45df581bba67832b61e5041f4b7d87cf59c80657",
+      "bytes": 32751,
+      "sha256": "78a7d16468e0fd8c48175018bb41940fb6b7a36a3d8906cd4d418cc0f6ed0d74",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic release COPYING and GPL notices preserved; not project MIT.",
+      "source_review": "Exported/final-form upstream asset; exact preferred-source correspondence not confirmed by this intake. See preserved mediasource README and source links."
+    },
+    {
+      "path": "data/sound/weapons/lasergun_fire.ogg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-data.pk3dir/-/raw/45df581bba67832b61e5041f4b7d87cf59c80657/sound/weapons/lasergun_fire.ogg",
+      "source_commit": "45df581bba67832b61e5041f4b7d87cf59c80657",
+      "bytes": 25973,
+      "sha256": "40b1fd77ba78402da369eba836ef30d645c22fe4e466368412dcd29980daf3bd",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic release COPYING and GPL notices preserved; not project MIT.",
+      "source_review": "Exported/final-form upstream asset; exact preferred-source correspondence not confirmed by this intake. See preserved mediasource README and source links."
+    },
+    {
+      "path": "data/sound/weapons/weaponpickup.ogg",
+      "source_url": "https://gitlab.com/xonotic/xonotic-data.pk3dir/-/raw/45df581bba67832b61e5041f4b7d87cf59c80657/sound/weapons/weaponpickup.ogg",
+      "source_commit": "45df581bba67832b61e5041f4b7d87cf59c80657",
+      "bytes": 18545,
+      "sha256": "9557f624193332fdb5787c8cbbaac00edbd9d4c6bdf5b87b3d157e3f617d8ab7",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic release COPYING and GPL notices preserved; not project MIT.",
+      "source_review": "Exported/final-form upstream asset; exact preferred-source correspondence not confirmed by this intake. See preserved mediasource README and source links."
+    },
+    {
+      "path": "data/mediasource-src/models/weapons/g_weapons/g_devastator/g_devastator.blend",
+      "bytes": 1556484,
+      "sha256": "fd7e0146f7f5cc17abf6317aa4889f9f8ee25f2f37773e4feaa95f5b0ede9fd2",
+      "source_url": "https://gitlab.com/xonotic/mediasource/-/raw/624caa3e2d5eddb011009ea3a7016b406a7b6d65/models/weapons/g_weapons/g_devastator/g_devastator.blend",
+      "source_commit": "624caa3e2d5eddb011009ea3a7016b406a7b6d65",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic COPYING; preserve GPL-3 and original README notices.",
+      "verification": "Upstream editable Blender file; exact 0.8.6 export correspondence not verified."
+    },
+    {
+      "path": "data/mediasource-src/models/weapons/g_weapons/g_blaster/g_blaster.blend",
+      "bytes": 1392296,
+      "sha256": "5c20f542a8154c3129b49612c53207fe49e63d7f1bbdbcd3f749281324bf7450",
+      "source_url": "https://gitlab.com/xonotic/mediasource/-/raw/624caa3e2d5eddb011009ea3a7016b406a7b6d65/models/weapons/g_weapons/g_blaster/g_blaster.blend",
+      "source_commit": "624caa3e2d5eddb011009ea3a7016b406a7b6d65",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic COPYING; preserve GPL-3 and original README notices.",
+      "verification": "Upstream editable Blender file; exact 0.8.6 export correspondence not verified."
+    },
+    {
+      "path": "data/mediasource-src/models/weapons/v_weapons/v_devastator/v_devastator.blend",
+      "bytes": 1563504,
+      "sha256": "fc53244605f553c07849b25fd68ecbf76817066121c6f072156a8f8f6b6040aa",
+      "source_url": "https://gitlab.com/xonotic/mediasource/-/raw/624caa3e2d5eddb011009ea3a7016b406a7b6d65/models/weapons/v_weapons/v_devastator/v_devastator.blend",
+      "source_commit": "624caa3e2d5eddb011009ea3a7016b406a7b6d65",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic COPYING; preserve GPL-3 and original README notices.",
+      "verification": "Upstream editable Blender file; exact 0.8.6 export correspondence not verified."
+    },
+    {
+      "path": "data/mediasource-src/models/weapons/v_weapons/v_blaster/v_blaster.blend",
+      "bytes": 1402728,
+      "sha256": "5b1d5a6d8570af2a1e26261a7f59477444c472379665882c71104056bf045822",
+      "source_url": "https://gitlab.com/xonotic/mediasource/-/raw/624caa3e2d5eddb011009ea3a7016b406a7b6d65/models/weapons/v_weapons/v_blaster/v_blaster.blend",
+      "source_commit": "624caa3e2d5eddb011009ea3a7016b406a7b6d65",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic COPYING; preserve GPL-3 and original README notices.",
+      "verification": "Upstream editable Blender file; exact 0.8.6 export correspondence not verified."
+    },
+    {
+      "path": "data/mediasource-src/models/weapons/h_weapons/h_devastator/h_devastator.blend",
+      "bytes": 2377644,
+      "sha256": "d808cfd25ab0b68a8ad02201313c35083a878c3aab85085e57fb2c533633bd56",
+      "source_url": "https://gitlab.com/xonotic/mediasource/-/raw/624caa3e2d5eddb011009ea3a7016b406a7b6d65/models/weapons/h_weapons/h_devastator/h_devastator.blend",
+      "source_commit": "624caa3e2d5eddb011009ea3a7016b406a7b6d65",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic COPYING; preserve GPL-3 and original README notices.",
+      "verification": "Upstream editable Blender file; exact 0.8.6 export correspondence not verified."
+    },
+    {
+      "path": "data/mediasource-src/models/weapons/h_weapons/h_blaster/h_blaster.blend",
+      "bytes": 408688,
+      "sha256": "ad7b1aeb99df3c85007825663aaa70231e9d5e807f31fb5153b543746381875c",
+      "source_url": "https://gitlab.com/xonotic/mediasource/-/raw/624caa3e2d5eddb011009ea3a7016b406a7b6d65/models/weapons/h_weapons/h_blaster/h_blaster.blend",
+      "source_commit": "624caa3e2d5eddb011009ea3a7016b406a7b6d65",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic COPYING; preserve GPL-3 and original README notices.",
+      "verification": "Upstream editable Blender file; exact 0.8.6 export correspondence not verified."
+    },
+    {
+      "path": "data/mediasource-src/models/newprojectiles2.blend",
+      "bytes": 176660,
+      "sha256": "ad66407b89e340b4f4b7aecdd463c7f23add43126df25988d171c322a582eb94",
+      "source_url": "https://gitlab.com/xonotic/mediasource/-/raw/624caa3e2d5eddb011009ea3a7016b406a7b6d65/models/newprojectiles2.blend",
+      "source_commit": "624caa3e2d5eddb011009ea3a7016b406a7b6d65",
+      "modifications": "none",
+      "licence_basis": "Official Xonotic COPYING; preserve GPL-3 and original README notices.",
+      "verification": "Upstream editable Blender file; exact 0.8.6 export correspondence not verified."
+    },
+    {
+      "path": "data/mediasource-src/README.txt",
+      "bytes": 2764,
+      "sha256": "2c8c1ed134ffed35a1f32bf8a8b455af137531f492fb052c8b685774675c7e3c",
+      "source_url": "https://gitlab.com/xonotic/mediasource/-/raw/624caa3e2d5eddb011009ea3a7016b406a7b6d65/README.txt",
+      "source_commit": "624caa3e2d5eddb011009ea3a7016b406a7b6d65",
+      "modifications": "none"
+    },
+    {
+      "path": "data/mediasource-src/models/weapons/README.txt",
+      "bytes": 1663,
+      "sha256": "073098540682a833c9dc152a3d7e2ec9787b95a1ab09bdb713329f3c4d60edbd",
+      "source_url": "https://gitlab.com/xonotic/mediasource/-/raw/624caa3e2d5eddb011009ea3a7016b406a7b6d65/models/weapons/README.txt",
+      "source_commit": "624caa3e2d5eddb011009ea3a7016b406a7b6d65",
+      "modifications": "none"
+    }
+  ]
+}

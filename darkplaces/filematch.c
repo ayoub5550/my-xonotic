@@ -204,7 +204,10 @@ void listdirectory(stringlist_t *list, const char *basepath, const char *path)
 #ifdef __ANDROID__
 	// SDL currently does not support listing assets, so we have to emulate
 	// it. We're using relative paths for assets, so that will do.
-	if (basepath[0] != '/')
+	// FS_AddGameDirectory passes basepath="" and an absolute path. Testing
+	// basepath alone misroutes installed PK3 directories to nonexistent ls.txt
+	// assets, making every pack (including default.cfg and touch UI) disappear.
+	if (fullpath[0] != '/')
 	{
 		char listpath[MAX_OSPATH];
 		qfile_t *listfile;
@@ -235,4 +238,3 @@ void listdirectory(stringlist_t *list, const char *basepath, const char *path)
 	closedir(dir);
 }
 #endif
-

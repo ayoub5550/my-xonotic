@@ -2354,6 +2354,52 @@ void FS_Init(void)
 	FS_Init_Commands(); // assumes com_startupgamegroup is set
 
 	FS_Init_Dir();
+
+#ifdef __ANDROID__
+	// APK hashes only verify installation, not this engine's virtual filesystem.
+	// Do not silently fall back to an empty Quake menu if PK3 discovery fails.
+	if (gamemode == GAME_XONOTIC)
+	{
+		static const char *required[] = {
+			"default.cfg", "xonotic-common.cfg", "menu.dat", "progs.dat", "android.cfg",
+			"gfx/touch_menu.tga", "gfx/touch_attackbutton.tga",
+			"gfx/touch_attack2button.tga", "gfx/touch_jumpbutton.tga",
+			"gfx/touch_weapnextbutton.tga", "gfx/touch_weapprevbutton.tga",
+			"gfx/touch_crouchbutton.tga", "gfx/touch_zoombutton.tga",
+			"gfx/touch_movebutton.tga", "gfx/touch_moveknob.tga",
+			"gfx/touch_keyboard.tga"
+		};
+		size_t i;
+		char diagnostic[MAX_OSPATH];
+		const char *missing = NULL;
+		FILE *report;
+		dpsnprintf(diagnostic, sizeof(diagnostic), "%sstartup-resources.txt", fs_basedir);
+		report = fopen(diagnostic, "w");
+		if (report)
+			fprintf(report, "Xonotic Android resource check\nbasedir=%s\nuserdir=%s\n",
+				fs_basedir, fs_userdir);
+		for (i = 0; i < sizeof(required) / sizeof(required[0]); ++i)
+		{
+			fs_offset_t size = 0;
+			unsigned char *data = FS_LoadFile(required[i], tempmempool, true, &size);
+			qbool valid = data != NULL && size > 0;
+			if (report)
+				fprintf(report, "%s %s (%lld bytes)\n", valid ? "PASS" : "FAIL",
+					required[i], (long long)size);
+			Con_Printf("Android resource check: %s %s\n", valid ? "PASS" : "FAIL", required[i]);
+			if (!valid && !missing)
+				missing = required[i];
+			if (data)
+				Mem_Free(data);
+		}
+		if (report)
+			fclose(report);
+		if (missing)
+			Sys_Error("Xonotic resources could not be read: %s\n"
+				"Close and reopen the app to verify installed resources.\n"
+				"Diagnostic: %s", missing, diagnostic);
+	}
+#endif
 }
 
 /*

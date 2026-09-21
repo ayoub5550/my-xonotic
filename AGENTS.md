@@ -1,8 +1,35 @@
 # xonotic-android — developer and agent handoff
 
-## Read this first: what this is (2026-09-20)
+## Read this first: Android resource-discovery failure (2026-09-21)
 
-**Current increment: 0.1.2 LibreQuake-style controls, offline APK.** Owner rejected first-run downloads and requires
+**0.1.2 failed on the owner's POCO F3.** Screenshot shows missing `default.cfg`,
+menu/audio and touch graphics, with only the fallback engine console visible.
+This is real Android failure evidence; earlier successful package/hash builds did
+not cover engine resource discovery. Do NOT describe 0.1.2 as playable.
+
+**0.1.3 root cause/fix:** `FS_AddGameDirectory` calls `listdirectory("", absolute_dir)`.
+The Android branch in `filematch.c` tested `basepath[0]`, not the composed
+`fullpath[0]`; it consequently tried nonexistent `ls.txt` instead of `opendir`,
+skipping ALL installed PK3s. One-line branch fix retains relative APK asset listing.
+`tools/test_android_directory.py` compiles the actual listing source with
+`__ANDROID__`: exact call shape fails before fix, four scenarios pass after.
+This host regression is not an Android runtime test.
+
+`FS_Init` now reads essential configs, game/menu programs and every touch icon
+through `FS_LoadFile` on Android; writes `startup-resources.txt` beside the data
+directory and reports a clear fatal resource error instead of an empty fallback UI.
+The owner must still test the replacement on-device.
+
+Additional integration gate: `tools/test_engine_android_fs.py <hostbuild> <hostlog>`
+recompiles the CURRENT `fs.c` and `filematch.c` with `__ANDROID__`, links against
+existing Linux engine objects, and runs real staged packs through `FS_LoadFile`
+and SDL RWops. All 16 required resources above were read successfully, including
+menu/progs.dat and all 11 TGA icons. This exercises Android filesystem branches
+with host SDL stdio, NOT Android JNI/asset access, GLES rendering, or touch input.
+Build/package gates: ARM64 link + Gradle PASS; APK 1,188,659,126 bytes,
+versionCode 4, v2 signature same as earlier, eight embedded hashes verified.
+
+**Current increment: 0.1.3 resource-discovery fix, offline APK.** Owner rejected first-run downloads and requires
 one APK with all resources. `tools/bundle_data.py` stages all seven official release PK3s
 (including music, nexcompat, xoncompat) plus the touch PK3 and a SHA-256 manifest.
 Launcher now verifies/copies these assets locally, with atomic replacement, corruption
@@ -10,8 +37,8 @@ repair, partial-file cleanup, storage checks, and retry. No HTTP downloader rema
 Manifest/data staging is ignored by Git. Run bundling after regenerating touch assets.
 Java installer tests are in `tools/OfflineInstallerTest.java`; compile with the pure-Java
 `OfflineInstaller.java` and run `com.ayoub.xonotic.OfflineInstallerTest`.
-Phone: owner uses POCO F3 and reported unspecified defects in 0.1.0. Android runtime
-remains unverified. Host Linux execution is NOT proof of APK execution.
+Phone: owner uses POCO F3; device evidence confirms 0.1.2 resource loading failure.
+Corrected Android runtime remains unverified. Host Linux execution is NOT APK proof.
 Local emulator attempts reached ADB but did not complete stable Android boot; stopped
 at owner's request. Do not claim screenshots extracted from APK assets are runtime shots.
 
@@ -28,10 +55,10 @@ This replaces the earlier Unity re-implementation attempt in `ayoub5550/my-xonot
 | Gate | Current result |
 |---|---|
 | Engine + deps cross-compile (arm64-v8a) | PASS: `libmain.so` 5.6 MB, `libSDL2.so`, `libpng.so` |
-| Gradle APK (release, debug-signed) | PASS 0.1.2: 1,188,658,154 bytes, v2 signature verified, same certificate as 0.1.0 |
+| Gradle APK (release, debug-signed) | 0.1.3 build PASS; see resource build receipt for final verification |
 | Offline contents / installer | PASS: eight manifest SHA-256 checks on embedded files; 26 Java installer assertions |
 | Host Linux build of the same engine boots Xonotic 0.8.6 data | see CHANGELOG |
-| Run on a real ARM64 phone | NOT VERIFIED — owner must test; report logcat |
+| Run on a real ARM64 phone | 0.1.2 FAILED resource discovery in owner screenshot; 0.1.3 pending device test |
 | Touch controls | New reference-style layout; 37 pure-C helper checks PASS, actual Android usability NOT VERIFIED |
 
 ### 0.1.2 implementation and review (2026-09-21)
@@ -87,6 +114,8 @@ env.sh              sandbox toolchain paths (NDK r23b, SDK 34/35/36, OpenJDK 11)
    stick presses from triggering MOUSE4=weaplast / MOUSE5=hook.
 3. `gl_textures.c`: Steelstorm KTX/ETC1 path behind `DP_USE_KTX` (needs libktx we don't ship).
 4. `gl_rmain.c`: Steelstorm shader prewarm behind `DP_STEELSTORM_PREWARM`.
+5. `filematch.c`: Android absolute-directory detection uses full joined path, not
+   basepath alone. `fs.c`: essential resource read-through guard + diagnostic.
 
 Compile defines: `LINK_TO_LIBJPEG CONFIG_MENU CONFIG_VIDEO_CAPTURE _FILE_OFFSET_BITS=64`.
 `sys.h` already sets for Android: `USE_GLES2 USE_RWOPS LINK_TO_ZLIB LINK_TO_LIBVORBIS
@@ -127,7 +156,7 @@ git checkout d93f9c4 && git apply ../native/darkplaces-android.patch`.
 
 ## Known gaps / next actions
 
-1. Get first device report (does it reach the menu? logcat tag `SDL`, `Xonotic`).
+1. Get device report on resource-discovery fix (does it reach the Xonotic menu?).
 2. Touch layout now includes weapon switching, zoom and crouch. Verify real multitouch,
    size and placement on POCO F3. Layout uses physical aspect at virtual height 720;
    `vid_touchscreen_look_sensitivity` defaults to 180 degrees per screen-width drag.

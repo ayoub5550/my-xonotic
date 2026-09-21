@@ -1,0 +1,14 @@
+{
+  "version": "0.1.3",
+  "versionCode": 4,
+  "engine_fs_probe": "16 actual FS_LoadFile reads passed; Android fs/listing branches + host SDL RWops, not Android runtime",
+  "installer_assertions": 26,
+  "touch_helper_checks": 37,
+  "signature": "v2 verified; same certificate as 0.1.0",
+  "apk_bytes": 1188659126,
+  "sha256": "f0d480f0ed34cfcc625704403fda1d5f33b0a1f2ed75edf3edb7388c461cd38b",
+  "embedded_resource_count": 8,
+  "embedded_sha256_checks": "all passed",
+  "directory_regression": "actual filematch.c Android branch; reproduces failure before, 4 scenarios pass after",
+  "android_runtime": "0.1.2 device resource failure confirmed by screenshot; 0.1.3 NOT YET VERIFIED"
+}

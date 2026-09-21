@@ -54,7 +54,7 @@ namespace MyXonotic
         /// testable part) and routes knockback into whichever mover component exists.
         public void TakeDamage(int rawDamage, Vector3 knockback, Actor instigator)
         {
-            if (IsDead || rawDamage <= 0) return;
+            if (IsDead || ArenaBootstrap.IsPaused || rawDamage <= 0) return;
 
             int armor = Armor;
             int toHealth = ArenaMath.ApplyArmor(rawDamage, ref armor, ArmorAbsorbRatio);

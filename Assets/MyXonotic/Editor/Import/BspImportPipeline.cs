@@ -120,6 +120,9 @@ namespace MyXonotic.EditorTools
             {
                 warnings.Add("BspGameplayImporter.Import threw and was skipped: " + e.Message);
             }
+            var pickups = new List<Pickup>();
+            warnings.AddRange(BspPickupImporter.Import(doc, root.transform, pickups));
+            PersistPickupVisuals(pickups);
 
             arena.warnings = warnings.ToArray();
             foreach (var w in warnings)
@@ -130,6 +133,42 @@ namespace MyXonotic.EditorTools
             WriteImportManifest(safeName, sourceName, manifestEntries, warnings);
 
             return root;
+        }
+
+        static void PersistPickupVisuals(List<Pickup> pickups)
+        {
+            // Development visuals must survive scene serialization; cached transient
+            // procedural meshes/materials alone are not buildable asset references.
+            const string folder = "Assets/MyXonotic/Generated/Pickups";
+            Directory.CreateDirectory(folder);
+            foreach (var pickup in pickups)
+            {
+                var filter = pickup.GetComponent<MeshFilter>();
+                var renderer = pickup.GetComponent<MeshRenderer>();
+                if (filter != null && filter.sharedMesh != null)
+                {
+                    string path = folder + "/PlaceholderSphere.asset";
+                    var saved = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+                    if (saved == null)
+                    {
+                        saved = UnityEngine.Object.Instantiate(filter.sharedMesh);
+                        AssetDatabase.CreateAsset(saved, path);
+                    }
+                    filter.sharedMesh = saved;
+                }
+                if (renderer != null && renderer.sharedMaterial != null)
+                {
+                    string path = folder + "/" + pickup.Type + ".mat";
+                    var saved = AssetDatabase.LoadAssetAtPath<Material>(path);
+                    if (saved == null)
+                    {
+                        saved = new Material(renderer.sharedMaterial);
+                        AssetDatabase.CreateAsset(saved, path);
+                    }
+                    renderer.sharedMaterial = saved;
+                }
+            }
+            AssetDatabase.SaveAssets();
         }
 
         // --------------------------------------------------------------
@@ -644,6 +683,9 @@ namespace MyXonotic.EditorTools
                 {
                     continue;
                 }
+                if (BspPickupImporter.ClassToPlan.ContainsKey(classname) ||
+                    classname == "trigger_push" || classname == "trigger_teleport" || classname == "trigger_hurt")
+                    continue; // Additive passes emit their own per-entity failure warnings.
                 if (classname.StartsWith("func_") || classname.StartsWith("trigger_") ||
                     classname.StartsWith("item_") || classname.StartsWith("weapon_") ||
                     classname.StartsWith("target_") || classname.StartsWith("path_"))

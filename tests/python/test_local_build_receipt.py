@@ -120,6 +120,14 @@ class RunnerEarlyExitTests(unittest.TestCase):
         (self.root / "Artifacts/playtest-result.json").write_text('{"passed":true}')
         self.assertEqual(self.invoke("playtest"), 1)
 
+    def test_exit_zero_cannot_reuse_gameplay_tests(self):
+        (self.root / "Artifacts/gameplay-integration-tests.txt").write_text("PASS old")
+        self.assertEqual(self.invoke("gameplay-test"), 1)
+
+    def test_exit_zero_cannot_reuse_gameplay_playtest(self):
+        (self.root / "Artifacts/gameplay-playtest.json").write_text('{"passed":true}')
+        self.assertEqual(self.invoke("gameplay-playtest"), 1)
+
     def test_exit_zero_cannot_reuse_old_compile(self):
         (self.root / "Artifacts/compile-result.json").write_text(
             '{"passed":true,"invocation":"old"}')

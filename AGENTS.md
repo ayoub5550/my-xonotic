@@ -1,5 +1,24 @@
 # my-xonotic — developer and agent handoff
 
+## Full-game continuation wave — dev.4 source checkpoint
+
+Owner reiterated full game after dev.3; a Boil-only release is not the endpoint.
+Do not manufacture a >1GB APK with unused files to simulate completeness.
+Current wave: original-map pickups, offline Deathmatch lifecycle, and a complete
+official-map/entity coverage inventory. Full weapons/animation/models/modes/network
+and Android validation remain separate acceptance gates.
+
+Workers finished; parent integrated and verified actual Unity Editor/Play Mode.
+25 Boil pickups (health/armor/rocket ammo) survive scene serialization and collect
+through actual physics. Pickup visuals are development spheres, not original art.
+Offline match limit/winner/tie/freeze/restart is wired into the arena and HUD.
+Current passes: 55 BSP, 36 MD3, 68 match rules, 172 Boil entity-data, 130 Python,
+22 Editor, 59 sky, 131 integration, 44 gameplay Play Mode, 12 synthetic Play Mode,
+100 original-Boil smoke assertions. No Android device/visual parity claim.
+All-map inventory reads 31 BSP files incl internal stub; no all-map playability claim.
+Read `docs/FULL-GAME-GATES.md`. APK receipt is a separate post-build gate.
+Keep dev.3 evidence below historical when reporting this wave.
+
 ## Verified continuation checkpoint — 2026-09-21
 
 Current working branch: `feat/unity-android-continuation`, based on `f59e34a`.

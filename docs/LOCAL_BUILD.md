@@ -65,6 +65,9 @@ export XONOTIC_REVISION="<exact-source-commit>"
 python3 tools/local_unity.py compile
 python3 tools/local_unity.py configure
 python3 tools/local_unity.py test
+python3 tools/local_unity.py sky-test
+python3 tools/local_unity.py gameplay-test
+python3 tools/local_unity.py gameplay-playtest
 python3 tools/local_unity.py original-playtest
 python3 tools/local_unity.py android --timeout 3600
 ```

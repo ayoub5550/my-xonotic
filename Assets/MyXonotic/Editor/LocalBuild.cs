@@ -46,7 +46,7 @@ namespace MyXonotic.EditorTools
             PlayerSettings.productName = "my-xonotic Development";
             PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, "com.ayoub.myxonotic");
             PlayerSettings.bundleVersion = File.ReadAllText("VERSION").Trim();
-            PlayerSettings.Android.bundleVersionCode = 3;
+            PlayerSettings.Android.bundleVersionCode = 4;
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel26;
             PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevel36;
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;

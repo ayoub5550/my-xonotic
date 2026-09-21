@@ -22,9 +22,8 @@ namespace MyXonotic
         public Actor Player;
         public WeaponController Weapons;
 
-        // Exact values from brand/DESIGN.md ("jev FPS touch controls"), which
-        // itself pins the owner's LibreQuake TouchControls.cs/UIKit.cs reference
-        // colors — do not invent new tints here.
+        // Preserve the existing touch palette. The historical brand document
+        // is not present in this checkout; no new brand provenance is asserted.
         static readonly Color FireColor = new Color32(204, 51, 26, 140);       // rgba(204,51,26,0.55)
         static readonly Color JumpColor = new Color32(51, 128, 230, 128);      // rgba(51,128,230,0.5)
         static readonly Color WeaponColor = new Color32(255, 255, 255, 89);    // rgba(255,255,255,0.35)
@@ -37,6 +36,7 @@ namespace MyXonotic
 
         Text _statusText;
         Text _bannerText;
+        Text _pauseText;
         GameObject _pausePanel;
         RectTransform _safeAreaRoot;
 
@@ -89,9 +89,9 @@ namespace MyXonotic
             rt.anchorMax = Vector2.one;
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
-            Text pauseText = CreateText("PauseText", _pausePanel.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+            _pauseText = CreateText("PauseText", _pausePanel.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(600f, 100f), 28, TextAnchor.MiddleCenter, Color.white);
-            pauseText.text = "PAUSED\nTouch RESUME or RESTART\nDesktop: P / R";
+            _pauseText.text = "PAUSED\nTouch RESUME or RESTART\nDesktop: P / R";
             _pausePanel.SetActive(false);
         }
 
@@ -139,6 +139,20 @@ namespace MyXonotic
             _statusText.text =
                 $"HP {Player.Health}  AR {Player.Armor}  AMMO {ammo}  [{weaponName}]\n" +
                 $"FRAGS {Player.Frags}  DEATHS {Player.Deaths}";
+            var arena = ArenaBootstrap.Instance;
+            if (arena != null && arena.Match != null)
+            {
+                int seconds = Mathf.FloorToInt(arena.Match.ElapsedSeconds);
+                _statusText.text += $"\nDM  {seconds / 60:00}:{seconds % 60:00}  LIMIT {arena.FragLimit}";
+                if (arena.MatchFinished)
+                {
+                    var result = arena.Match.Result;
+                    string winner = result.IsTie ? "TIE" : result.Winner.DisplayName + " WINS";
+                    _pauseText.text = "MATCH OVER — " + winner + "\n" + result.Reason +
+                        "\nTouch RESTART / Desktop R";
+                }
+                else _pauseText.text = "PAUSED\nTouch RESUME or RESTART\nDesktop: P / R";
+            }
             if (_pausePanel != null) _pausePanel.SetActive(ArenaBootstrap.IsPaused);
         }
 
@@ -241,7 +255,8 @@ namespace MyXonotic
             GUI.color = PauseColor;
             GUI.Box(GuiRect(TouchLayout.Pause), string.Empty, boxStyle);
             GUI.color = prevColor;
-            GUI.Box(GuiRect(TouchLayout.Pause), isPaused ? "RESUME" : "PAUSE", boxStyle);
+            bool finished = ArenaBootstrap.Instance != null && ArenaBootstrap.Instance.MatchFinished;
+            GUI.Box(GuiRect(TouchLayout.Pause), finished ? "FINISHED" : isPaused ? "RESUME" : "PAUSE", boxStyle);
 
             if (isPaused)
             {

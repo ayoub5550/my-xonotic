@@ -71,28 +71,31 @@ namespace MyXonotic.Menu
             // Header
             var title = MakeText("Title", safe, "MY XONOTIC", 40, TextAnchor.MiddleLeft, Accent, FontStyle.Bold);
             SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f),
-                new Vector2(30f, -12f), new Vector2(-30f, -62f));
+                new Vector2(30f, -62f), new Vector2(-30f, -12f));
             int count = _catalog != null ? _catalog.maps.Count : 0;
             string version = _catalog != null && !string.IsNullOrEmpty(_catalog.buildVersion) ? _catalog.buildVersion : Application.version;
             var sub = MakeText("Subtitle", safe,
                 count + " maps · Unity reimplementation " + version + " · original Xonotic art (GPL) · development build",
                 16, TextAnchor.MiddleLeft, SubText, FontStyle.Normal);
             SetRect(sub.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f),
-                new Vector2(30f, -64f), new Vector2(-30f, -90f));
+                new Vector2(30f, -90f), new Vector2(-30f, -64f));
 
             var quit = MakeButton("Quit", safe, "QUIT", () => Application.Quit());
             SetRect(quit.GetComponent<RectTransform>(), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(-150f, -16f), new Vector2(-30f, -60f));
+                new Vector2(-150f, -60f), new Vector2(-30f, -16f));
 
             BuildMatchOptions(safe);
 
             // Scroll view with grid of cards
-            var scrollGO = new GameObject("MapScroll", typeof(RectTransform), typeof(Image), typeof(ScrollRect));
+            // RectMask2D, not Mask: a Mask needs a visible Image to write the
+            // stencil, and an alpha of 0.001 quantises to 0 in the vertex
+            // colour -> the UI shader's alpha clip discards it -> every card
+            // fails the stencil test and the grid is invisible on device.
+            var scrollGO = new GameObject("MapScroll", typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(RectMask2D));
             scrollGO.transform.SetParent(safe, false);
             var scrollRT = scrollGO.GetComponent<RectTransform>();
             SetRect(scrollRT, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(20f, 20f), new Vector2(-20f, -150f));
-            scrollGO.GetComponent<Image>().color = new Color(0, 0, 0, 0.001f);
-            scrollGO.AddComponent<Mask>().showMaskGraphic = false;
+            scrollGO.GetComponent<Image>().color = new Color(0, 0, 0, 0f); // raycast target only
             var scroll = scrollGO.GetComponent<ScrollRect>();
             scroll.horizontal = false;
             scroll.vertical = true;
@@ -105,6 +108,7 @@ namespace MyXonotic.Menu
             content.anchorMax = new Vector2(1f, 1f);
             content.pivot = new Vector2(0.5f, 1f);
             content.anchoredPosition = Vector2.zero;
+            content.sizeDelta = Vector2.zero;
             var grid = content.gameObject.AddComponent<GridLayoutGroup>();
             grid.cellSize = new Vector2(290f, 210f);
             grid.spacing = new Vector2(16f, 16f);
@@ -127,7 +131,7 @@ namespace MyXonotic.Menu
 
         // ------------------------------------------------------------ match options
 
-        Text _modeLabels0, _modeLabels1, _modeLabels2, _allWeaponsLabel, _botsLabel;
+        Text _modeLabels0, _modeLabels1, _modeLabels2, _allWeaponsLabel, _botsLabel, _botsMinus, _botsPlus;
         Image _mode0, _mode1, _mode2, _allWeaponsImg;
 
         /// One row: DM / TDM / CTF mode buttons, "ALL WEAPONS" toggle, bot count - / +.
@@ -138,11 +142,11 @@ namespace MyXonotic.Menu
             _mode1 = OptionButton(safe, "ModeTDM", 136f, 236f, y0, y1, out _modeLabels1, () => { MatchSettings.Mode = GameMode.TeamDeathmatch; RefreshOptions(); });
             _mode2 = OptionButton(safe, "ModeCTF", 242f, 342f, y0, y1, out _modeLabels2, () => { MatchSettings.Mode = GameMode.CaptureTheFlag; RefreshOptions(); });
             _allWeaponsImg = OptionButton(safe, "AllWeapons", 372f, 552f, y0, y1, out _allWeaponsLabel, () => { MatchSettings.AllWeapons = !MatchSettings.AllWeapons; RefreshOptions(); });
-            OptionButton(safe, "BotsMinus", 582f, 626f, y0, y1, out _, () => { MatchSettings.BotCount = MatchSettings.BotCount - 1; RefreshOptions(); });
+            OptionButton(safe, "BotsMinus", 582f, 626f, y0, y1, out _botsMinus, () => { MatchSettings.BotCount = MatchSettings.BotCount - 1; RefreshOptions(); });
             var botsLabelGO = MakeText("BotsLabel", safe, "", 16, TextAnchor.MiddleCenter, TextColor, FontStyle.Bold);
             SetRect(botsLabelGO.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(630f, y1), new Vector2(720f, y0));
             _botsLabel = botsLabelGO;
-            OptionButton(safe, "BotsPlus", 724f, 768f, y0, y1, out _, () => { MatchSettings.BotCount = MatchSettings.BotCount + 1; RefreshOptions(); });
+            OptionButton(safe, "BotsPlus", 724f, 768f, y0, y1, out _botsPlus, () => { MatchSettings.BotCount = MatchSettings.BotCount + 1; RefreshOptions(); });
             var hint = MakeText("OptionsHint", safe, "CTF needs a map with flag stands (ctf in the map's modes).", 12, TextAnchor.MiddleLeft, SubText, FontStyle.Normal);
             SetRect(hint.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(790f, y1), new Vector2(-30f, y0));
             RefreshOptions();
@@ -167,6 +171,7 @@ namespace MyXonotic.Menu
             _allWeaponsLabel.text = "ALL WEAPONS: " + (MatchSettings.AllWeapons ? "ON" : "OFF");
             _allWeaponsImg.color = MatchSettings.AllWeapons ? Accent : CardColor;
             _botsLabel.text = "BOTS " + MatchSettings.BotCount;
+            _botsMinus.text = "-"; _botsPlus.text = "+";
         }
 
         void BuildCard(Transform parent, MapCatalog.Entry entry)
@@ -187,7 +192,7 @@ namespace MyXonotic.Menu
 
             var preview = MakeImage("Preview", card.transform, Color.white);
             SetRect(preview.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(6f, -6f), new Vector2(-6f, -150f));
+                new Vector2(6f, -150f), new Vector2(-6f, -6f));
             if (entry.preview != null)
             {
                 preview.sprite = Sprite.Create(entry.preview,

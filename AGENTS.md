@@ -1,5 +1,21 @@
 # my-xonotic — developer and agent handoff
 
+## dev.10 menu-fix checkpoint — 2026-09-22 (branch `feat/unity-dev10-menu-fix`)
+
+Read `docs/UNITY-DEV10.md` first. The first real-device screenshot (dev.9)
+showed a main menu with no title, no QUIT and no map cards. Two latent bugs
+since dev.5: code-built rects with `offsetMin.y > offsetMax.y` (negative
+height → Text truncated to nothing, Image culled) and a stencil `Mask` on an
+alpha-0.001 Image (alpha quantises to 0 → alpha-clip → no stencil → all cards
+fail the mask). Fixed in `MainMenu.cs` (`RectMask2D`, positive rects, −/+
+labels). `LocalTests.MainMenuGeometry` now builds the real menu headlessly and
+asserts positive rects for every Graphic, card count = catalog count, no
+`Mask`. Editor checks 237. Rendering in the sandbox is NOT possible: the Linux
+player under Xvfb/llvmpipe never draws a frame (10 min, dev.6 saw the same) —
+do not spend time on it; verify UI geometry by test and ask for a device
+screenshot. APK vc11 `0.1.0-dev.10`: see `CHANGELOG.md` /
+`docs/unity-dev10-build-2026-09-22.json`.
+
 ## dev.9 modes/animation/movers checkpoint — 2026-09-22 (branch `feat/unity-dev9-modes`)
 
 Read `docs/UNITY-DEV9.md` first. Skeletal character animation

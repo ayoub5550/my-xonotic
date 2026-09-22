@@ -57,6 +57,18 @@ namespace MyXonotic.Gameplay
 
         bool _subscribed;
 
+        /// Score reported for an actor: personal frags by default; team modes
+        /// install a team total (TDM: team frags, CTF: team captures) so the
+        /// "frag limit" becomes the team/capture limit. Never null.
+        public Func<Actor, int> ScoreOf = a => a != null ? a.Frags : 0;
+
+        /// Re-reports <paramref name="actor"/>'s current score (e.g. after a CTF capture).
+        public void ReportScore(Actor actor)
+        {
+            if (!Rules.IsRunning || actor == null) return;
+            Rules.ReportFrags(actor, ScoreOf(actor));
+        }
+
         // ------------------------------------------------------------- hooks
 
         /// Hook 1: start a match. Subscribes to GameState.AnyDeath (only after
@@ -111,8 +123,8 @@ namespace MyXonotic.Gameplay
         public void ReportDeath(Actor victim, Actor killer)
         {
             if (!Rules.IsRunning) return;
-            if (victim != null) Rules.ReportFrags(victim, victim.Frags);
-            if (killer != null && killer != victim) Rules.ReportFrags(killer, killer.Frags);
+            if (victim != null) Rules.ReportFrags(victim, ScoreOf(victim));
+            if (killer != null && killer != victim) Rules.ReportFrags(killer, ScoreOf(killer));
         }
 
         /// Hook 4: match-over freeze / result view. Poll IsOver/Result, or

@@ -122,7 +122,9 @@ namespace MyXonotic.EditorTools
             {
                 [WeaponType.Blaster] = "g_laser", [WeaponType.Shotgun] = "g_shotgun", [WeaponType.MachineGun] = "g_uzi",
                 [WeaponType.Mortar] = "g_gl", [WeaponType.Electro] = "g_electro", [WeaponType.Crylink] = "g_crylink",
-                [WeaponType.Vortex] = "g_nex", [WeaponType.Hagar] = "g_hagar", [WeaponType.Devastator] = "g_rl"
+                [WeaponType.Vortex] = "g_nex", [WeaponType.Hagar] = "g_hagar", [WeaponType.Devastator] = "g_rl",
+                [WeaponType.Rifle] = "g_campingrifle", [WeaponType.Minelayer] = "g_minelayer", [WeaponType.Arc] = "g_arc",
+                [WeaponType.Fireball] = "g_fireball", [WeaponType.Hook] = "g_hookgun"
             };
             var list = new List<WeaponSource>();
             for (int i = 0; i < WeaponController.WeaponCount; i++)
@@ -199,6 +201,9 @@ namespace MyXonotic.EditorTools
                 CopyContentAudio(resolver, "sound/weapons/" + common + ".ogg", "Common_" + common + ".ogg");
             foreach (var misc in WeaponAudio.MiscSources)
                 CopyContentAudio(resolver, "sound/misc/" + misc + ".ogg", "Misc_" + misc + ".ogg");
+            foreach (var ctf in WeaponAudio.CtfSources)
+                CopyContentAudio(resolver, "sound/ctf/" + ctf + ".ogg", "Ctf_" + ctf + ".ogg");
+            CopyContentAudio(resolver, "sound/plats/medplat1.ogg", "Plats_medplat1.ogg");
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             WriteWeaponManifest(results);

@@ -22,6 +22,13 @@ namespace MyXonotic
         public float GravityScale;
         public bool Bounces;
         public float BounceDamping = 0.55f;
+        /// Minelayer mine: sticks to the world on impact, arms after <see cref="MineArmDelay"/>,
+        /// explodes when an enemy comes within <see cref="MineTriggerRadius"/> (or on remote detonation).
+        public bool IsMine;
+        public const float MineArmDelay = 1f;
+        public const float MineTriggerRadius = 60f / 32f;
+        public bool IsStuck { get; private set; }
+        float _stuckTime;
 
         /// Grace period right after spawning where a hit on the instigator's own
         /// body is ignored, so firing from the muzzle/camera position (which can sit
@@ -77,6 +84,7 @@ namespace MyXonotic
             p.Weapon = weapon;
             p.GravityScale = fire.GravityScale;
             p.Bounces = fire.Mode == FireMode.Bouncing;
+            p.IsMine = fire.Mode == FireMode.Mine;
             p.LifeTime = fire.FuseSeconds > 0f ? fire.FuseSeconds : 8f;
             p._trail = trail;
             return p;
@@ -97,6 +105,14 @@ namespace MyXonotic
             return n;
         }
 
+        /// Live (stuck or flying) mines owned by <paramref name="owner"/>.
+        public static int CountMinesOwnedBy(Actor owner)
+        {
+            int n = 0;
+            foreach (var p in Live) if (p != null && p.IsMine && p.Instigator == owner && !p._exploded) n++;
+            return n;
+        }
+
         void OnEnable() => Live.Add(this);
         void OnDisable() => Live.Remove(this);
 
@@ -107,9 +123,24 @@ namespace MyXonotic
             _age += dt;
             if (_age > LifeTime)
             {
-                // Fused projectiles (grenades, electro balls) explode on timeout; others fizzle.
-                if (SplashRadius > 0f && (Bounces || GravityScale > 0f)) Explode(transform.position, null);
+                // Fused projectiles (grenades, electro balls, mines) explode on timeout; others fizzle.
+                if (SplashRadius > 0f && (Bounces || GravityScale > 0f || IsMine)) Explode(transform.position, null);
                 else Destroy(gameObject);
+                return;
+            }
+
+            if (IsStuck)
+            {
+                // Armed mine: proximity trigger on enemies only.
+                if (_age - _stuckTime < MineArmDelay) return;
+                foreach (var c in Physics.OverlapSphere(transform.position, MineTriggerRadius, ~0, QueryTriggerInteraction.Ignore))
+                {
+                    var a = c.GetComponentInParent<Actor>();
+                    if (a == null || a.IsDead || a == Instigator) continue;
+                    if (Instigator != null && !Instigator.IsEnemyOf(a)) continue;
+                    Explode(transform.position, null);
+                    return;
+                }
                 return;
             }
 
@@ -128,6 +159,18 @@ namespace MyXonotic
                 var hitActor = hit.collider.GetComponentInParent<Actor>();
                 if (hitActor == Instigator && _age < SelfIgnoreWindow) continue;
 
+                if (IsMine && hitActor == null)
+                {
+                    // Stick to the surface and arm.
+                    transform.position = hit.point + hit.normal * 0.05f;
+                    Velocity = Vector3.zero;
+                    GravityScale = 0f;
+                    IsStuck = true;
+                    _stuckTime = _age;
+                    if (_trail != null) _trail.emitting = false;
+                    WeaponAudio.PlayAt(WeaponAudio.Load(WeaponAudio.ResourceName(WeaponType.Minelayer, "mine_stick")), transform.position, 0.7f);
+                    return;
+                }
                 if (Bounces && hitActor == null)
                 {
                     // Reflect off world geometry, lose energy; explode once nearly at rest.

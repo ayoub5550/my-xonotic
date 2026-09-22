@@ -1,5 +1,21 @@
 # سجل التغييرات
 
+## 0.1.0-dev.9 — 2026-09-22 — التحريك الهيكلي والمحركات والتعزيزات و14 سلاحًا وTDM/CTF
+
+- تحريك هيكلي للشخصيات الـ11 من IQM (idle/run/strafe/jump/die) عبر
+  `SkinnedMeshRenderer` مع توقيت `.framegroups` الأصلي؛ الجثث تبقى حتى الظهور.
+- محركات: `func_door` (اقتراب، lip/speed/wait/START_OPEN)، `func_rotating`،
+  `func_bobbing`، `func_plat`؛ اللاعب والبوتات يُحملون على المنصات.
+- تعزيزات Strength (×3) وShield (÷3) 30 ث من `item_strength/item_invincible`.
+- أسلحة 10–14: Rifle, Mine Layer (ألغام لاصقة + تفجير), Arc (شعاع), Fireball,
+  Grappling Hook؛ نماذج عرض أصلية بخاماتها (14/14)؛ شريط أسلحة يتمدد للمملوك.
+- أنماط DM/TDM/CTF مع فرق ولا ضرر بين الزملاء وتلوين فريق؛ أعلام CTF من
+  `item_flag_team1/2` (18 قاعدة) بنموذج flags.md3 وأصوات ctf؛ حد 10 تسجيلات.
+  قائمة: الوضع، ALL WEAPONS، عدد البوتات 1–7. البوتات تستهدف أي عدو وتلعب CTF.
+- الاختبارات: Editor 22، تكامل لعب 234 (55 جديدة)، محتوى 194 — كلها ناجحة.
+- APK versionCode 10: 445,214,075 بايت، SHA256 `74be4c09d3caaa56eaeb4480b1afa9b0f571645278a9aff8d8fc6d0db828e9d9`. لا اختبار جهاز؛ لا شبكة.
+  التفاصيل في `docs/UNITY-DEV9.md`.
+
 ## 0.1.0-dev.8 — 2026-09-21 — الترسانة الكاملة وأزرار الأسلحة وبوتات أذكى
 
 - تسعة أسلحة Xonotic (Blaster, Shotgun, Machine Gun, Mortar, Electro, Crylink,

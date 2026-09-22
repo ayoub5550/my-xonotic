@@ -95,6 +95,16 @@ namespace MyXonotic.EditorTools
                 mesh = Persist(mesh, ResourcesFolder + "/" + name + "_Mesh.asset");
                 result.Vertices = positions.Length;
                 result.Triangles = triCount;
+
+                // Skeletal variant: bind-pose skinned mesh + rig asset (dev.9).
+                try
+                {
+                    BuildRigAssets(name, path, doc, mats, result);
+                }
+                catch (Exception rigError)
+                {
+                    result.Notes.Add("rig: " + rigError.Message + " (static mesh only)");
+                }
                 result.Ok = true;
             }
             catch (Exception e)
@@ -103,6 +113,123 @@ namespace MyXonotic.EditorTools
             }
             return result;
         }
+
+        /// <summary>
+        /// Writes <c>&lt;name&gt;_Skinned.asset</c> (bind-pose mesh with bone weights and
+        /// bindposes, Unity space) and <c>&lt;name&gt;_Rig.asset</c> (joints + every
+        /// animation frame as local TRS, Unity space) so the runtime can animate
+        /// the character with a SkinnedMeshRenderer. Frame rates / loop flags come
+        /// from the model's <c>.framegroups</c> file when present.
+        /// </summary>
+        static void BuildRigAssets(string name, string iqmPath, IqmSkinnedDocument doc, Material[] mats, Result result)
+        {
+            int n = doc.JointCount;
+            if (n == 0) { result.Notes.Add("rig: no joints; skipped."); return; }
+            var rig = ScriptableObject.CreateInstance<CharacterRig>();
+            rig.ModelName = name;
+            rig.JointNames = new string[n];
+            rig.JointParents = new int[n];
+            rig.BindLocal = new float[n * 10];
+            for (int j = 0; j < n; j++)
+            {
+                doc.GetJoint(j, out rig.JointNames[j], out rig.JointParents[j], out Vector3 t, out Quaternion r, out Vector3 sc);
+                WriteTrs(rig.BindLocal, j * 10, ToUnityT(t), ToUnityQ(r), ToUnityS(sc));
+            }
+            int frames = doc.FrameCount;
+            rig.FrameCount = frames;
+            rig.Poses = new float[frames * n * 10];
+            for (int f = 0; f < frames; f++)
+                for (int j = 0; j < n; j++)
+                {
+                    doc.GetFramePose(f, j, out Vector3 t, out Quaternion r, out Vector3 sc);
+                    WriteTrs(rig.Poses, (f * n + j) * 10, ToUnityT(t), ToUnityQ(r), ToUnityS(sc));
+                }
+            var groups = ReadFrameGroups(iqmPath + ".framegroups");
+            var clips = new List<CharacterRig.Clip>();
+            for (int a = 0; a < doc.AnimCount; a++)
+            {
+                doc.GetAnim(a, out string aname, out int first, out int count, out float rate, out bool loop);
+                if (groups != null && a < groups.Count)
+                {
+                    // framegroups is authoritative for timing (IQM files ship rate 0).
+                    var g = groups[a];
+                    if (g.First == first) { count = g.Count; rate = g.Fps; loop = g.Loop; }
+                }
+                if (rate <= 0f) rate = 20f;
+                clips.Add(new CharacterRig.Clip { Name = aname, FirstFrame = first, FrameCount = Mathf.Max(1, Mathf.Min(count, frames - first)), FramesPerSecond = rate, Loop = loop });
+            }
+            rig.Clips = clips.ToArray();
+
+            // Bind-pose mesh in Unity space with bone weights; bindposes = inverse bind world matrices (root-local).
+            Vector3[] bindPos, bindNrm;
+            doc.SkinFrame(-1, out bindPos, out bindNrm);
+            var skinned = new Mesh { name = name + "_Skinned" };
+            if (bindPos.Length > 65535) skinned.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            skinned.vertices = bindPos;
+            skinned.normals = bindNrm;
+            skinned.uv = doc.TexCoords;
+            skinned.subMeshCount = doc.Meshes.Length;
+            for (int m = 0; m < doc.Meshes.Length; m++) skinned.SetTriangles(doc.Meshes[m].Triangles, m);
+            skinned.boneWeights = doc.BuildBoneWeights();
+            var world = new Matrix4x4[n];
+            var bindposes = new Matrix4x4[n];
+            for (int j = 0; j < n; j++)
+            {
+                rig.GetBind(j, out Vector3 t, out Quaternion r, out Vector3 sc);
+                var local = Matrix4x4.TRS(t, r.normalized, sc);
+                int p = rig.JointParents[j];
+                world[j] = p >= 0 ? world[p] * local : local;
+                bindposes[j] = world[j].inverse;
+            }
+            skinned.bindposes = bindposes;
+            skinned.RecalculateBounds();
+            Persist(skinned, ResourcesFolder + "/" + name + "_Skinned.asset");
+            Persist(rig, ResourcesFolder + "/" + name + "_Rig.asset");
+            result.Notes.Add(string.Format("rig: {0} joints, {1} frames, {2} clips ({3}).", n, frames, rig.Clips.Length,
+                groups != null ? "framegroups timing" : "default 20 fps"));
+        }
+
+        struct FrameGroup { public int First, Count; public float Fps; public bool Loop; }
+
+        static List<FrameGroup> ReadFrameGroups(string path)
+        {
+            if (!File.Exists(path)) return null;
+            var list = new List<FrameGroup>();
+            foreach (var raw in File.ReadAllLines(path))
+            {
+                string line = raw;
+                int c = line.IndexOf("//", StringComparison.Ordinal);
+                if (c >= 0) line = line.Substring(0, c);
+                var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length < 3) continue;
+                int first, count; float fps; int loop = 1;
+                if (!int.TryParse(parts[0], out first) || !int.TryParse(parts[1], out count)) continue;
+                if (!float.TryParse(parts[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out fps)) continue;
+                if (parts.Length > 3) int.TryParse(parts[3], out loop);
+                list.Add(new FrameGroup { First = first, Count = count, Fps = fps, Loop = loop != 0 });
+            }
+            return list;
+        }
+
+        static void WriteTrs(float[] dst, int o, Vector3 t, Quaternion r, Vector3 s)
+        {
+            dst[o] = t.x; dst[o + 1] = t.y; dst[o + 2] = t.z;
+            dst[o + 3] = r.x; dst[o + 4] = r.y; dst[o + 5] = r.z; dst[o + 6] = r.w;
+            dst[o + 7] = s.x; dst[o + 8] = s.y; dst[o + 9] = s.z;
+        }
+
+        // Quake (x, y, z; units) -> Unity (x, z, y; metres). The axis swap is a
+        // reflection, so a rotation (axis a, angle θ) becomes (swap(a), -θ):
+        // quaternion (x, y, z, w) -> (-x, -z, -y, w). Verified numerically against
+        // CPU skinning of the raw data (see docs/UNITY-DEV9.md).
+        const float Units = MyXonotic.Content.Bsp.BspCoordinateSpace.SourceUnitsPerUnityUnit;
+        static Vector3 ToUnityT(Vector3 t) => new Vector3(t.x / Units, t.z / Units, t.y / Units);
+        static Quaternion ToUnityQ(Quaternion q)
+        {
+            if (q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w < 1e-8f) return Quaternion.identity;
+            return new Quaternion(-q.x, -q.z, -q.y, q.w).normalized;
+        }
+        static Vector3 ToUnityS(Vector3 s) => new Vector3(s.x, s.z, s.y);
 
         static Material BuildMaterial(string name, int index, string materialName, XonoticContentResolver resolver, Result result)
         {
@@ -175,7 +302,7 @@ namespace MyXonotic.EditorTools
         public sealed class MeshInfo { public string Name; public string MaterialName; public int[] Triangles; }
         sealed class Joint { public string Name; public int Parent; public Vector3 T; public Quaternion R; public Vector3 S; }
         sealed class Pose { public int Parent; public uint Mask; public float[] Offset = new float[10]; public float[] Scale = new float[10]; }
-        sealed class Anim { public string Name; public uint First, Count; }
+        sealed class Anim { public string Name; public uint First, Count; public float Rate; public uint Flags; }
 
         public MeshInfo[] Meshes;
         public Vector2[] TexCoords;
@@ -275,7 +402,11 @@ namespace MyXonotic.EditorTools
             for (uint a = 0; a < numAnims; a++)
             {
                 uint r = ofsAnims + a * 20;
-                doc._anims[a] = new Anim { Name = cstr(BitConverter.ToUInt32(d, (int)r)), First = BitConverter.ToUInt32(d, (int)r + 4), Count = BitConverter.ToUInt32(d, (int)r + 8) };
+                doc._anims[a] = new Anim
+                {
+                    Name = cstr(BitConverter.ToUInt32(d, (int)r)), First = BitConverter.ToUInt32(d, (int)r + 4), Count = BitConverter.ToUInt32(d, (int)r + 8),
+                    Rate = F(d, r + 12), Flags = BitConverter.ToUInt32(d, (int)r + 16)
+                };
             }
             doc._numFrames = numFrames; doc._numFrameChannels = numFrameChannels;
             doc._frameData = new ushort[numFrames * numFrameChannels];
@@ -284,6 +415,67 @@ namespace MyXonotic.EditorTools
         }
 
         static float F(byte[] d, uint o) => BitConverter.ToSingle(d, (int)o);
+
+        public int FrameCount => (int)_numFrames;
+        public int AnimCount => _anims.Length;
+
+        public void GetJoint(int j, out string name, out int parent, out Vector3 t, out Quaternion r, out Vector3 s)
+        {
+            var jt = _joints[j];
+            name = jt.Name; parent = jt.Parent; t = jt.T; r = jt.R; s = jt.S;
+        }
+
+        public void GetAnim(int a, out string name, out int first, out int count, out float rate, out bool loop)
+        {
+            var an = _anims[a];
+            name = an.Name; first = (int)an.First; count = (int)an.Count; rate = an.Rate; loop = (an.Flags & 1) != 0;
+        }
+
+        /// <summary>Local TRS of joint <paramref name="j"/> at <paramref name="frame"/> in raw (Quake) space.</summary>
+        public void GetFramePose(int frame, int j, out Vector3 t, out Quaternion r, out Vector3 s)
+        {
+            if (_poses.Length != _joints.Length || frame < 0 || frame >= _numFrames)
+            {
+                t = _joints[j].T; r = _joints[j].R; s = _joints[j].S; return;
+            }
+            // Channels are packed per frame in joint order; compute this joint's offset.
+            uint fp = (uint)frame * _numFrameChannels;
+            for (int k = 0; k < j; k++) fp += CountBits(_poses[k].Mask);
+            var p = _poses[j];
+            var ch = new float[10];
+            for (int c = 0; c < 10; c++)
+            {
+                ch[c] = p.Offset[c];
+                if ((p.Mask & (1u << c)) != 0) ch[c] += _frameData[fp++] * p.Scale[c];
+            }
+            t = new Vector3(ch[0], ch[1], ch[2]);
+            r = new Quaternion(ch[3], ch[4], ch[5], ch[6]);
+            s = new Vector3(ch[7], ch[8], ch[9]);
+        }
+
+        static uint CountBits(uint v) { uint c = 0; while (v != 0) { c += v & 1; v >>= 1; } return c; }
+
+        /// <summary>Unity BoneWeight per vertex from the IQM blend indexes/weights (normalised, top 4).</summary>
+        public BoneWeight[] BuildBoneWeights()
+        {
+            int vcount = _rawPositions.Length;
+            var bw = new BoneWeight[vcount];
+            for (int v = 0; v < vcount; v++)
+            {
+                var idx = _blendIndex[v] ?? new byte[] { 0, 0, 0, 0 };
+                var w = _blendWeight[v] ?? new[] { 1f, 0f, 0f, 0f };
+                float total = w[0] + w[1] + w[2] + w[3];
+                if (total <= 0f) { w = new[] { 1f, 0f, 0f, 0f }; total = 1f; }
+                bw[v] = new BoneWeight
+                {
+                    boneIndex0 = idx[0], weight0 = w[0] / total,
+                    boneIndex1 = idx[1], weight1 = w[1] / total,
+                    boneIndex2 = idx[2], weight2 = w[2] / total,
+                    boneIndex3 = idx[3], weight3 = w[3] / total
+                };
+            }
+            return bw;
+        }
 
         /// <summary>First frame of the named animation; falls back to frame 0 (bind pose) when absent.</summary>
         public int FindAnimStart(string name, out string used)

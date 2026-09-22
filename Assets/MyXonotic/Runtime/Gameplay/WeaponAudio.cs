@@ -31,12 +31,21 @@ namespace MyXonotic
             [WeaponType.Vortex] = new Set { Fire = new[] { "nexfire" }, AltFire = new string[0], Impact = new[] { "neximpact" } },
             [WeaponType.Hagar] = new Set { Fire = new[] { "hagar_fire" }, AltFire = new[] { "hagar_fire" }, Impact = new[] { "hagexp1", "hagexp2", "hagexp3" } },
             [WeaponType.Devastator] = new Set { Fire = new[] { "rocket_fire" }, AltFire = new[] { "rocket_det" }, Impact = new[] { "rocket_impact" } },
+            [WeaponType.Rifle] = new Set { Fire = new[] { "campingrifle_fire" }, AltFire = new[] { "campingrifle_fire2" }, Impact = new[] { "ric1", "ric2", "ric3" } },
+            [WeaponType.Minelayer] = new Set { Fire = new[] { "mine_fire", "mine_stick" }, AltFire = new[] { "mine_det" }, Impact = new[] { "mine_exp" } },
+            [WeaponType.Arc] = new Set { Fire = new[] { "arc_fire" }, AltFire = new[] { "lgbeam_fire" }, Impact = new[] { "electro_impact" } },
+            [WeaponType.Fireball] = new Set { Fire = new[] { "fireball_fire" }, AltFire = new[] { "fireball_fire2" }, Impact = new[] { "fireball_impact2" } },
+            [WeaponType.Hook] = new Set { Fire = new[] { "hook_fire", "hook_impact" }, AltFire = new[] { "hookbomb_fire" }, Impact = new[] { "hookbomb_impact" } },
         };
 
         /// Weapon-independent UI/gameplay sounds copied under Resources/Weapons/Common_*.
         public static readonly string[] CommonSources = { "weapon_switch", "weaponpickup", "dryfire" };
         /// Misc sounds (sound/misc) copied under Resources/Weapons/Misc_*.
-        public static readonly string[] MiscSources = { "itempickup", "hit", "kill", "armorimpact", "bodyimpact1", "mediumhealth", "megahealth" };
+        public static readonly string[] MiscSources = { "itempickup", "hit", "kill", "armorimpact", "bodyimpact1", "mediumhealth", "megahealth",
+            "powerup", "poweroff", "powerup_shield", "strength_respawn", "shield_respawn" };
+        /// CTF sounds (sound/ctf) copied under Resources/Weapons/Ctf_*.
+        public static readonly string[] CtfSources = { "capture", "red_capture", "blue_capture", "red_taken", "blue_taken",
+            "red_dropped", "blue_dropped", "red_returned", "blue_returned", "flag_respawn" };
 
         static readonly Dictionary<string, AudioClip> Cache = new Dictionary<string, AudioClip>();
 
@@ -67,6 +76,7 @@ namespace MyXonotic
 
         public static AudioClip Common(string file) => Load("Weapons/Common_" + file);
         public static AudioClip Misc(string file) => Load("Weapons/Misc_" + file);
+        public static AudioClip Ctf(string file) => Load("Weapons/Ctf_" + file);
 
         /// Plays a clip at a world position (3D) or flat (2D) on a throwaway AudioSource.
         public static void PlayAt(AudioClip clip, Vector3 position, float volume = 1f, bool spatial = true)

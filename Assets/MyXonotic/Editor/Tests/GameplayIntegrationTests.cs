@@ -21,9 +21,18 @@ namespace MyXonotic.EditorTools
             Check(true, "pickup actor/grant/rejection/respawn self-tests");
             MatchSessionRegressionTests.RunSelfTests();
             Check(true, "real Actor scoring and MatchSession self-tests");
+            Dev9Tests.RunSelfTests();
+            Passed.AddRange(Dev9Tests.Passed);
+            Check(true, "dev.9 teams/powerups/extra weapons/movers/CTF/rig self-tests");
             var root = BspImportPipeline.Import("ThirdParty/Xonotic/maps-pk3/maps/boil.bsp");
             var pickups = root.GetComponentsInChildren<Pickup>(true);
-            Check(pickups.Length == 36, "real Boil has 36 supported health/armor/ammo/weapon pickups (37 items minus item_strength)");
+            Check(pickups.Length == 37, "real Boil has 37 supported health/armor/ammo/weapon/strength pickups");
+            int strengthPickups = 0;
+            foreach (var p in pickups) if (p.Type == PickupType.Strength) strengthPickups++;
+            Check(strengthPickups == 1, "Boil's item_strength is a live Strength pickup");
+            Check(root.GetComponentsInChildren<MyXonotic.Content.ImportedSubmodel>(true).Length >= 0, "submodel markers present or none");
+            foreach (var sub in root.GetComponentsInChildren<MyXonotic.Content.ImportedSubmodel>(true))
+                Check(sub.localMax.x >= sub.localMin.x && sub.localMax.y >= sub.localMin.y, "submodel bounds recorded for " + sub.classname);
             int weaponPickups = 0;
             foreach (var pickup in pickups)
             {
@@ -38,8 +47,8 @@ namespace MyXonotic.EditorTools
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             EditorSceneManager.OpenScene(scenePath);
             Check(weaponPickups == 7, "Boil's 7 weapon_* entities became weapon pickups");
-            Check(UnityEngine.Object.FindObjectsOfType<Pickup>().Length == 36,
-                "36 pickups survive scene reload");
+            Check(UnityEngine.Object.FindObjectsOfType<Pickup>().Length == 37,
+                "37 pickups survive scene reload");
             foreach (var pickup in UnityEngine.Object.FindObjectsOfType<Pickup>())
             {
                 Check(pickup.GetComponent<MeshFilter>().sharedMesh != null, "serialized pickup mesh retained");

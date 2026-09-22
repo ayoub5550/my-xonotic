@@ -16,6 +16,33 @@ namespace MyXonotic
         Light _light;
         float _lightIntensity;
 
+        /// <summary>Short-lived tinted beam (Arc, hook rope flash) from <paramref name="from"/> to <paramref name="to"/>.</summary>
+        public static void Beam(Vector3 from, Vector3 to, Color tint, float life, bool hitActor)
+        {
+            var go = new GameObject("Beam");
+            go.transform.position = from;
+            var lr = go.AddComponent<LineRenderer>();
+            lr.useWorldSpace = true;
+            lr.positionCount = 2;
+            lr.SetPosition(0, from);
+            lr.SetPosition(1, to);
+            lr.startWidth = 0.06f;
+            lr.endWidth = 0.03f;
+            lr.sharedMaterial = ArenaMaterials.Get(hitActor ? Color.Lerp(tint, Color.white, 0.5f) : tint);
+            lr.startColor = tint;
+            lr.endColor = tint;
+            lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            lr.receiveShadows = false;
+            var light = go.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = tint;
+            light.range = 3f;
+            light.intensity = 1.2f;
+            light.shadows = LightShadows.None;
+            go.transform.position = to;
+            Destroy(go, Mathf.Max(0.05f, life));
+        }
+
         public static void Spawn(Vector3 point, Vector3 normal, WeaponType weapon, bool hitActor, float splashRadius = 0f)
         {
             var def = WeaponController.GetDef(weapon);

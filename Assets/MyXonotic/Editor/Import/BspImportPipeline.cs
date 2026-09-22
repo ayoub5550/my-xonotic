@@ -319,6 +319,29 @@ namespace MyXonotic.EditorTools
                 marker.classname = classname;
                 marker.modelIndex = modelIndex;
                 marker.targetName = entity.Get("targetname");
+                marker.target = entity.Get("target");
+                marker.angle = ParseFloatOrNaN(entity.Get("angle"));
+                if (TryParseVec3(entity.Get("angles", ""), out BspVec3 ang)) { marker.hasAngles = true; marker.angles = new Vector3(ang.X, ang.Y, ang.Z); }
+                marker.speed = ParseFloatOrNaN(entity.Get("speed"));
+                marker.lip = ParseFloatOrNaN(entity.Get("lip"));
+                marker.wait = ParseFloatOrNaN(entity.Get("wait"));
+                marker.height = ParseFloatOrNaN(entity.Get("height"));
+                float ph = ParseFloatOrNaN(entity.Get("phase")); marker.phase = float.IsNaN(ph) ? 0f : ph;
+                int sf; int.TryParse(entity.Get("spawnflags", "0"), NumberStyles.Integer, CultureInfo.InvariantCulture, out sf); marker.spawnflags = sf;
+                int dmgv; int.TryParse(entity.Get("dmg", "0"), NumberStyles.Integer, CultureInfo.InvariantCulture, out dmgv); marker.dmg = dmgv;
+                // Local bounds from the built vertices (Unity space, relative to the pivot).
+                {
+                    var mn = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+                    var mx = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+                    foreach (var bp in data.Positions)
+                    {
+                        var u = BspCoordinateSpace.QuakeToUnity(bp);
+                        mn = Vector3.Min(mn, new Vector3(u.X, u.Y, u.Z));
+                        mx = Vector3.Max(mx, new Vector3(u.X, u.Y, u.Z));
+                    }
+                    marker.localMin = mn;
+                    marker.localMax = mx;
+                }
                 built++;
             }
             return built;
@@ -847,6 +870,13 @@ namespace MyXonotic.EditorTools
             {
                 warnings.Add("Entity class '" + c + "' present in map but not instantiated by this import pass (see BspGameplayImporter for the trigger_push/trigger_teleport/trigger_hurt subset that is; movers/items remain out of scope).");
             }
+        }
+
+        private static float ParseFloatOrNaN(string s)
+        {
+            float f;
+            if (string.IsNullOrEmpty(s) || !float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out f)) return float.NaN;
+            return f;
         }
 
         private static bool TryParseVec3(string s, out BspVec3 v)

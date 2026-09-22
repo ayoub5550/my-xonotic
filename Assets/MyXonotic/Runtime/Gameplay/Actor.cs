@@ -19,6 +19,22 @@ namespace MyXonotic
         public string DisplayName = "Actor";
         public float RespawnDelay = 2.5f;
 
+        /// Team in TDM/CTF; None in Deathmatch. Same-team damage is ignored.
+        public Team Team = Team.None;
+
+        /// Powerups (Xonotic item_strength / item_invincible): seconds remaining.
+        public const float PowerupDuration = 30f;
+        public const float StrengthDamageFactor = 3f;
+        public const float ShieldDamageDivisor = 3f;
+        public float StrengthRemaining { get; private set; }
+        public float ShieldRemaining { get; private set; }
+        public bool HasStrength => StrengthRemaining > 0f;
+        public bool HasShield => ShieldRemaining > 0f;
+        /// Fired when a powerup starts: (actor, isStrength).
+        public static event Action<Actor, bool> PowerupStarted;
+        /// Fired when a powerup expires: (actor, isStrength).
+        public static event Action<Actor, bool> PowerupEnded;
+
         /// Assigned by ArenaBootstrap so this actor can find a spawn point on respawn.
         public ArenaBootstrap Arena;
 
@@ -46,7 +62,48 @@ namespace MyXonotic
             if (controller != null) controller.enabled = true;
             var weapons = GetComponent<WeaponController>();
             if (weapons != null) weapons.ResetLoadout();
-            foreach (var renderer in GetComponentsInChildren<MeshRenderer>()) renderer.enabled = true;
+            StrengthRemaining = 0f;
+            ShieldRemaining = 0f;
+            foreach (var renderer in GetComponentsInChildren<Renderer>()) renderer.enabled = true;
+            var animator = GetComponentInChildren<CharacterAnimator>();
+            if (animator != null) animator.OnRespawn();
+        }
+
+        /// True when <paramref name="other"/> may be damaged by this actor (not self, not a teammate).
+        public bool IsEnemyOf(Actor other)
+        {
+            if (other == null || other == this) return false;
+            return Team == Team.None || other.Team == Team.None || other.Team != Team;
+        }
+
+        public void GiveStrength(float seconds = PowerupDuration)
+        {
+            bool started = StrengthRemaining <= 0f;
+            StrengthRemaining = Mathf.Max(StrengthRemaining, seconds);
+            if (started) PowerupStarted?.Invoke(this, true);
+        }
+
+        public void GiveShield(float seconds = PowerupDuration)
+        {
+            bool started = ShieldRemaining <= 0f;
+            ShieldRemaining = Mathf.Max(ShieldRemaining, seconds);
+            if (started) PowerupStarted?.Invoke(this, false);
+        }
+
+        /// Powerup countdown as a plain method (testable without frames).
+        public void TickPowerups(float dt)
+        {
+            if (dt <= 0f || float.IsNaN(dt) || float.IsInfinity(dt)) return;
+            if (StrengthRemaining > 0f)
+            {
+                StrengthRemaining -= dt;
+                if (StrengthRemaining <= 0f) { StrengthRemaining = 0f; PowerupEnded?.Invoke(this, true); }
+            }
+            if (ShieldRemaining > 0f)
+            {
+                ShieldRemaining -= dt;
+                if (ShieldRemaining <= 0f) { ShieldRemaining = 0f; PowerupEnded?.Invoke(this, false); }
+            }
         }
 
         public void AddHealth(int amount) => Health = Mathf.Clamp(Health + amount, 0, MaxHealth);
@@ -58,6 +115,10 @@ namespace MyXonotic
         public void TakeDamage(int rawDamage, Vector3 knockback, Actor instigator)
         {
             if (IsDead || ArenaBootstrap.IsPaused || rawDamage <= 0) return;
+            // Team modes: no friendly fire (self damage still applies).
+            if (instigator != null && instigator != this && !instigator.IsEnemyOf(this)) return;
+            if (instigator != null && instigator.HasStrength) rawDamage = Mathf.RoundToInt(rawDamage * StrengthDamageFactor);
+            if (HasShield) rawDamage = Mathf.Max(1, Mathf.CeilToInt(rawDamage / ShieldDamageDivisor));
 
             int armor = Armor;
             int toHealth = ArenaMath.ApplyArmor(rawDamage, ref armor, ArmorAbsorbRatio);
@@ -86,7 +147,20 @@ namespace MyXonotic
             Deaths++;
             if (killer != null && killer != this) killer.Frags++;
             else Frags--;
-            foreach (var renderer in GetComponentsInChildren<MeshRenderer>()) renderer.enabled = false;
+            StrengthRemaining = 0f;
+            ShieldRemaining = 0f;
+            var animator = GetComponentInChildren<CharacterAnimator>();
+            if (animator != null)
+            {
+                // Animated body: play the death animation and leave the corpse
+                // visible until respawn; hide only the non-animated pieces.
+                foreach (var renderer in GetComponentsInChildren<MeshRenderer>()) renderer.enabled = false;
+                animator.OnDeath();
+            }
+            else
+            {
+                foreach (var renderer in GetComponentsInChildren<Renderer>()) renderer.enabled = false;
+            }
             var controller = GetComponent<CharacterController>();
             if (controller != null) controller.enabled = false;
             Died?.Invoke(this, killer);
@@ -95,7 +169,8 @@ namespace MyXonotic
 
         void Update()
         {
-            if (!IsDead || ArenaBootstrap.IsPaused) return;
+            if (ArenaBootstrap.IsPaused) return;
+            if (!IsDead) { TickPowerups(Time.deltaTime); return; }
             _respawnTimer -= Time.deltaTime;
             if (_respawnTimer <= 0f) Respawn();
         }

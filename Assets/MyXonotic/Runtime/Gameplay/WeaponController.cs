@@ -487,7 +487,7 @@ namespace MyXonotic
                 if (Hook == null || Hook.IsActive) return false;
                 if (!Hook.Fire(origin, direction, fire.Speed)) return false;
                 _cooldownTimer = fire.Refire;
-                if (View != null) View.PlayFireSound(alt);
+                if (View != null) { View.PlayFireAnimation(alt); View.PlayFireSound(alt); }
                 Fired?.Invoke(Current, alt);
                 return true;
             }
@@ -525,7 +525,7 @@ namespace MyXonotic
                         break;
                 }
             }
-            if (View != null) { View.Kick(); View.PlayFireSound(alt); }
+            if (View != null) { View.Kick(alt); View.PlayFireSound(alt); }
             else WeaponAudio.PlayAt(WeaponAudio.Fire(Current, alt), origin, 0.8f); // bots: positional
             Fired?.Invoke(Current, alt);
             return true;

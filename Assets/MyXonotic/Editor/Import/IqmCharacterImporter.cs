@@ -189,9 +189,9 @@ namespace MyXonotic.EditorTools
                 groups != null ? "framegroups timing" : "default 20 fps"));
         }
 
-        struct FrameGroup { public int First, Count; public float Fps; public bool Loop; }
+        public struct FrameGroup { public int First, Count; public float Fps; public bool Loop; }
 
-        static List<FrameGroup> ReadFrameGroups(string path)
+        public static List<FrameGroup> ReadFrameGroups(string path)
         {
             if (!File.Exists(path)) return null;
             var list = new List<FrameGroup>();
@@ -211,7 +211,7 @@ namespace MyXonotic.EditorTools
             return list;
         }
 
-        static void WriteTrs(float[] dst, int o, Vector3 t, Quaternion r, Vector3 s)
+        public static void WriteTrs(float[] dst, int o, Vector3 t, Quaternion r, Vector3 s)
         {
             dst[o] = t.x; dst[o + 1] = t.y; dst[o + 2] = t.z;
             dst[o + 3] = r.x; dst[o + 4] = r.y; dst[o + 5] = r.z; dst[o + 6] = r.w;
@@ -223,13 +223,13 @@ namespace MyXonotic.EditorTools
         // quaternion (x, y, z, w) -> (-x, -z, -y, w). Verified numerically against
         // CPU skinning of the raw data (see docs/UNITY-DEV9.md).
         const float Units = MyXonotic.Content.Bsp.BspCoordinateSpace.SourceUnitsPerUnityUnit;
-        static Vector3 ToUnityT(Vector3 t) => new Vector3(t.x / Units, t.z / Units, t.y / Units);
-        static Quaternion ToUnityQ(Quaternion q)
+        public static Vector3 ToUnityT(Vector3 t) => new Vector3(t.x / Units, t.z / Units, t.y / Units);
+        public static Quaternion ToUnityQ(Quaternion q)
         {
             if (q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w < 1e-8f) return Quaternion.identity;
             return new Quaternion(-q.x, -q.z, -q.y, q.w).normalized;
         }
-        static Vector3 ToUnityS(Vector3 s) => new Vector3(s.x, s.z, s.y);
+        public static Vector3 ToUnityS(Vector3 s) => new Vector3(s.x, s.z, s.y);
 
         static Material BuildMaterial(string name, int index, string materialName, XonoticContentResolver resolver, Result result)
         {
@@ -281,7 +281,7 @@ namespace MyXonotic.EditorTools
             }
         }
 
-        static T Persist<T>(T asset, string path) where T : UnityEngine.Object
+        public static T Persist<T>(T asset, string path) where T : UnityEngine.Object
         {
             var existing = AssetDatabase.LoadAssetAtPath<T>(path);
             if (existing == null) { AssetDatabase.CreateAsset(asset, path); return asset; }
@@ -301,7 +301,14 @@ namespace MyXonotic.EditorTools
     {
         public sealed class MeshInfo { public string Name; public string MaterialName; public int[] Triangles; }
         sealed class Joint { public string Name; public int Parent; public Vector3 T; public Quaternion R; public Vector3 S; }
-        sealed class Pose { public int Parent; public uint Mask; public float[] Offset = new float[10]; public float[] Scale = new float[10]; }
+        sealed class Pose { public int Parent; public uint Mask; public bool V1; public float[] Offset = new float[10]; public float[] Scale = new float[10]; }
+
+        /// IQM v1 quaternion: xyz stored, w reconstructed as -sqrt(1 - |xyz|^2) (IQM spec).
+        static Quaternion Quat3(float x, float y, float z)
+        {
+            float w2 = 1f - (x * x + y * y + z * z);
+            return new Quaternion(x, y, z, -Mathf.Sqrt(Mathf.Max(0f, w2)));
+        }
         sealed class Anim { public string Name; public uint First, Count; public float Rate; public uint Flags; }
 
         public MeshInfo[] Meshes;
@@ -329,7 +336,11 @@ namespace MyXonotic.EditorTools
             uint numVA = h[7], numVerts = h[8], ofsVA = h[9], numTris = h[10], ofsTris = h[11];
             uint numJoints = h[13], ofsJoints = h[14], numPoses = h[15], ofsPoses = h[16];
             uint numAnims = h[17], ofsAnims = h[18], numFrames = h[19], numFrameChannels = h[20], ofsFrames = h[21];
-            if (h[0] != 2) throw new InvalidDataException("IQM version " + h[0] + " unsupported: " + src);
+            // IQM v1 (h_fireball.iqm) stores 3-component quaternions (w = -sqrt(1-|xyz|^2))
+            // and 9 pose channels; v2 stores full quaternions and 10 channels.
+            uint version = h[0];
+            if (version != 1 && version != 2) throw new InvalidDataException("IQM version " + h[0] + " unsupported: " + src);
+            bool v1 = version == 1;
             Func<uint, string> cstr = idx =>
             {
                 uint p = ofsText + idx; int e = (int)p;
@@ -380,22 +391,27 @@ namespace MyXonotic.EditorTools
             doc._joints = new Joint[numJoints];
             for (uint j = 0; j < numJoints; j++)
             {
-                uint r = ofsJoints + j * 48;
+                uint r = ofsJoints + j * (v1 ? 44u : 48u);
+                Quaternion rot = v1
+                    ? Quat3(F(d, r + 20), F(d, r + 24), F(d, r + 28))
+                    : new Quaternion(F(d, r + 20), F(d, r + 24), F(d, r + 28), F(d, r + 32));
+                uint so = v1 ? r + 32 : r + 36;
                 doc._joints[j] = new Joint
                 {
                     Name = cstr(BitConverter.ToUInt32(d, (int)r)),
                     Parent = BitConverter.ToInt32(d, (int)r + 4),
                     T = new Vector3(F(d, r + 8), F(d, r + 12), F(d, r + 16)),
-                    R = new Quaternion(F(d, r + 20), F(d, r + 24), F(d, r + 28), F(d, r + 32)),
-                    S = new Vector3(F(d, r + 36), F(d, r + 40), F(d, r + 44)),
+                    R = rot,
+                    S = new Vector3(F(d, so), F(d, so + 4), F(d, so + 8)),
                 };
             }
             doc._poses = new Pose[numPoses];
             for (uint p = 0; p < numPoses; p++)
             {
-                uint r = ofsPoses + p * 88;
-                var pose = new Pose { Parent = BitConverter.ToInt32(d, (int)r), Mask = BitConverter.ToUInt32(d, (int)r + 4) };
-                for (int c = 0; c < 10; c++) { pose.Offset[c] = F(d, r + 8 + (uint)c * 4); pose.Scale[c] = F(d, r + 48 + (uint)c * 4); }
+                uint r = ofsPoses + p * (v1 ? 80u : 88u);
+                var pose = new Pose { Parent = BitConverter.ToInt32(d, (int)r), Mask = BitConverter.ToUInt32(d, (int)r + 4), V1 = v1 };
+                int nch = v1 ? 9 : 10;
+                for (int c = 0; c < nch; c++) { pose.Offset[c] = F(d, r + 8 + (uint)c * 4); pose.Scale[c] = F(d, r + 8 + (uint)nch * 4 + (uint)c * 4); }
                 doc._poses[p] = pose;
             }
             doc._anims = new Anim[numAnims];
@@ -443,6 +459,20 @@ namespace MyXonotic.EditorTools
             for (int k = 0; k < j; k++) fp += CountBits(_poses[k].Mask);
             var p = _poses[j];
             var ch = new float[10];
+            if (p.V1)
+            {
+                // 9 channels: t(3) q.xyz(3) s(3); w derived.
+                var raw = new float[9];
+                for (int c = 0; c < 9; c++)
+                {
+                    raw[c] = p.Offset[c];
+                    if ((p.Mask & (1u << c)) != 0) raw[c] += _frameData[fp++] * p.Scale[c];
+                }
+                t = new Vector3(raw[0], raw[1], raw[2]);
+                r = Quat3(raw[3], raw[4], raw[5]);
+                s = new Vector3(raw[6], raw[7], raw[8]);
+                return;
+            }
             for (int c = 0; c < 10; c++)
             {
                 ch[c] = p.Offset[c];

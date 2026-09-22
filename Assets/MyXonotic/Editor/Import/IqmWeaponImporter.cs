@@ -204,6 +204,15 @@ namespace MyXonotic.EditorTools
             foreach (var ctf in WeaponAudio.CtfSources)
                 CopyContentAudio(resolver, "sound/ctf/" + ctf + ".ogg", "Ctf_" + ctf + ".ogg");
             CopyContentAudio(resolver, "sound/plats/medplat1.ogg", "Plats_medplat1.ogg");
+            // dev.11: animated first-person rigs (h_ models) next to the static visuals.
+            foreach (var rig in WeaponRigImporter.ImportAll(resolver))
+            {
+                var owner = results.Find(r => r.WeaponName == rig.WeaponName);
+                string line = rig.Ok
+                    ? "Rig " + rig.Format + ": " + string.Join(" ", rig.Notes)
+                    : "Rig import failed (static visual kept): " + rig.Error;
+                if (owner != null) owner.Notes.Add(line); else Debug.LogWarning("[WeaponRigImporter] " + rig.WeaponName + ": " + line);
+            }
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             WriteWeaponManifest(results);

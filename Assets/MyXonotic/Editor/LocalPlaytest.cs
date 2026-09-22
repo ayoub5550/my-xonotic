@@ -118,6 +118,15 @@ namespace MyXonotic.EditorTools
                     Check(arena.PlayerWeapons.TryFire(player.transform.position + Vector3.up,
                         Vector3.forward, false), "hitscan fired");
                     Check(target.Health < targetHealth, "hitscan damages target");
+                    // dev.11: firing plays the h_ rig's fire clip and spawns a muzzle flash.
+                    var view = arena.PlayerWeapons.View;
+                    if (view != null && view.IsRigged(WeaponType.MachineGun))
+                    {
+                        Check(view.AnimatorFor(WeaponType.MachineGun).CurrentClip == "fire", "fire animation plays on shot");
+                        Check(view.ShotJointFor(WeaponType.MachineGun) != null, "muzzle joint resolved");
+                        Check(ImpactEffects.LiveCount > 0, "muzzle flash spawned");
+                    }
+                    else Debug.LogWarning("[my-xonotic] MachineGun not rigged in playtest; animation checks skipped");
                     arena.PlayerWeapons.ResetCooldownForTest();
                     arena.PlayerWeapons.SwitchTo(WeaponType.Blaster);
                     // Re-seat the target: MachineGun knockback moves it during this frame, which made

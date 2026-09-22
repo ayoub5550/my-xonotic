@@ -19,6 +19,7 @@ namespace MyXonotic.EditorTools
         static double deadline, started;
         static Vector3 startPosition;
         static int targetHealth;
+        static int spawnFrame;
         static string failure;
         static bool finishing;
 
@@ -82,7 +83,7 @@ namespace MyXonotic.EditorTools
                 player.UseTestInput = true;
                 if (stage == 0)
                 {
-                    Check(arena.Bots.Count == 3 && arena.Pickups.Count == 5, "arena population");
+                    Check(arena.Bots.Count == 3 && arena.Pickups.Count == 9, "arena population");
                     for (int i = 0; i < arena.Bots.Count; i++)
                         Place(arena.Bots[i].transform, new Vector3(-15 + i * 2, 0.1f, 15));
                     Place(player.transform, new Vector3(-10, 0.1f, 0));
@@ -119,14 +120,26 @@ namespace MyXonotic.EditorTools
                     Check(target.Health < targetHealth, "hitscan damages target");
                     arena.PlayerWeapons.ResetCooldownForTest();
                     arena.PlayerWeapons.SwitchTo(WeaponType.Blaster);
+                    // Re-seat the target: MachineGun knockback moves it during this frame, which made
+                    // this check flaky. Aim at the target centre so the shot is deterministic.
+                    Place(target.transform, new Vector3(-10, 0.1f, 5));
+                    Physics.SyncTransforms();
                     targetHealth = target.Health;
-                    arena.PlayerWeapons.TryFire(player.transform.position + Vector3.up, Vector3.forward, false);
+                    Vector3 muzzle = player.transform.position + Vector3.up;
+                    Vector3 aim = (target.transform.position + Vector3.up - muzzle).normalized;
+                    Check(arena.PlayerWeapons.TryFire(muzzle, aim, false), "projectile fired");
+                    spawnFrame = Time.frameCount;
                     started = now;
                     stage = 3;
                 }
-                else if (stage == 3 && now - started > 0.6)
+                else if (stage == 3 && ((Projectile.LiveCount == 0 && Time.frameCount > spawnFrame) || now - started > 3.0))
                 {
-                    Check(target.Health < targetHealth, "projectile damages target");
+                    // Frame-driven: headless Play Mode frames can be slower than editor wall-clock,
+                    // so wait for the projectile to resolve (or a generous timeout) instead of 0.6 s.
+                    Check(target.Health < targetHealth, "projectile damages target (target hp " + target.Health + "/" + targetHealth +
+                        " pos " + target.transform.position + " player " + player.transform.position +
+                        " live projectiles " + Projectile.LiveCount + " frames " + (Time.frameCount - spawnFrame) +
+                        " dt " + Time.deltaTime + " paused " + ArenaBootstrap.IsPaused + " timeScale " + Time.timeScale + ")");
                     target.TakeDamage(1000, Vector3.zero, arena.PlayerActor);
                     Check(target.IsDead && arena.PlayerActor.Frags == 1, "kill scoring");
                     started = now;

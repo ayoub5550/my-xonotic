@@ -172,8 +172,12 @@ namespace MyXonotic.EditorTools
                 Texture2D decoded = BspTextureLoader.Load(texturePath, srgb: true, failureReason: out failureReason);
                 if (decoded != null)
                 {
+                    // dev.12: run through ImportedTexturePolicy (mip chain + ETC2/ASTC)
+                    // like the map pipeline. The raw 2048^2 RGBA32 assets were
+                    // ~16 MB of GPU memory each without mipmaps; 14 weapons loaded
+                    // at once exhausted phone GPUs (Vortex rendered white on device).
                     string texAssetPath = generatedRoot + "/" + weaponName + "_Texture_" + surfaceIndex + ".asset";
-                    var persistedTex = PersistAsset(decoded, texAssetPath);
+                    var persistedTex = PersistAsset(ImportedTexturePolicy.Finalize(decoded, repeat: true), texAssetPath);
                     material.mainTexture = persistedTex;
                     provenance.ResolvedTexturePath = texturePath;
                     provenance.Resolved = true;

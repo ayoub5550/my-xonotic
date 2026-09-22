@@ -215,7 +215,7 @@ namespace MyXonotic
 
             _cc.Move((_velocity + _externalImpulse) * Time.deltaTime + carry);
             _externalImpulse = Vector3.Lerp(_externalImpulse, Vector3.zero, 6f * Time.deltaTime);
-            if (transform.position.y < -200f) Actor.TakeDamage(10000, Vector3.zero, null);
+            if (transform.position.y < ArenaBootstrap.VoidKillY) Actor.TakeDamage(10000, Vector3.zero, null);
 
             if (Animator != null) Animator.SetMotion(_velocity, transform.forward, grounded);
         }

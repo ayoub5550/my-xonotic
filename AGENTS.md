@@ -1,5 +1,26 @@
 # my-xonotic — developer and agent handoff
 
+## dev.12 device-fixes checkpoint — 2026-09-22 (branch `feat/unity-dev12-device-fixes`)
+
+Read `docs/UNITY-DEV12.md` first. First real-device videos (dev.11) drove this
+release. **Weapon placement is Xonotic-faithful — do not "fix" it**: DPM hands
+(Mortar/Devastator) look close/large on device exactly as in the Editor bake
+and in original Xonotic (`h_` model at view origin, `cl_gunoffset` 0).
+Verify first-person geometry headlessly with `LocalTests.WeaponPlacement` →
+`Artifacts/weapons/<Type>.obj` + `python3 tools/weapon_snapshot.py
+Artifacts/weapons out.png` and compare against a device frame. The white
+Vortex / dark blobs were GPU texture memory: every generated texture now goes
+through `ImportedTexturePolicy.Finalize` (mips + ETC2) — weapons
+(`Md3WeaponModelBuilder`) and pickup models (`BspMapModelImporter`) included;
+never persist raw RGBA32. Void kill is `ArenaBootstrap.VoidKillY` (lowest
+collider − 12 m); `trigger_hurt` default is lethal (1000) like Xonotic.
+`Hud.CreateText` pivot = anchorMin; new `HudGeometry` test. New
+`RuntimeErrorLog` writes `{persistentDataPath}/my-xonotic-errors.log` and the
+PAUSE screen shows its summary — ask the owner for that file with every device
+report. Gates re-run: Editor tests PASS 455, gameplay-playtest OK. Bots were
+not visible in the dev.11 videos — unverified, dev.13. APK vc13
+`0.1.0-dev.12`: see `CHANGELOG.md` / `docs/unity-dev12-build-2026-09-22.json`.
+
 ## dev.11 weapon-animation checkpoint — 2026-09-22 (branch `feat/unity-dev11-weapon-anim`)
 
 Read `docs/UNITY-DEV11.md` and `docs/DEVELOPMENT-GUIDE.md` first. First-person

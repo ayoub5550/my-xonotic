@@ -213,7 +213,7 @@ namespace MyXonotic.EditorTools
                 {
                     string reason;
                     var decoded = BspTextureLoader.Load(tex, srgb: true, failureReason: out reason);
-                    if (decoded != null) mat.mainTexture = Persist(decoded, GeneratedRoot + "/" + safe + "_Texture_" + i + ".asset");
+                    if (decoded != null) mat.mainTexture = Persist(ImportedTexturePolicy.Finalize(decoded, repeat: true), GeneratedRoot + "/" + safe + "_Texture_" + i + ".asset"); // dev.12: mips + GPU compression
                 }
                 mats[i] = Persist(mat, GeneratedRoot + "/" + safe + "_Material_" + i + ".mat");
             }

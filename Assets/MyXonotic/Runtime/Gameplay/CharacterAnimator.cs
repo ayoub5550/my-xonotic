@@ -19,6 +19,16 @@ namespace MyXonotic
 
         public string CurrentClip => _clip >= 0 && Rig != null ? Rig.Clips[_clip].Name : "";
         public bool IsDead { get; private set; }
+        /// True once a non-looping clip has reached its last frame.
+        public bool IsFinished => _finished;
+        /// Index of a joint by name (case-insensitive), or -1.
+        public Transform FindBone(string name)
+        {
+            if (Rig == null || Bones == null) return null;
+            for (int j = 0; j < Rig.JointCount && j < Bones.Length; j++)
+                if (string.Equals(Rig.JointNames[j], name, System.StringComparison.OrdinalIgnoreCase)) return Bones[j];
+            return null;
+        }
 
         int _clip = -1;
         float _time;
@@ -46,15 +56,20 @@ namespace MyXonotic
                 bones[j].localRotation = Normalize(r);
                 bones[j].localScale = s;
             }
-            var skinGO = new GameObject("Skin");
-            skinGO.transform.SetParent(root.transform, false);
-            var smr = skinGO.AddComponent<SkinnedMeshRenderer>();
-            smr.sharedMesh = skinnedMesh;
-            smr.sharedMaterials = materials;
-            smr.bones = bones;
-            smr.rootBone = n > 0 ? bones[0] : root.transform;
-            smr.updateWhenOffscreen = true;
-            smr.quality = SkinQuality.Bone4;
+            SkinnedMeshRenderer smr = null;
+            if (skinnedMesh != null)
+            {
+                // Skeleton-only rigs (dev.11 weapon h_ models) drive attached objects instead of a mesh.
+                var skinGO = new GameObject("Skin");
+                skinGO.transform.SetParent(root.transform, false);
+                smr = skinGO.AddComponent<SkinnedMeshRenderer>();
+                smr.sharedMesh = skinnedMesh;
+                smr.sharedMaterials = materials;
+                smr.bones = bones;
+                smr.rootBone = n > 0 ? bones[0] : root.transform;
+                smr.updateWhenOffscreen = true;
+                smr.quality = SkinQuality.Bone4;
+            }
             var anim = root.AddComponent<CharacterAnimator>();
             anim.Rig = rig;
             anim.Bones = bones;

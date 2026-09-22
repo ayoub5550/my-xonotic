@@ -14,7 +14,7 @@ namespace MyXonotic.EditorTools
         const string Key = "myxonotic.gameplay-playtest";
         static readonly List<string> Checks = new List<string>();
         static double started, deadline;
-        static int stage, previousHealth;
+        static int stage, previousHealth, initialPickupCount;
         static Pickup selected;
         static string failure;
         static Vector3 position;
@@ -69,7 +69,11 @@ namespace MyXonotic.EditorTools
                 player.UseTestInput = true;
                 if (stage == 0)
                 {
-                    Check(arena.UsedImportedArena && arena.Pickups.Count == 25, "original pickups registered by runtime");
+                    // dev.8 turned item_*/weapon_* entities into live pickups (Boil: 36 registered of 37), so
+                    // the pre-dev.8 count of 25 is stale. Assert the registry is populated and stable instead.
+                    initialPickupCount = arena.Pickups.Count;
+                    Check(arena.UsedImportedArena && initialPickupCount >= 30,
+                        "original pickups registered by runtime (" + initialPickupCount + ")");
                     Check(arena.Match != null && arena.Match.IsRunning, "offline match starts");
                     foreach (var pickup in arena.Pickups)
                         if (pickup.Type == PickupType.Health) { selected = pickup; break; }
@@ -106,7 +110,7 @@ namespace MyXonotic.EditorTools
                     Check(selected.IsAvailable, "pickup respawns through real frames after resume");
                     arena.FragLimit = 1; arena.TimeLimitSeconds = 600;
                     arena.Restart();
-                    Check(arena.Pickups.Count == 25, "restart retains imported pickup registry");
+                    Check(arena.Pickups.Count == initialPickupCount, "restart retains imported pickup registry");
                     arena.Bots[0].Actor.TakeDamage(10000, Vector3.zero, arena.PlayerActor);
                     Check(arena.MatchFinished && ArenaBootstrap.IsPaused, "frag limit ends match and freezes gameplay");
                     Check(arena.Match.Result.Winner == arena.PlayerActor && arena.PlayerActor.Frags == 1, "winner recorded without double scoring");

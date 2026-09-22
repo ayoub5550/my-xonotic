@@ -1,5 +1,21 @@
 # my-xonotic — developer and agent handoff
 
+## dev.11 weapon-animation checkpoint — 2026-09-22 (branch `feat/unity-dev11-weapon-anim`)
+
+Read `docs/UNITY-DEV11.md` and `docs/DEVELOPMENT-GUIDE.md` first. First-person
+weapons now use Xonotic's animated `h_<name>` models via `WeaponRigImporter`
+→ `Resources/Weapons/<Name>WeaponRig.asset` (+ `<Name>Hands_Rig/_Skinned`):
+9 IQM v2 skeletons (v_ attached to joint `weapon`), `h_fireball` is IQM v1
+(3-component quats, 9 channels — supported in `IqmSkinnedDocument`), and
+electro/crylink/gl/hagar/rl are DarkPlaces **DPM** files under an `.iqm`
+name (check the magic, not the extension) read by `DpmDocument`.
+`WeaponView` plays idle/fire/fire2, spawns `ImpactEffects.MuzzleFlash`;
+explosions add shockwave + debris + camera shake (`Player.ShakeAmount`).
+`LocalTests.WeaponRigs` asserts 14 rigs; first run found 13 (before the v1
+fix) and the owner asked to ship without re-running — **re-run `test` and
+`playtest` first thing in dev.12**. Rendering still impossible headless. APK
+vc12 `0.1.0-dev.11`: see `CHANGELOG.md` / `docs/unity-dev11-build-2026-09-22.json`.
+
 ## dev.10 menu-fix checkpoint — 2026-09-22 (branch `feat/unity-dev10-menu-fix`)
 
 Read `docs/UNITY-DEV10.md` first. The first real-device screenshot (dev.9)

@@ -166,6 +166,10 @@ namespace MyXonotic
             transform.rotation = Quaternion.Euler(0f, _yaw, 0f);
         }
 
+        float _shake;
+        /// Current camera-shake amplitude (0..~0.35), for tests.
+        public float ShakeAmount => _shake;
+
         void Update()
         {
             if (ArenaBootstrap.IsPaused) return;
@@ -180,7 +184,14 @@ namespace MyXonotic
             _yaw += lookDelta.x;
             _pitch = Mathf.Clamp(_pitch - lookDelta.y, -85f, 85f);
             transform.rotation = Quaternion.Euler(0f, _yaw, 0f);
-            if (ViewCamera != null) ViewCamera.transform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
+            if (ViewCamera != null)
+            {
+                // dev.11: explosion camera shake (ImpactEffects requests, we decay).
+                _shake = Mathf.Max(_shake * Mathf.Exp(-9f * dt), ImpactEffects.ConsumeShake());
+                float roll = _shake > 0.001f ? Mathf.Sin(Time.time * 41f) * _shake * 6f : 0f;
+                float bump = _shake > 0.001f ? Mathf.Cos(Time.time * 37f) * _shake * 2.5f : 0f;
+                ViewCamera.transform.localRotation = Quaternion.Euler(_pitch + bump, 0f, roll);
+            }
 
             IsGrounded = _cc.isGrounded;
             Vector3 wishDir = transform.forward * moveInput.y + transform.right * moveInput.x;

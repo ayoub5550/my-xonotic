@@ -73,6 +73,7 @@ namespace MyXonotic.EditorTools
             foreach (var behaviour in root.GetComponentsInChildren<MonoBehaviour>())
                 Check(behaviour != null, "imported component serializable");
             MainMenuGeometry();
+            WeaponRigs();
             LocalBuild.CreateDevelopmentScene();
             Directory.CreateDirectory("Artifacts");
             File.WriteAllText("Artifacts/editor-tests.txt", string.Join("\n", Passed));
@@ -129,6 +130,55 @@ namespace MyXonotic.EditorTools
             if (expected > 0)
                 Check(content != null && content.rect.height > 0f, "map grid content has positive height after layout");
             UnityEngine.Object.DestroyImmediate(go);
+        }
+
+        /// dev.11: every weapon ships an animated first-person rig generated
+        /// from Xonotic's h_ model (IQM skeleton-only or DarkPlaces DPM with
+        /// its own skinned mesh). Checks are geometric because the sandbox
+        /// cannot render: clip set, joint presence, and a plausible muzzle
+        /// position in the view's frame after the -90 deg yaw WeaponView applies.
+        static void WeaponRigs()
+        {
+            int rigged = 0;
+            var yaw = Quaternion.Euler(0f, -90f, 0f);
+            for (int i = 0; i < WeaponController.WeaponCount; i++)
+            {
+                var type = (WeaponType)i;
+                var info = Resources.Load<WeaponRigInfo>("Weapons/" + type + "WeaponRig");
+                if (info == null) { Debug.LogWarning("[my-xonotic] no rig for " + type + " (static fallback)"); continue; }
+                rigged++;
+                Check(info.Rig != null && info.Rig.JointCount > 0, type + " rig has joints");
+                Check(info.Rig.FindClip("fire") >= 0 && info.Rig.FindClip("idle") >= 0, type + " rig has fire+idle clips");
+                Check(info.Rig.Clips[info.Rig.FindClip("idle")].Loop, type + " idle loops");
+                Check(!info.Rig.Clips[info.Rig.FindClip("fire")].Loop, type + " fire is one-shot");
+                Check(info.Rig.Poses != null && info.Rig.Poses.Length == info.Rig.FrameCount * info.Rig.JointCount * 10,
+                    type + " pose table complete (" + info.Rig.FrameCount + " frames)");
+                if (info.SourceFormat == "IQM")
+                    Check(info.WeaponJoint >= 0, type + " IQM rig exposes the 'weapon' joint");
+                else
+                {
+                    Check(info.SkinnedMesh != null && info.SkinnedMesh.vertexCount > 0, type + " DPM rig has a skinned mesh");
+                    Check(info.SkinnedMesh.boneWeights.Length == info.SkinnedMesh.vertexCount, type + " DPM bone weights per vertex");
+                    Check(info.SkinnedMesh.bindposes.Length == info.Rig.JointCount, type + " DPM bindposes per joint");
+                    Check(info.Materials != null && info.Materials.Length == info.SkinnedMesh.subMeshCount, type + " DPM material per submesh");
+                }
+                Check(info.ShotJoint >= 0, type + " rig exposes a muzzle joint");
+                Vector3 shot = yaw * WorldPosition(info.Rig, info.ShotJoint);
+                Check(shot.z > -0.3f && shot.z < 2.2f && shot.x > -0.3f && shot.x < 0.9f && shot.y > -0.9f && shot.y < 0.4f,
+                    type + " muzzle joint in a plausible view-space box (" + shot.ToString("0.00") + ")");
+            }
+            Check(rigged == WeaponController.WeaponCount, "all " + WeaponController.WeaponCount + " weapons have an animated rig (" + rigged + ")");
+        }
+
+        static Vector3 WorldPosition(CharacterRig rig, int joint)
+        {
+            Matrix4x4 m = Matrix4x4.identity;
+            for (int j = joint; j >= 0; j = rig.JointParents[j])
+            {
+                rig.GetBind(j, out var t, out var r, out var s);
+                m = Matrix4x4.TRS(t, r, s) * m;
+            }
+            return m.MultiplyPoint3x4(Vector3.zero);
         }
 
         static void Check(bool condition, string name)

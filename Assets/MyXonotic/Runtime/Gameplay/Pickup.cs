@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace MyXonotic
 {
-    public enum PickupType { Health, Armor, AmmoShells, AmmoBullets, AmmoRockets, AmmoCells, Weapon }
+    public enum PickupType { Health, Armor, AmmoShells, AmmoBullets, AmmoRockets, AmmoCells, Weapon, Strength, Shield }
 
     /// <summary>
     /// World pickup with a respawn timer; grants health/armor/ammo on touch.
@@ -52,6 +52,8 @@ namespace MyXonotic
                     case PickupType.AmmoRockets: return Amount + " Rockets";
                     case PickupType.AmmoCells: return Amount + " Cells";
                     case PickupType.Weapon: return WeaponController.GetDef(Weapon).Name;
+                    case PickupType.Strength: return "Strength";
+                    case PickupType.Shield: return "Shield";
                     default: return Type.ToString();
                 }
             }
@@ -117,7 +119,7 @@ namespace MyXonotic
             EnsureCached();
             if (!_active || ArenaBootstrap.IsPaused) return false;
             if (actor == null || actor.IsDead) return false;
-            if (Amount <= 0 && Type != PickupType.Weapon) return false;
+            if (Amount <= 0 && Type != PickupType.Weapon && Type != PickupType.Strength && Type != PickupType.Shield) return false;
 
             switch (Type)
             {
@@ -147,6 +149,12 @@ namespace MyXonotic
                     if (wc == null || !wc.GiveWeapon(Weapon)) return false;
                     break;
                 }
+                case PickupType.Strength:
+                    actor.GiveStrength(Amount > 0 ? Amount : Actor.PowerupDuration);
+                    break;
+                case PickupType.Shield:
+                    actor.GiveShield(Amount > 0 ? Amount : Actor.PowerupDuration);
+                    break;
                 default:
                     return false;
             }

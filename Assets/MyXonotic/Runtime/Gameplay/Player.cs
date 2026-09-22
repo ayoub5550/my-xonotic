@@ -36,6 +36,13 @@ namespace MyXonotic
         public Actor Actor { get; private set; }
         public bool IsGrounded { get; private set; }
 
+        /// World point the grappling hook is anchored at while pulling; null otherwise (set by GrapplingHook).
+        public Vector3? HookAnchor;
+
+        /// Mover the player is standing on this frame (platforms/doors carry the player).
+        Mover _groundMover;
+        float _groundMoverTime;
+
         /// Current horizontal+vertical velocity, exposed read-only for test drivers/HUD.
         public Vector3 Velocity => _velocity;
 
@@ -146,6 +153,8 @@ namespace MyXonotic
         {
             _velocity = Vector3.zero;
             _externalImpulse = Vector3.zero;
+            HookAnchor = null;
+            _groundMover = null;
             _pitch = 0f;
             ResetInputState();
             SetViewYaw(yaw);
@@ -180,24 +189,42 @@ namespace MyXonotic
             if (wishDir.sqrMagnitude > 0f) wishDir.Normalize();
 
             var horizontal = new Vector3(_velocity.x, 0f, _velocity.z);
-            if (IsGrounded)
+            if (HookAnchor.HasValue)
             {
-                if (!jump) horizontal = ArenaMath.ApplyGroundFriction(horizontal, GroundFriction, StopSpeed, dt);
-                horizontal = ArenaMath.Accelerate(horizontal, wishDir, wishSpeed, Acceleration, dt);
+                // Grappling hook: steer the whole velocity towards the anchor (no friction, no gravity).
+                Vector3 pull = (HookAnchor.Value - (transform.position + Vector3.up * 1.2f));
+                if (pull.sqrMagnitude > 0.01f)
+                {
+                    Vector3 target = pull.normalized * GrapplingHook.PullSpeed + wishDir * (wishSpeed * 0.5f);
+                    _velocity = Vector3.Lerp(_velocity, target, 1f - Mathf.Exp(-8f * dt));
+                }
             }
             else
             {
-                horizontal = ArenaMath.Accelerate(horizontal, wishDir, wishSpeed, AirAcceleration, dt);
+                if (IsGrounded)
+                {
+                    if (!jump) horizontal = ArenaMath.ApplyGroundFriction(horizontal, GroundFriction, StopSpeed, dt);
+                    horizontal = ArenaMath.Accelerate(horizontal, wishDir, wishSpeed, Acceleration, dt);
+                }
+                else
+                {
+                    horizontal = ArenaMath.Accelerate(horizontal, wishDir, wishSpeed, AirAcceleration, dt);
+                }
+                _velocity.x = horizontal.x;
+                _velocity.z = horizontal.z;
+
+                if (IsGrounded && _velocity.y < 0f) _velocity.y = -1f;
+                _velocity.y += Gravity * dt;
+
+                if (IsGrounded && jump) _velocity.y = JumpSpeed;
             }
-            _velocity.x = horizontal.x;
-            _velocity.z = horizontal.z;
 
-            if (IsGrounded && _velocity.y < 0f) _velocity.y = -1f;
-            _velocity.y += Gravity * dt;
+            // Ride moving platforms/doors: add the mover's displacement this frame.
+            Vector3 carry = Vector3.zero;
+            if (_groundMover != null && Time.time - _groundMoverTime < 0.15f) carry = _groundMover.LastDelta;
+            else _groundMover = null;
 
-            if (IsGrounded && jump) _velocity.y = JumpSpeed;
-
-            var flags = _cc.Move((_velocity + _externalImpulse) * dt);
+            var flags = _cc.Move((_velocity + _externalImpulse) * dt + carry);
             if ((flags & CollisionFlags.Above) != 0 && _velocity.y > 0) _velocity.y = 0;
             IsGrounded = (flags & CollisionFlags.Below) != 0 || _cc.isGrounded;
             _externalImpulse = Vector3.Lerp(_externalImpulse, Vector3.zero, 6f * dt);
@@ -208,6 +235,7 @@ namespace MyXonotic
                 Vector3 origin = ViewCamera.transform.position;
                 Vector3 dir = ViewCamera.transform.forward;
                 Weapons.SetSecondaryHeld(fireAlt);
+                Weapons.SetPrimaryHeld(firePrimary);
                 if (firePrimary) Weapons.TryFire(origin, dir, false);
                 else if (fireAlt) Weapons.TryFire(origin, dir, true);
 
@@ -222,15 +250,34 @@ namespace MyXonotic
                 if (switchPrev || Input.GetKeyDown(KeyCode.E) || Input.mouseScrollDelta.y > 0f) Weapons.SwitchCycle(-1);
                 if (_tappedWeaponSlot >= 0)
                 {
-                    Weapons.SwitchTo((WeaponType)_tappedWeaponSlot);
+                    if (Weapons.SlotToWeapon(_tappedWeaponSlot, out var tapped)) Weapons.SwitchTo(tapped);
                     _tappedWeaponSlot = -1;
                 }
-                for (int i = 0; i < WeaponController.WeaponCount; i++)
+                for (int i = 0; i < WeaponController.CoreWeaponCount; i++)
                     if (Input.GetKeyDown(KeyCode.Alpha1 + i)) Weapons.SwitchTo((WeaponType)i);
+                // 0 key cycles through the owned extra weapons.
+                if (Input.GetKeyDown(KeyCode.Alpha0))
+                {
+                    int start = (int)Weapons.Current >= WeaponController.CoreWeaponCount ? (int)Weapons.Current + 1 : WeaponController.CoreWeaponCount;
+                    for (int n = 0; n < WeaponController.WeaponCount - WeaponController.CoreWeaponCount; n++)
+                    {
+                        int idx = WeaponController.CoreWeaponCount + (start - WeaponController.CoreWeaponCount + n) % (WeaponController.WeaponCount - WeaponController.CoreWeaponCount);
+                        if (Weapons.Has((WeaponType)idx)) { Weapons.SwitchTo((WeaponType)idx); break; }
+                    }
+                }
             }
         }
 
         int _tappedWeaponSlot = -1;
+
+        void OnControllerColliderHit(ControllerColliderHit hit)
+        {
+            if (hit.normal.y < 0.5f) return;
+            var mover = hit.collider.GetComponentInParent<Mover>();
+            if (mover == null) return;
+            _groundMover = mover;
+            _groundMoverTime = Time.time;
+        }
 
         public void ApplyExternalImpulse(Vector3 impulse) => _externalImpulse += impulse;
 

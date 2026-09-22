@@ -29,6 +29,7 @@ METHODS = {
     "original-playtest": "MyXonotic.EditorTools.OriginalMapPlaytest.Run",
     "all-maps-playtest": "MyXonotic.EditorTools.AllMapsPlaytest.Run",
     "content-test": "MyXonotic.EditorTools.ContentRegressionTests.Run",
+    "weapons": "MyXonotic.EditorTools.IqmWeaponImporter.GenerateWeaponAssetsMenu",
 }
 
 

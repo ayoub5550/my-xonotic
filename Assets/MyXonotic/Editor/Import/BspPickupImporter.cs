@@ -86,6 +86,9 @@ namespace MyXonotic.EditorTools
             ["item_armor_big"] = new PickupPlan(PickupType.Armor, 50),
             ["item_armor_mega"] = new PickupPlan(PickupType.Armor, 100),
             // Ammo amounts: g_pickup_shells/nails/rockets/cells defaults (15/80/25/25).
+            ["item_strength"] = new PickupPlan(PickupType.Strength, 30),
+            ["item_invincible"] = new PickupPlan(PickupType.Shield, 30),
+            ["item_shield"] = new PickupPlan(PickupType.Shield, 30),
             ["item_shells"] = new PickupPlan(PickupType.AmmoShells, 15),
             ["item_bullets"] = new PickupPlan(PickupType.AmmoBullets, 80),
             ["item_rockets"] = new PickupPlan(PickupType.AmmoRockets, 25),
@@ -105,6 +108,13 @@ namespace MyXonotic.EditorTools
             ["weapon_hagar"] = new PickupPlan(WeaponType.Hagar),
             ["weapon_devastator"] = new PickupPlan(WeaponType.Devastator),
             ["weapon_rocketlauncher"] = new PickupPlan(WeaponType.Devastator),
+            ["weapon_rifle"] = new PickupPlan(WeaponType.Rifle),
+            ["weapon_campingrifle"] = new PickupPlan(WeaponType.Rifle),
+            ["weapon_sniperrifle"] = new PickupPlan(WeaponType.Rifle),
+            ["weapon_minelayer"] = new PickupPlan(WeaponType.Minelayer),
+            ["weapon_arc"] = new PickupPlan(WeaponType.Arc),
+            ["weapon_fireball"] = new PickupPlan(WeaponType.Fireball),
+            ["weapon_hook"] = new PickupPlan(WeaponType.Hook),
         };
 
         /// <summary>
@@ -147,6 +157,11 @@ namespace MyXonotic.EditorTools
                 }
                 considered++;
 
+                if (classname == "item_flag_team1" || classname == "item_flag_team2")
+                {
+                    PlaceFlagBase(entity, classname == "item_flag_team1" ? 1 : 2, root, resolver, warnings);
+                    continue;
+                }
                 if (!ClassToPlan.TryGetValue(classname, out PickupPlan plan))
                 {
                     unsupported.Add(classname);
@@ -200,7 +215,8 @@ namespace MyXonotic.EditorTools
                 // Xonotic defaults: weapons/ammo respawn after 15 s, health/armor after 20/30 s.
                 pickup.RespawnTime = plan.Type == PickupType.Weapon ? 15f
                     : plan.Type == PickupType.Health ? 20f
-                    : plan.Type == PickupType.Armor ? 30f : 15f;
+                    : plan.Type == PickupType.Armor ? 30f
+                    : plan.Type == PickupType.Strength || plan.Type == PickupType.Shield ? 120f : 15f;
 
                 createdPickups.Add(pickup);
                 importedCount++;
@@ -226,15 +242,52 @@ namespace MyXonotic.EditorTools
             return warnings;
         }
 
+        /// <summary>
+        /// CTF flag stand: a <see cref="MyXonotic.Content.CtfFlagBase"/> marker with the
+        /// original flags.md3 (static frame 0) as its visual. Runtime attaches the
+        /// CtfFlag behaviour only in CTF mode. Not a Pickup, not a decoration.
+        /// </summary>
+        static void PlaceFlagBase(BspEntity entity, int team, Transform root, XonoticContentResolver resolver, List<string> warnings)
+        {
+            string originStr = entity.Get("origin");
+            if (originStr == null || !TryParseVec3(originStr, out BspVec3 quakeOrigin) || !IsFiniteAndBounded(quakeOrigin))
+            {
+                warnings.Add("item_flag_team" + team + ": no parsable origin; flag stand skipped.");
+                return;
+            }
+            var u = BspCoordinateSpace.QuakeToUnity(quakeOrigin);
+            var go = new GameObject("item_flag_team" + team);
+            go.transform.SetParent(root, false);
+            go.transform.localPosition = new Vector3(u.X, u.Y, u.Z);
+            var marker = go.AddComponent<MyXonotic.Content.CtfFlagBase>();
+            marker.team = team;
+            float yaw;
+            if (float.TryParse(entity.Get("angle", "0"), NumberStyles.Float, CultureInfo.InvariantCulture, out yaw)) marker.yaw = yaw;
+
+            var visual = new GameObject("FlagVisual");
+            visual.transform.SetParent(go.transform, false);
+            Mesh mesh; Material[] mats; string error;
+            if (BspMapModelImporter.TryGetModel("models/ctf/flags.md3", resolver, out mesh, out mats, out error))
+            {
+                visual.AddComponent<MeshFilter>().sharedMesh = mesh;
+                visual.AddComponent<MeshRenderer>().sharedMaterials = mats;
+                warnings.Add("item_flag_team" + team + ": flag stand placed with original models/ctf/flags.md3 (static frame 0).");
+            }
+            else
+            {
+                visual.transform.localScale = new Vector3(0.12f, 2.2f, 0.12f);
+                visual.transform.localPosition = Vector3.up * 1.1f;
+                visual.AddComponent<MeshFilter>().sharedMesh = ArenaPrimitives.CylinderMesh;
+                visual.AddComponent<MeshRenderer>().sharedMaterial = ArenaMaterials.Get(team == 1 ? new Color(1f, 0.25f, 0.2f) : new Color(0.25f, 0.5f, 1f));
+                warnings.Add("item_flag_team" + team + ": flags.md3 unavailable (" + error + "); placeholder pole used.");
+            }
+        }
+
         static string UnsupportedReason(string classname)
         {
             if (classname.StartsWith("weapon_", StringComparison.Ordinal))
             {
-                return "weapon outside the nine core weapons implemented by WeaponController (visual-only decoration).";
-            }
-            if (classname == "item_strength" || classname == "item_invincible" || classname == "item_shield")
-            {
-                return "power-up items are out of scope; Actor/WeaponController expose no such stat.";
+                return "weapon outside the fourteen weapons implemented by WeaponController (visual-only decoration).";
             }
             if (classname == "item_fuel" || classname == "item_fuel_regen" || classname == "item_jetpack")
             {
@@ -425,13 +478,24 @@ namespace MyXonotic.EditorTools
                 "weapon_devastator maps to the Devastator weapon pickup");
             int weaponClasses = 0;
             foreach (var kv in ClassToPlan) if (kv.Value.Type == PickupType.Weapon) weaponClasses++;
-            Expect(weaponClasses >= WeaponController.WeaponCount, "every one of the nine weapons has at least one entity classname");
+            Expect(weaponClasses >= WeaponController.WeaponCount, "every one of the fourteen weapons has at least one entity classname");
 
-            // Power-ups and exotic weapons stay visual-only.
+            // dev.9: power-ups and the five extra weapons are live pickups now.
+            Expect(ClassToPlan.TryGetValue("item_strength", out PickupPlan st) && st.Type == PickupType.Strength && st.Amount == 30,
+                "item_strength maps to a 30 s Strength pickup");
+            Expect(ClassToPlan.TryGetValue("item_invincible", out PickupPlan sd) && sd.Type == PickupType.Shield,
+                "item_invincible maps to the Shield pickup");
+            Expect(ClassToPlan.TryGetValue("weapon_minelayer", out PickupPlan wm) && wm.Weapon == WeaponType.Minelayer &&
+                   ClassToPlan.TryGetValue("weapon_arc", out PickupPlan wa) && wa.Weapon == WeaponType.Arc &&
+                   ClassToPlan.TryGetValue("weapon_rifle", out PickupPlan wr) && wr.Weapon == WeaponType.Rifle &&
+                   ClassToPlan.TryGetValue("weapon_fireball", out PickupPlan wf) && wf.Weapon == WeaponType.Fireball &&
+                   ClassToPlan.TryGetValue("weapon_hook", out PickupPlan wh) && wh.Weapon == WeaponType.Hook,
+                "the five extra weapons have entity classnames");
+            // Jetpack/fuel and the remaining exotic weapons stay visual-only.
             string[] mustStayUnsupported =
             {
-                "item_strength", "item_invincible", "item_jetpack", "item_fuel",
-                "weapon_arc", "weapon_minelayer", "weapon_rifle", "weapon_seeker", "weapon_fireball", "weapon_hlac", "weapon_hook", "weapon_porto", "weapon_tuba", "weapon_vaporizer",
+                "item_jetpack", "item_fuel",
+                "weapon_seeker", "weapon_hlac", "weapon_porto", "weapon_tuba", "weapon_vaporizer",
             };
             foreach (var c in mustStayUnsupported)
             {

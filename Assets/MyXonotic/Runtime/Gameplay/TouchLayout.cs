@@ -62,17 +62,22 @@ namespace MyXonotic
         public static Rect Alt => Circle(340f / 720f, 185f / 720f, 90f / 720f);
 
         /// <summary>
-        /// Weapon bar: nine tappable slots centred along the top edge of the
+        /// Weapon bar: tappable slots (nine core + owned extras) centred along the top edge of the
         /// safe area (below the banner), one per <see cref="WeaponType"/>.
         /// Tapping a slot selects that weapon if it is owned.
         /// </summary>
+        /// Slots currently shown: the nine core weapons plus any owned extra
+        /// weapon (set by Hud from WeaponController.VisibleSlotCount each frame).
+        public static int VisibleWeaponSlots = WeaponController.CoreWeaponCount;
+
         public static Rect WeaponBar
         {
             get
             {
                 var s = Safe;
                 float slot = WeaponSlotSize;
-                float width = slot * WeaponController.WeaponCount + WeaponSlotGap * (WeaponController.WeaponCount - 1);
+                int count = Mathf.Clamp(VisibleWeaponSlots, WeaponController.CoreWeaponCount, WeaponController.WeaponCount);
+                float width = slot * count + WeaponSlotGap * (count - 1);
                 return new Rect(s.center.x - width * 0.5f, s.yMax - s.height * 0.055f - slot, width, slot);
             }
         }
@@ -91,7 +96,8 @@ namespace MyXonotic
         public static int WeaponSlotAt(Vector2 screenPos)
         {
             if (!WeaponBar.Contains(screenPos)) return -1;
-            for (int i = 0; i < WeaponController.WeaponCount; i++)
+            int count = Mathf.Clamp(VisibleWeaponSlots, WeaponController.CoreWeaponCount, WeaponController.WeaponCount);
+            for (int i = 0; i < count; i++)
                 if (WeaponSlot(i).Contains(screenPos)) return i;
             return -1;
         }

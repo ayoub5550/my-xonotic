@@ -17,7 +17,13 @@ namespace MyXonotic
         Crylink = 5,
         Vortex = 6,
         Hagar = 7,
-        Devastator = 8
+        Devastator = 8,
+        // Extra Xonotic weapons (not part of the default 1-9 bar; shown when owned).
+        Rifle = 9,
+        Minelayer = 10,
+        Arc = 11,
+        Fireball = 12,
+        Hook = 13
     }
 
     /// <summary>Shared ammo pools (several weapons draw from the same pool).</summary>
@@ -39,7 +45,13 @@ namespace MyXonotic
         /// Remote-detonates this owner's live projectiles (Devastator secondary).
         Detonate,
         /// No shot: hold to zoom (Vortex secondary).
-        Zoom
+        Zoom,
+        /// Continuous short-range beam: one damage tick per Refire while held (Arc primary).
+        Beam,
+        /// Gravity projectile that sticks to the world, arms, and explodes near an enemy (Minelayer primary).
+        Mine,
+        /// Grappling hook: pulls the owner towards the hit point while held (Hook primary).
+        Hook
     }
 
     /// <summary>One fire mode of one weapon.</summary>
@@ -175,10 +187,59 @@ namespace MyXonotic
             Secondary = new FireDef { Mode = FireMode.Detonate, Refire = 0.3f }
         };
 
+        public static WeaponDef Rifle() => new WeaponDef
+        {
+            Type = WeaponType.Rifle, Name = "Rifle", ShortName = "RIF", Ammo = AmmoType.Bullets, PickupAmmo = 40,
+            Tint = new Color(0.75f, 0.65f, 0.45f),
+            Primary = Hitscan(80, 1.2f, 1, 0f, 10f, 10),
+            // Secondary: fast, weaker, slightly inaccurate shots.
+            Secondary = Hitscan(20, 0.15f, 1, 1.2f, 4f, 2)
+        };
+
+        public static WeaponDef Minelayer() => new WeaponDef
+        {
+            Type = WeaponType.Minelayer, Name = "Mine Layer", ShortName = "MIN", Ammo = AmmoType.Rockets, PickupAmmo = 20,
+            Tint = new Color(0.6f, 0.75f, 0.35f),
+            Primary = Proj(FireMode.Mine, 40, 1.5f, 1, 0f, 750f * Q, 150f * Q, 10f, 5, fuse: 60f, gravity: 1f, selfDmg: 0.5f),
+            Secondary = new FireDef { Mode = FireMode.Detonate, Refire = 0.3f }
+        };
+
+        public static WeaponDef Arc() => new WeaponDef
+        {
+            Type = WeaponType.Arc, Name = "Arc", ShortName = "ARC", Ammo = AmmoType.Cells, PickupAmmo = 25,
+            Tint = new Color(0.55f, 0.85f, 1f),
+            // Beam: 15 damage every 0.2 s while held (75 dps), 1 cell per tick, 25 m range (Speed = range).
+            Primary = new FireDef { Mode = FireMode.Beam, Damage = 15, Refire = 0.2f, Shots = 1, Speed = 25f, Knockback = 1.5f, AmmoCost = 1 },
+            Secondary = Proj(FireMode.Projectile, 30, 0.5f, 1, 0f, 2000f * Q, 60f * Q, 6f, 2)
+        };
+
+        public static WeaponDef Fireball() => new WeaponDef
+        {
+            Type = WeaponType.Fireball, Name = "Fireball", ShortName = "FRB", Ammo = AmmoType.None, PickupAmmo = 0,
+            Tint = new Color(1f, 0.6f, 0.1f),
+            Primary = Proj(FireMode.Ballistic, 200, 2f, 1, 0f, 1200f * Q, 200f * Q, 30f, 0, fuse: 10f, gravity: 0f, selfDmg: 0.3f),
+            // Secondary: three bouncing fire mines.
+            Secondary = Proj(FireMode.Bouncing, 40, 1.5f, 3, 6f, 900f * Q, 60f * Q, 6f, 0, fuse: 4f, gravity: 1f, selfDmg: 0.3f)
+        };
+
+        public static WeaponDef Hook() => new WeaponDef
+        {
+            Type = WeaponType.Hook, Name = "Grappling Hook", ShortName = "HOK", Ammo = AmmoType.None, PickupAmmo = 0,
+            Tint = new Color(0.7f, 0.7f, 0.75f),
+            Primary = new FireDef { Mode = FireMode.Hook, Refire = 0.2f, Speed = 2000f * Q },
+            // Secondary: gravity bomb that detonates on a fuse.
+            Secondary = Proj(FireMode.Bouncing, 50, 1.2f, 1, 0f, 1000f * Q, 100f * Q, 10f, 0, fuse: 3f, gravity: 1f, selfDmg: 0.5f)
+        };
+
         public static WeaponDef For(WeaponType type)
         {
             switch (type)
             {
+                case WeaponType.Rifle: return Rifle();
+                case WeaponType.Minelayer: return Minelayer();
+                case WeaponType.Arc: return Arc();
+                case WeaponType.Fireball: return Fireball();
+                case WeaponType.Hook: return Hook();
                 case WeaponType.Blaster: return Blaster();
                 case WeaponType.Shotgun: return Shotgun();
                 case WeaponType.MachineGun: return MachineGun();
@@ -200,8 +261,13 @@ namespace MyXonotic
     /// </summary>
     public sealed class WeaponController : MonoBehaviour
     {
-        public const int WeaponCount = 9;
+        /// All weapons including the five extras (Rifle..Hook).
+        public const int WeaponCount = 14;
+        /// The nine classic weapons that always occupy bar slots 1-9.
+        public const int CoreWeaponCount = 9;
         public const int AmmoTypeCount = 5;
+        /// Live mines one actor may have at once (Minelayer).
+        public const int MaxLiveMines = 3;
 
         /// Ammo pool caps (Xonotic g_pickup_*_max defaults).
         public static readonly int[] MaxAmmo = { 0, 60, 320, 160, 180 };
@@ -275,13 +341,47 @@ namespace MyXonotic
             Current = WeaponType.Shotgun;
             _cooldownTimer = 0f;
             _zooming = false;
+            if (Hook != null) Hook.Release();
+            if (MatchSettings.AllWeapons && !ArenaBootstrap.TestMode) GiveAll();
         }
 
-        /// Gives every weapon and full ammo (bots on hard difficulty / debug).
+        /// Gives every weapon and full ammo ("all weapons" mutator / debug).
         public void GiveAll()
         {
             for (int i = 0; i < WeaponCount; i++) _ownedMask |= 1 << i;
             for (int i = 1; i < AmmoTypeCount; i++) _ammo[i] = MaxAmmo[i];
+        }
+
+        /// Bar slot i (0-based) -> weapon: slots 0-8 are the core weapons, further
+        /// slots are the OWNED extra weapons in enum order. Returns false when empty.
+        public bool SlotToWeapon(int slot, out WeaponType weapon)
+        {
+            weapon = WeaponType.Blaster;
+            if (slot < 0) return false;
+            if (slot < CoreWeaponCount) { weapon = (WeaponType)slot; return true; }
+            int n = CoreWeaponCount;
+            for (int i = CoreWeaponCount; i < WeaponCount; i++)
+            {
+                if (!Has((WeaponType)i)) continue;
+                if (n == slot) { weapon = (WeaponType)i; return true; }
+                n++;
+            }
+            return false;
+        }
+
+        /// Number of bar slots to show: 9 core + owned extras.
+        public int VisibleSlotCount
+        {
+            get { int n = CoreWeaponCount; for (int i = CoreWeaponCount; i < WeaponCount; i++) if (Has((WeaponType)i)) n++; return n; }
+        }
+
+        /// Owner's grappling hook (player only); null for bots.
+        public GrapplingHook Hook;
+
+        /// Called each frame by the input owner so hold-style weapons (Hook) know the trigger state.
+        public void SetPrimaryHeld(bool held)
+        {
+            if (Hook != null) Hook.Held = held && CurrentDef.Primary.Mode == FireMode.Hook;
         }
 
         void Update()
@@ -316,7 +416,7 @@ namespace MyXonotic
             if (isNew)
             {
                 WeaponAcquired?.Invoke(t);
-                if (autoSwitch && (int)t > (int)Current && IsReady) SwitchTo(t);
+                if (autoSwitch && (int)t > (int)Current && (int)t < CoreWeaponCount && IsReady) SwitchTo(t);
             }
             return isNew || ammoAdded;
         }
@@ -346,10 +446,10 @@ namespace MyXonotic
             return false;
         }
 
-        /// Highest-ranked owned weapon that can currently fire (falls back to Blaster).
+        /// Highest-ranked owned CORE weapon that can currently fire (falls back to Blaster).
         public WeaponType BestUsable()
         {
-            for (int i = WeaponCount - 1; i >= 0; i--)
+            for (int i = CoreWeaponCount - 1; i >= 0; i--)
                 if (CanFire((WeaponType)i)) return (WeaponType)i;
             return WeaponType.Blaster;
         }
@@ -382,6 +482,18 @@ namespace MyXonotic
                 return true;
             }
 
+            if (fire.Mode == FireMode.Hook)
+            {
+                if (Hook == null || Hook.IsActive) return false;
+                if (!Hook.Fire(origin, direction, fire.Speed)) return false;
+                _cooldownTimer = fire.Refire;
+                if (View != null) View.PlayFireSound(alt);
+                Fired?.Invoke(Current, alt);
+                return true;
+            }
+
+            if (fire.Mode == FireMode.Mine && Projectile.CountMinesOwnedBy(Owner) >= MaxLiveMines) return false;
+
             if (def.Ammo != AmmoType.None && fire.AmmoCost > 0 && _ammo[(int)def.Ammo] < fire.AmmoCost)
             {
                 // Out of ammo: drop to the best usable weapon so the player is never stuck.
@@ -404,6 +516,9 @@ namespace MyXonotic
                         break;
                     case FireMode.Melee:
                         FireMelee(origin, dir, fire);
+                        break;
+                    case FireMode.Beam:
+                        FireBeam(origin, dir, fire);
                         break;
                     default:
                         Projectile.Spawn(origin, dir, fire, Owner, Current);
@@ -445,6 +560,30 @@ namespace MyXonotic
                 ImpactEffects.Spawn(hit.point, hit.normal, Current, actor != null);
                 break;
             }
+        }
+
+        /// Arc beam: a range-limited hitscan tick with a visible beam. Splash-free.
+        void FireBeam(Vector3 origin, Vector3 direction, FireDef fire)
+        {
+            float range = fire.Speed > 0f ? fire.Speed : 20f;
+            Vector3 end = origin + direction * range;
+            var hits = Physics.RaycastAll(origin, direction, range, ~0, QueryTriggerInteraction.Ignore);
+            Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+            bool hitActor = false;
+            foreach (var hit in hits)
+            {
+                var actor = hit.collider.GetComponentInParent<Actor>();
+                if (actor == Owner) continue;
+                end = hit.point;
+                if (actor != null)
+                {
+                    actor.TakeDamage(fire.Damage, ArenaMath.KnockbackImpulse(direction, fire.Knockback), Owner);
+                    hitActor = true;
+                }
+                ImpactEffects.Spawn(hit.point, hit.normal, Current, actor != null);
+                break;
+            }
+            ImpactEffects.Beam(origin, end, CurrentDef.Tint, fire.Refire, hitActor);
         }
 
         void FireMelee(Vector3 origin, Vector3 direction, FireDef fire)

@@ -390,14 +390,15 @@ namespace MyXonotic.EditorTools
                 if (p.Type == PickupType.Weapon) Check(p.Weapon != WeaponType.Blaster && p.Weapon != WeaponType.Shotgun, "map weapon pickups are never the spawn weapons");
             Check(positions.Count == created.Count, "every mapped pickup got a distinct real-map position (no collapsed/fake placement)");
 
-            bool warnedStrength = false, wronglyUnsupported = false;
+            bool wronglyUnsupported = false;
             foreach (var w in warnings)
             {
-                if (w.Contains("item_strength") && w.Contains("not instantiated as a pickup")) warnedStrength = true;
-                if ((w.Contains("item_cells") || w.Contains("item_bullets") || w.Contains("weapon_vortex")) && w.Contains("not instantiated as a pickup")) wronglyUnsupported = true;
+                if ((w.Contains("item_cells") || w.Contains("item_bullets") || w.Contains("weapon_vortex") || w.Contains("item_strength")) && w.Contains("not instantiated as a pickup")) wronglyUnsupported = true;
             }
-            Check(warnedStrength, "importer explicitly reports item_strength as unsupported");
-            Check(!wronglyUnsupported, "ammo and core weapons are no longer reported as unsupported");
+            Check(!wronglyUnsupported, "ammo, core weapons and item_strength are no longer reported as unsupported");
+            bool strengthLive = false;
+            foreach (var p in created) if (p.Type == PickupType.Strength && p.RespawnTime == 120f) strengthLive = true;
+            Check(strengthLive, "item_strength is a live Strength pickup with a 120 s respawn");
         }
     }
 }

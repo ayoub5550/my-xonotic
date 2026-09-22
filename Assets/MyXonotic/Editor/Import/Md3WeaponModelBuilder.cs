@@ -149,7 +149,7 @@ namespace MyXonotic.EditorTools
                     // decompiled mesh rather than the material (v_uzi) or use a
                     // different case (Hagar); try the documented aliases and the
                     // plain textures/<name> convention before giving up.
-                    foreach (var candidate in AliasCandidates(shaderRefName))
+                    foreach (var candidate in AliasCandidates(shaderRefName, weaponName))
                     {
                         texturePath = resolver.ResolveDiffuse(candidate, out script);
                         if (texturePath != null)
@@ -217,10 +217,22 @@ namespace MyXonotic.EditorTools
             ["shotgun2"] = "textures/shotgun2",
             ["shotgun_sight"] = "textures/shotgun_sight",
             ["grenadelauncher_sight"] = "textures/glsight01",
+            ["SniperRifle"] = "textures/sniperrifle",
+            ["fireball"] = "textures/fireball",
+            ["hookgun"] = "textures/hookgun",
+            // Weapon-scoped aliases ("<WeaponName>:<surface>") win over the plain surface name:
+            // v_arc.md3 names its only surface "shotgun" and v_minelayer.md3 "mesh".
+            ["Arc:shotgun"] = "textures/arc",
+            ["Minelayer:mesh"] = "textures/minelayer",
+            // CTF flag (models/ctf/flags.md3): skin file maps mesh/mesh2/mesh3 to these textures.
+            ["models_ctf_flags_md3:mesh"] = "models/ctf/flag",
+            ["models_ctf_flags_md3:mesh2"] = "models/ctf/banner",
+            ["models_ctf_flags_md3:mesh3"] = "models/ctf/glow",
         };
 
-        static IEnumerable<string> AliasCandidates(string name)
+        static IEnumerable<string> AliasCandidates(string name, string weaponName = null)
         {
+            if (!string.IsNullOrEmpty(weaponName) && SurfaceAliases.TryGetValue(weaponName + ":" + name, out var scoped)) yield return scoped;
             if (SurfaceAliases.TryGetValue(name, out var alias)) yield return alias;
             yield return name.ToLowerInvariant();
             yield return "textures/" + name;

@@ -43,6 +43,29 @@ namespace MyXonotic
         public float TimeLimitSeconds = 600f;
         public bool MatchFinished => Match != null && Match.IsOver;
 
+        /// Mode this arena was started with (from MatchSettings).
+        public GameMode Mode { get; private set; }
+        public bool IsTeamMode => Mode != GameMode.Deathmatch;
+        /// Movers attached to imported func_* submodels (doors, rotators, bobbing platforms).
+        public int MoverCount { get; private set; }
+        /// CTF flags in play (2 in CTF mode on maps with flag stands, else 0).
+        public IReadOnlyList<CtfFlag> Flags => _flags;
+        readonly List<CtfFlag> _flags = new List<CtfFlag>();
+
+        /// Sum of frags of every actor on <paramref name="team"/>.
+        public int TeamFrags(Team team)
+        {
+            int n = 0;
+            foreach (var a in GameState.Actors) if (a != null && a.Team == team) n += a.Frags;
+            return n;
+        }
+
+        /// Team score for the current mode (TDM: frags, CTF: captures).
+        public int TeamScore(Team team) => Mode == GameMode.CaptureTheFlag ? CtfFlag.Captures(team) : TeamFrags(team);
+
+        /// Score limit for the current mode (CTF: capture limit).
+        public int ScoreLimit => Mode == GameMode.CaptureTheFlag ? MatchSettings.CaptureLimit : FragLimit;
+
         public IReadOnlyList<Bot> Bots => _bots;
         public IReadOnlyList<Pickup> Pickups => _pickups;
 
@@ -71,17 +94,22 @@ namespace MyXonotic
             Application.targetFrameRate = 60;
             Input.simulateMouseWithTouches = false;
 
+            Mode = TestMode ? GameMode.Deathmatch : MatchSettings.Mode;
             BuildLighting();
             BuildSpawns();
             BuildPlayer();
             BuildBots();
             BuildPickups();
+            BuildMoversAndFlags();
             _hud = Hud.Build(transform);
             _hud.Player = PlayerActor;
             _hud.Weapons = PlayerWeapons;
             Match = new MatchSession();
+            if (Mode == GameMode.TeamDeathmatch) Match.ScoreOf = a => a != null ? TeamFrags(a.Team) : 0;
+            else if (Mode == GameMode.CaptureTheFlag) Match.ScoreOf = a => a != null ? CtfFlag.Captures(a.Team) : 0;
             Match.MatchOver += OnMatchOver;
             Match.StartMatch(CurrentMatchConfig(), GameState.Actors);
+            CtfFlag.Captured += OnFlagCaptured;
 
             IsReady = true;
             Instance = this;
@@ -136,6 +164,8 @@ namespace MyXonotic
                 Match.MatchOver -= OnMatchOver;
                 Match.StopListening();
             }
+            CtfFlag.Captured -= OnFlagCaptured;
+            CtfFlag.ResetScores();
             Instance = null;
             IsReady = false;
             IsPaused = false;
@@ -324,6 +354,7 @@ namespace MyXonotic
             var actor = go.AddComponent<Actor>();
             actor.DisplayName = "Player";
             actor.Arena = this;
+            actor.Team = IsTeamMode ? Team.Red : Team.None;
 
             var weapons = go.AddComponent<WeaponController>();
             weapons.Owner = actor;
@@ -340,6 +371,9 @@ namespace MyXonotic
             var player = go.AddComponent<Player>();
             player.ViewCamera = cam;
             player.Weapons = weapons;
+            var hook = go.AddComponent<GrapplingHook>();
+            hook.Owner = player;
+            weapons.Hook = hook;
             if (UsedImportedArena)
             {
                 var viewObject = new GameObject("OriginalWeaponView");
@@ -361,7 +395,8 @@ namespace MyXonotic
 
         void BuildBots()
         {
-            for (int i = 0; i < 3; i++)
+            int count = TestMode ? 3 : MatchSettings.BotCount;
+            for (int i = 0; i < count; i++)
             {
                 var go = new GameObject($"Bot_{i}");
                 go.transform.SetParent(transform, false);
@@ -381,18 +416,29 @@ namespace MyXonotic
                 bodyRenderer.sharedMaterial = ArenaMaterials.Get(new Color(0.9f, 0.35f, 0.2f));
                 // Original Xonotic character (static idle pose) when imported;
                 // the capsule stays as the fallback and is hidden otherwise.
+                // Teams: the player is Red; bots fill Blue first so the sides stay balanced.
+                Team team = Team.None;
+                if (IsTeamMode) team = (i % 2 == 0) ? Team.Blue : Team.Red;
+
                 string characterName = CharacterModels.PickForIndex(i);
                 GameObject characterBody;
-                if (characterName != null && CharacterModels.TryAttach(go.transform, characterName, out characterBody))
+                CharacterAnimator animator = null;
+                if (characterName != null && CharacterModels.TryAttach(go.transform, characterName, out characterBody, out animator))
                 {
                     // Actor.Respawn re-enables every child renderer, so remove
                     // the capsule outright rather than disabling it.
                     Destroy(visual);
+                    if (team != Team.None) TintTeam(characterBody, team);
+                }
+                else if (team != Team.None)
+                {
+                    bodyRenderer.sharedMaterial = ArenaMaterials.Get(MatchSettings.TeamColor(team));
                 }
 
                 var actor = go.AddComponent<Actor>();
-                actor.DisplayName = $"Bot_{i}";
+                actor.DisplayName = IsTeamMode ? (team == Team.Red ? "Red" : "Blue") + $"_Bot_{i}" : $"Bot_{i}";
                 actor.Arena = this;
+                actor.Team = team;
 
                 var weapons = go.AddComponent<WeaponController>();
                 weapons.Owner = actor;
@@ -400,6 +446,7 @@ namespace MyXonotic
                 var bot = go.AddComponent<Bot>();
                 bot.Weapons = weapons;
                 bot.Target = PlayerObject != null ? PlayerObject.transform : null;
+                bot.Animator = animator;
                 bot.AimErrorDegrees = 2.5f + i * 1.5f;
                 if (!TestMode)
                 {
@@ -413,6 +460,51 @@ namespace MyXonotic
                 _bots.Add(bot);
                 GameState.Register(actor);
             }
+        }
+
+        /// Multiplies the character's materials by the team colour (material instances; assets untouched).
+        static void TintTeam(GameObject body, Team team)
+        {
+            Color tint = Color.Lerp(Color.white, MatchSettings.TeamColor(team), 0.55f);
+            foreach (var r in body.GetComponentsInChildren<Renderer>(true))
+            {
+                var mats = r.materials; // instances
+                foreach (var m in mats)
+                {
+                    if (m == null) continue;
+                    if (m.HasProperty("_Tint")) m.SetColor("_Tint", tint);
+                    else if (m.HasProperty("_Color")) m.color = tint;
+                }
+                r.materials = mats;
+            }
+        }
+
+        // ---------------------------------------------------------------- movers + flags
+
+        void BuildMoversAndFlags()
+        {
+            if (!UsedImportedArena) return;
+            foreach (var arena in FindObjectsOfType<MyXonotic.Content.ImportedArena>())
+            {
+                MoverCount += Mover.Attach(arena.transform);
+                foreach (var stand in arena.GetComponentsInChildren<MyXonotic.Content.CtfFlagBase>(true))
+                {
+                    if (Mode != GameMode.CaptureTheFlag) { stand.gameObject.SetActive(false); continue; }
+                    var team = stand.team == 1 ? Team.Red : Team.Blue;
+                    var visual = stand.transform.childCount > 0 ? stand.transform.GetChild(0) : null;
+                    if (visual != null) TintTeam(visual.gameObject, team);
+                    var flag = stand.gameObject.AddComponent<CtfFlag>();
+                    flag.Init(team, stand.transform.position, visual);
+                    _flags.Add(flag);
+                }
+            }
+            if (Mode == GameMode.CaptureTheFlag && _flags.Count < 2)
+                Debug.LogWarning("MyXonotic.ArenaBootstrap: CTF selected but this map has " + _flags.Count + " flag stand(s); captures are impossible here.");
+        }
+
+        void OnFlagCaptured(CtfFlag flag, Actor scorer)
+        {
+            if (Match != null) Match.ReportScore(scorer);
         }
 
         // ---------------------------------------------------------------- pickups
@@ -478,13 +570,15 @@ namespace MyXonotic
                 pickup.ForceActivate();
             }
             foreach (var projectile in FindObjectsOfType<Projectile>()) Destroy(projectile.gameObject);
+            CtfFlag.ResetScores();
+            foreach (var flag in _flags) if (flag != null) flag.ResetToBase();
             if (Match != null) Match.Restart(CurrentMatchConfig(), GameState.Actors);
             SetPaused(false);
         }
 
         MatchConfig CurrentMatchConfig() => new MatchConfig
         {
-            FragLimit = FragLimit, TimeLimitSeconds = TimeLimitSeconds
+            FragLimit = ScoreLimit, TimeLimitSeconds = TimeLimitSeconds
         };
 
         void OnMatchOver(MatchResult<Actor> result)

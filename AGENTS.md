@@ -1,5 +1,22 @@
 # my-xonotic — developer and agent handoff
 
+## dev.9 modes/animation/movers checkpoint — 2026-09-22 (branch `feat/unity-dev9-modes`)
+
+Read `docs/UNITY-DEV9.md` first. Skeletal character animation
+(`IqmCharacterImporter` → `<name>_Rig.asset` + `<name>_Skinned.asset`,
+`CharacterAnimator` drives bones under a SkinnedMeshRenderer; Quake→Unity
+rotation is `(x,y,z,w) → (−x,−z,−y,w)`, verified to 0 mm against CPU skinning).
+Movers (`Mover.cs`) attach at arena start to `ImportedSubmodel` markers, which
+now carry entity keys + local bounds (re-run `prepare-maps` after changing the
+marker). Powerups Strength/Shield on `Actor`. Weapons 10–14 (Rifle, Minelayer,
+Arc, Fireball, Hook) with `FireMode.Beam/Mine/Hook`; `WeaponCount` = 14,
+`CoreWeaponCount` = 9, bar slots ≥ 9 map through `SlotToWeapon`. Modes via
+`MatchSettings` (PlayerPrefs) → DM/TDM/CTF, `Actor.Team`, `CtfFlag`,
+`MatchSession.ScoreOf` for team totals. `tools/local_unity.py weapons` regenerates
+weapon visuals + ctf/plats sounds outside the Android build. Gates: Editor 22,
+gameplay-integration 234, content-test see CHANGELOG. Still absent: network,
+device/GPU test, weapon-model animation, trigger→target chains, waypoints.
+
 ## dev.8 full-arsenal checkpoint — 2026-09-21 (branch `feat/unity-dev8-weapons`)
 
 Read `docs/UNITY-DEV8.md` first. All nine Xonotic weapons (primary/secondary,

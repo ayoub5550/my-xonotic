@@ -84,11 +84,13 @@ namespace MyXonotic.Menu
             SetRect(quit.GetComponent<RectTransform>(), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f),
                 new Vector2(-150f, -16f), new Vector2(-30f, -60f));
 
+            BuildMatchOptions(safe);
+
             // Scroll view with grid of cards
             var scrollGO = new GameObject("MapScroll", typeof(RectTransform), typeof(Image), typeof(ScrollRect));
             scrollGO.transform.SetParent(safe, false);
             var scrollRT = scrollGO.GetComponent<RectTransform>();
-            SetRect(scrollRT, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(20f, 20f), new Vector2(-20f, -100f));
+            SetRect(scrollRT, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(20f, 20f), new Vector2(-20f, -150f));
             scrollGO.GetComponent<Image>().color = new Color(0, 0, 0, 0.001f);
             scrollGO.AddComponent<Mask>().showMaskGraphic = false;
             var scroll = scrollGO.GetComponent<ScrollRect>();
@@ -121,6 +123,50 @@ namespace MyXonotic.Menu
                 return;
             }
             foreach (var entry in _catalog.maps) BuildCard(content, entry);
+        }
+
+        // ------------------------------------------------------------ match options
+
+        Text _modeLabels0, _modeLabels1, _modeLabels2, _allWeaponsLabel, _botsLabel;
+        Image _mode0, _mode1, _mode2, _allWeaponsImg;
+
+        /// One row: DM / TDM / CTF mode buttons, "ALL WEAPONS" toggle, bot count - / +.
+        void BuildMatchOptions(RectTransform safe)
+        {
+            float y0 = -96f, y1 = -140f;
+            _mode0 = OptionButton(safe, "ModeDM", 30f, 130f, y0, y1, out _modeLabels0, () => { MatchSettings.Mode = GameMode.Deathmatch; RefreshOptions(); });
+            _mode1 = OptionButton(safe, "ModeTDM", 136f, 236f, y0, y1, out _modeLabels1, () => { MatchSettings.Mode = GameMode.TeamDeathmatch; RefreshOptions(); });
+            _mode2 = OptionButton(safe, "ModeCTF", 242f, 342f, y0, y1, out _modeLabels2, () => { MatchSettings.Mode = GameMode.CaptureTheFlag; RefreshOptions(); });
+            _allWeaponsImg = OptionButton(safe, "AllWeapons", 372f, 552f, y0, y1, out _allWeaponsLabel, () => { MatchSettings.AllWeapons = !MatchSettings.AllWeapons; RefreshOptions(); });
+            OptionButton(safe, "BotsMinus", 582f, 626f, y0, y1, out _, () => { MatchSettings.BotCount = MatchSettings.BotCount - 1; RefreshOptions(); });
+            var botsLabelGO = MakeText("BotsLabel", safe, "", 16, TextAnchor.MiddleCenter, TextColor, FontStyle.Bold);
+            SetRect(botsLabelGO.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(630f, y1), new Vector2(720f, y0));
+            _botsLabel = botsLabelGO;
+            OptionButton(safe, "BotsPlus", 724f, 768f, y0, y1, out _, () => { MatchSettings.BotCount = MatchSettings.BotCount + 1; RefreshOptions(); });
+            var hint = MakeText("OptionsHint", safe, "CTF needs a map with flag stands (ctf in the map's modes).", 12, TextAnchor.MiddleLeft, SubText, FontStyle.Normal);
+            SetRect(hint.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(790f, y1), new Vector2(-30f, y0));
+            RefreshOptions();
+        }
+
+        Image OptionButton(RectTransform parent, string name, float x0, float x1, float y0, float y1, out Text label, UnityEngine.Events.UnityAction onClick)
+        {
+            var go = MakeButton(name, parent, "", onClick);
+            SetRect(go.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(x0, y1), new Vector2(x1, y0));
+            label = go.GetComponentInChildren<Text>();
+            label.fontSize = 15;
+            return go.GetComponent<Image>();
+        }
+
+        void RefreshOptions()
+        {
+            var mode = MatchSettings.Mode;
+            _modeLabels0.text = "DM"; _modeLabels1.text = "TDM"; _modeLabels2.text = "CTF";
+            _mode0.color = mode == GameMode.Deathmatch ? Accent : CardColor;
+            _mode1.color = mode == GameMode.TeamDeathmatch ? Accent : CardColor;
+            _mode2.color = mode == GameMode.CaptureTheFlag ? Accent : CardColor;
+            _allWeaponsLabel.text = "ALL WEAPONS: " + (MatchSettings.AllWeapons ? "ON" : "OFF");
+            _allWeaponsImg.color = MatchSettings.AllWeapons ? Accent : CardColor;
+            _botsLabel.text = "BOTS " + MatchSettings.BotCount;
         }
 
         void BuildCard(Transform parent, MapCatalog.Entry entry)

@@ -41,9 +41,18 @@ namespace MyXonotic.EditorTools
             {
                 var actor = new GameObject("CharacterTest");
                 GameObject body;
-                Check(CharacterModels.TryAttach(actor.transform, name, out body), name + " runtime resource attachment");
-                var mesh = body.GetComponent<MeshFilter>().sharedMesh;
-                var materials = body.GetComponent<MeshRenderer>().sharedMaterials;
+                CharacterAnimator animator;
+                Check(CharacterModels.TryAttach(actor.transform, name, out body, out animator), name + " runtime resource attachment");
+                Check(animator != null && animator.Rig != null && animator.Rig.JointCount > 0 && animator.Rig.Clips.Length > 0 &&
+                      animator.Rig.FindClip("idle") >= 0 && animator.Rig.FindClip("run") >= 0 && animator.Rig.FindClip("dieone") >= 0,
+                    name + " skeletal rig with idle/run/dieone clips");
+                var mesh = animator.Skin.sharedMesh;
+                var materials = animator.Skin.sharedMaterials;
+                Check(mesh.bindposes.Length == animator.Rig.JointCount && mesh.boneWeights.Length == mesh.vertexCount,
+                    name + " skinned mesh bindposes/bone weights consistent");
+                animator.Play("run", true);
+                animator.Step(0.1f);
+                Check(animator.CurrentClip == "run", name + " animator advances the run clip");
                 Check(mesh.vertexCount > 0 && mesh.bounds.size.y > 0.5f && mesh.bounds.size.y < 5f &&
                       mesh.vertices.All(v => Finite(v.x) && Finite(v.y) && Finite(v.z)),
                     name + " finite nonempty character geometry");
@@ -56,6 +65,7 @@ namespace MyXonotic.EditorTools
             Check(scenes.Length == 29, "all 29 official map scenes available");
             int totalPickups = 0, totalModels = 0, totalSubmodels = 0, totalDecorations = 0;
             int originalPickups = 0, placeholders = 0, untexturedModelMaterials = 0;
+            int strengthPickups = 0, flagStands = 0, moverMarkers = 0;
             foreach (var path in scenes.OrderBy(s => s, StringComparer.Ordinal))
             {
                 var scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
@@ -95,6 +105,9 @@ namespace MyXonotic.EditorTools
                 Check(originsMatch, Path.GetFileName(path) + " inline model pivots match BSP entity origins");
                 totalPickups += pickups.Length;
                 totalDecorations += decorations.Length;
+                foreach (var p in pickups) if (p.Type == PickupType.Strength) strengthPickups++;
+                flagStands += arena.GetComponentsInChildren<CtfFlagBase>(true).Length;
+                foreach (var sub in arena.GetComponentsInChildren<ImportedSubmodel>(true)) { Mover.Kind k; if (Mover.KindFor(sub.classname, out k)) moverMarkers++; }
                 totalModels += arena.mapModelCount;
                 totalSubmodels += arena.GetComponentsInChildren<ImportedSubmodel>(true).Length;
                 foreach (var r in arena.GetComponentsInChildren<MeshRenderer>(true))
@@ -105,9 +118,14 @@ namespace MyXonotic.EditorTools
             // dev.6 shipped 1562 pickups + 577 visual-only items = 2139 item/weapon
             // entities with original art; dev.8 promotes ammo and the nine core
             // weapons to real pickups, so the split moves but the total must not.
+            // dev.9 promotes item_strength (20) and weapon_minelayer (1) to live pickups too.
             Check(totalPickups + totalDecorations == 2139 && originalPickups == totalPickups && placeholders == 0,
                 "2139 persisted original item/weapon meshes (" + totalPickups + " pickups + " + totalDecorations + " visual-only); zero placeholder spheres");
             Check(totalPickups > 1562, "ammo and weapon entities are now live pickups (" + totalPickups + " > 1562)");
+            Check(strengthPickups == 20, "20 item_strength entities are live Strength pickups (got " + strengthPickups + ")");
+            Check(flagStands == 18, "18 CTF flag stands (9 maps x 2) imported (got " + flagStands + ")");
+            Check(moverMarkers >= 50, "func_door/rotating/bobbing markers carry mover data (got " + moverMarkers + ")");
+            Passed.Add("INFO strength=" + strengthPickups + " flagStands=" + flagStands + " moverMarkers=" + moverMarkers);
             Check(totalModels == 304 && totalSubmodels == 117,
                 "304 props / 117 static submodels persisted");
             Passed.Add("INFO pickups=" + totalPickups + " decorations=" + totalDecorations);

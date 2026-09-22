@@ -20,9 +20,21 @@ namespace MyXonotic
 
         public static bool Exists(string name) => Resources.Load<Mesh>("Characters/" + name + "_Mesh") != null;
 
-        public static bool TryAttach(Transform parent, string name, out GameObject body)
+        /// True when the skeletal variant (rig + skinned mesh) was imported for <paramref name="name"/>.
+        public static bool HasRig(string name) =>
+            Resources.Load<CharacterRig>("Characters/" + name + "_Rig") != null &&
+            Resources.Load<Mesh>("Characters/" + name + "_Skinned") != null;
+
+        public static bool TryAttach(Transform parent, string name, out GameObject body) => TryAttach(parent, name, out body, out _);
+
+        /// <summary>
+        /// Attaches the character: the animated skinned rig when available
+        /// (<paramref name="animator"/> set), else the static idle mesh.
+        /// </summary>
+        public static bool TryAttach(Transform parent, string name, out GameObject body, out CharacterAnimator animator)
         {
             body = null;
+            animator = null;
             var mesh = Resources.Load<Mesh>("Characters/" + name + "_Mesh");
             if (mesh == null) return false;
             var mats = new System.Collections.Generic.List<Material>();
@@ -36,6 +48,14 @@ namespace MyXonotic
             body.transform.localPosition = new Vector3(0f, OriginAboveFeet, 0f);
             // Mesh faces Quake +X; the actor faces Unity +Z.
             body.transform.localRotation = Quaternion.Euler(0f, -90f, 0f);
+
+            var rig = Resources.Load<CharacterRig>("Characters/" + name + "_Rig");
+            var skinned = Resources.Load<Mesh>("Characters/" + name + "_Skinned");
+            if (rig != null && skinned != null && rig.JointCount > 0 && skinned.bindposes != null && skinned.bindposes.Length == rig.JointCount)
+            {
+                animator = CharacterAnimator.Create(body.transform, rig, skinned, mats.ToArray());
+                return true;
+            }
             body.AddComponent<MeshFilter>().sharedMesh = mesh;
             body.AddComponent<MeshRenderer>().sharedMaterials = mats.ToArray();
             return true;

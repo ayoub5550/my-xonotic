@@ -188,6 +188,12 @@ namespace MyXonotic
             Pickup.AnyCollected += OnPickupCollected;
             GameState.AnyDeath += OnAnyDeath;
             Actor.AnyDamage += OnAnyDamage;
+            Actor.PowerupStarted += OnPowerupStarted;
+            Actor.PowerupEnded += OnPowerupEnded;
+            CtfFlag.Taken += OnFlagTaken;
+            CtfFlag.Dropped += OnFlagDropped;
+            CtfFlag.Returned += OnFlagReturned;
+            CtfFlag.Captured += OnFlagCaptured;
         }
 
         void OnDisable()
@@ -195,6 +201,12 @@ namespace MyXonotic
             Pickup.AnyCollected -= OnPickupCollected;
             GameState.AnyDeath -= OnAnyDeath;
             Actor.AnyDamage -= OnAnyDamage;
+            Actor.PowerupStarted -= OnPowerupStarted;
+            Actor.PowerupEnded -= OnPowerupEnded;
+            CtfFlag.Taken -= OnFlagTaken;
+            CtfFlag.Dropped -= OnFlagDropped;
+            CtfFlag.Returned -= OnFlagReturned;
+            CtfFlag.Captured -= OnFlagCaptured;
             if (_subscribedPlayer != null && Weapons != null) Weapons.WeaponAcquired -= OnWeaponAcquired;
         }
 
@@ -207,6 +219,48 @@ namespace MyXonotic
                 : pickup.Type == PickupType.Health && pickup.Amount >= 25 ? WeaponAudio.Misc("mediumhealth")
                 : WeaponAudio.Misc("itempickup");
             WeaponAudio.PlayAt(clip, Vector3.zero, 0.9f, spatial: false);
+        }
+
+        void OnPowerupStarted(Actor actor, bool strength)
+        {
+            if (actor != Player) return;
+            WeaponAudio.PlayAt(WeaponAudio.Misc(strength ? "powerup" : "powerup_shield"), Vector3.zero, 0.9f, spatial: false);
+        }
+
+        void OnPowerupEnded(Actor actor, bool strength)
+        {
+            if (actor != Player) return;
+            WeaponAudio.PlayAt(WeaponAudio.Misc("poweroff"), Vector3.zero, 0.8f, spatial: false);
+        }
+
+        static string TeamName(Team t) => t == Team.Red ? "RED" : t == Team.Blue ? "BLUE" : "";
+        static string TeamHex(Team t) => t == Team.Red ? "#ff5a50" : "#5a8cff";
+
+        void OnFlagTaken(CtfFlag flag, Actor actor)
+        {
+            string who = actor == Player ? "You" : actor != null ? actor.DisplayName : "?";
+            Notify("<color=" + TeamHex(flag.Team) + ">" + who + " took the " + TeamName(flag.Team) + " flag</color>");
+            WeaponAudio.PlayAt(WeaponAudio.Ctf(flag.Team == Team.Red ? "red_taken" : "blue_taken"), Vector3.zero, 0.9f, spatial: false);
+        }
+
+        void OnFlagDropped(CtfFlag flag, Actor actor)
+        {
+            Notify("<color=" + TeamHex(flag.Team) + ">" + TeamName(flag.Team) + " flag dropped</color>");
+            WeaponAudio.PlayAt(WeaponAudio.Ctf(flag.Team == Team.Red ? "red_dropped" : "blue_dropped"), Vector3.zero, 0.9f, spatial: false);
+        }
+
+        void OnFlagReturned(CtfFlag flag, Actor actor)
+        {
+            Notify("<color=" + TeamHex(flag.Team) + ">" + TeamName(flag.Team) + " flag returned</color>");
+            WeaponAudio.PlayAt(WeaponAudio.Ctf(flag.Team == Team.Red ? "red_returned" : "blue_returned"), Vector3.zero, 0.9f, spatial: false);
+        }
+
+        void OnFlagCaptured(CtfFlag flag, Actor actor)
+        {
+            Team scorer = actor != null ? actor.Team : Team.None;
+            string who = actor == Player ? "You" : actor != null ? actor.DisplayName : "?";
+            Notify("<color=" + TeamHex(scorer) + ">" + who + " captured the flag!</color>");
+            WeaponAudio.PlayAt(WeaponAudio.Ctf(scorer == Team.Red ? "red_capture" : "blue_capture"), Vector3.zero, 1f, spatial: false);
         }
 
         void OnWeaponAcquired(WeaponType weapon)
@@ -249,6 +303,7 @@ namespace MyXonotic
             }
 
             float dt = Time.unscaledDeltaTime;
+            if (Weapons != null) TouchLayout.VisibleWeaponSlots = Weapons.VisibleSlotCount;
             var def = Weapons != null ? Weapons.CurrentDef : WeaponController.GetDef(WeaponType.Blaster);
             int ammo = Weapons != null ? Weapons.GetAmmo(Weapons.Current) : 0;
             string hp = "<color=#" + ColorUtility.ToHtmlStringRGB(Player.Health <= 25 ? Color.red : HealthColor) + ">" + Player.Health + "</color>";
@@ -256,6 +311,8 @@ namespace MyXonotic
             _statusText.text =
                 $"HEALTH {hp}   ARMOR {ar}\n" +
                 $"FRAGS {Player.Frags}   DEATHS {Player.Deaths}";
+            if (Player.HasStrength) _statusText.text += "   <color=#ff4aa0>STRENGTH " + Mathf.CeilToInt(Player.StrengthRemaining) + "</color>";
+            if (Player.HasShield) _statusText.text += "   <color=#4ae0ff>SHIELD " + Mathf.CeilToInt(Player.ShieldRemaining) + "</color>";
             string ammoStr = ammo < 0 ? "∞" : ammo.ToString();
             string ammoColor = ammo >= 0 && ammo < Mathf.Max(1, def.Primary.AmmoCost) * 3 ? "#ff5a5a" : "#ffd278";
             _ammoText.text = "<size=22>" + def.Name.ToUpperInvariant() + "</size>\n<color=" + ammoColor + ">" + ammoStr + "</color>";
@@ -279,11 +336,30 @@ namespace MyXonotic
             if (arena != null && arena.Match != null)
             {
                 int seconds = Mathf.FloorToInt(arena.Match.ElapsedSeconds);
-                _statusText.text += $"\nDM  {seconds / 60:00}:{seconds % 60:00}  LIMIT {arena.FragLimit}";
+                _statusText.text += $"\n{MatchSettings.ModeShort(arena.Mode)}  {seconds / 60:00}:{seconds % 60:00}  LIMIT {arena.ScoreLimit}";
+                if (arena.IsTeamMode)
+                {
+                    _statusText.text += $"\n<color=#ff5a50>RED {arena.TeamScore(Team.Red)}</color>   <color=#5a8cff>BLUE {arena.TeamScore(Team.Blue)}</color>";
+                    if (arena.Mode == GameMode.CaptureTheFlag)
+                    {
+                        var mine = CtfFlag.CarriedBy(Player);
+                        if (mine != null) _statusText.text += "   <color=#ffd280>YOU HAVE THE FLAG — RETURN TO BASE</color>";
+                        else
+                        {
+                            var enemyFlag = CtfFlag.ForTeam(MatchSettings.Opponent(Player.Team));
+                            var ownFlag = CtfFlag.ForTeam(Player.Team);
+                            if (ownFlag != null && ownFlag.State == CtfFlag.FlagState.Carried) _statusText.text += "   <color=#ff8c5a>ENEMY HAS YOUR FLAG</color>";
+                            else if (ownFlag != null && ownFlag.State == CtfFlag.FlagState.Dropped) _statusText.text += "   <color=#ff8c5a>YOUR FLAG IS DROPPED</color>";
+                            if (enemyFlag == null) _statusText.text += "   (no flags on this map)";
+                        }
+                    }
+                }
                 if (arena.MatchFinished)
                 {
                     var result = arena.Match.Result;
-                    string winner = result.IsTie ? "TIE" : result.Winner.DisplayName + " WINS";
+                    string winner = result.IsTie ? "TIE"
+                        : arena.IsTeamMode ? TeamName(result.Winner.Team) + " TEAM WINS"
+                        : result.Winner.DisplayName + " WINS";
                     _pauseText.text = "MATCH OVER — " + winner + "\n" + result.Reason +
                         "\nTouch RESTART / Desktop R";
                 }
@@ -354,10 +430,12 @@ namespace MyXonotic
             float slotSize = TouchLayout.WeaponSlotSize;
             _slotStyle.fontSize = Mathf.Max(9, Mathf.RoundToInt(slotSize * 0.22f));
             var prev = GUI.color;
-            for (int i = 0; i < WeaponController.WeaponCount; i++)
+            TouchLayout.VisibleWeaponSlots = Weapons.VisibleSlotCount;
+            for (int i = 0; i < TouchLayout.VisibleWeaponSlots; i++)
             {
                 var rect = GuiRect(TouchLayout.WeaponSlot(i));
-                var w = (WeaponType)i;
+                WeaponType w;
+                if (!Weapons.SlotToWeapon(i, out w)) continue;
                 bool owned = Weapons.Has(w);
                 bool current = Weapons.Current == w;
                 var def = WeaponController.GetDef(w);
@@ -378,7 +456,8 @@ namespace MyXonotic
                 string ammoStr = ammo < 0 ? "∞" : ammo.ToString();
                 string tint = owned ? (Weapons.CanFire(w) ? "#ffffff" : "#ff7a7a") : "#6a6a72";
                 _slotStyle.normal.textColor = Color.white;
-                GUI.Label(rect, "<color=#8a8a95><size=" + Mathf.Max(8, _slotStyle.fontSize - 3) + ">" + (i + 1) + "</size></color>\n<color=" + tint + "><b>" + def.ShortName + "</b></color>\n<color=" + tint + ">" + (owned ? ammoStr : "-") + "</color>", _slotStyle);
+                string key = i < WeaponController.CoreWeaponCount ? (i + 1).ToString() : "0";
+                GUI.Label(rect, "<color=#8a8a95><size=" + Mathf.Max(8, _slotStyle.fontSize - 3) + ">" + key + "</size></color>\n<color=" + tint + "><b>" + def.ShortName + "</b></color>\n<color=" + tint + ">" + (owned ? ammoStr : "-") + "</color>", _slotStyle);
             }
             GUI.color = prev;
         }

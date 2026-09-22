@@ -2,7 +2,8 @@
 
 ## dev.12 device-fixes checkpoint — 2026-09-22 (branch `feat/unity-dev12-device-fixes`)
 
-Read `docs/UNITY-DEV12.md` first. First real-device videos (dev.11) drove this
+Read `docs/UNITY-DEV12.md` first, then `docs/UNITY-DEV13-PLAN.md` for the
+agreed dev.13 scope. First real-device videos (dev.11) drove this
 release. **Weapon placement is Xonotic-faithful — do not "fix" it**: DPM hands
 (Mortar/Devastator) look close/large on device exactly as in the Editor bake
 and in original Xonotic (`h_` model at view origin, `cl_gunoffset` 0).

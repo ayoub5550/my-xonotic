@@ -1,0 +1,16 @@
+{
+    "unity": "2022.3.62f3",
+    "version": "0.1.0-dev.18",
+    "utc": "2026-09-23T20:19:57.4136100Z",
+    "target": "Android",
+    "result": "Succeeded",
+    "revision": "unrecorded",
+    "content": "All official Xonotic 0.8.6 maps + menu + music with approximate Unity gameplay; weapons/characters/modes/network incomplete; Android device unverified",
+    "output": "my-xonotic-full.apk",
+    "sha256": "bc05de144bacf8ab265777ffa39ecdd452c7be52018c1bc447809c9fef63be25",
+    "invocation": "a0636de05052469c9c50f9616c6809bd",
+    "artifactBytes": 413413477,
+    "errors": 0,
+    "warnings": 30,
+    "bytes": 1828299029
+}

@@ -19,43 +19,58 @@ namespace MyXonotic
         const string ModeKey = "mx_mode";
         const string AllWeaponsKey = "mx_allweapons";
         const string BotsKey = "mx_bots";
+        const string BotSkillKey = "mx_botskill";
 
         public const int MinBots = 1;
         public const int MaxBots = 7;
         public const int DefaultBots = 3;
+        /// dev.18: Xonotic `skill` 1..10. The server default 8 (dev.16) was "insanely hard" on touch
+        /// (owner, Poco F3, dev.17); default 3 → bots 3 / 2 / 1. Slider on SETTINGS → GAME.
+        public const int MinBotSkill = 1, MaxBotSkill = 10, DefaultBotSkill = 3;
 
         static bool _loaded;
         static GameMode _mode = GameMode.Deathmatch;
         static bool _allWeapons;
         static int _bots = DefaultBots;
+        static int _botSkill = DefaultBotSkill;
 
         public static GameMode Mode
         {
             get { Load(); return _mode; }
-            set { Load(); _mode = value; PlayerPrefs.SetInt(ModeKey, (int)value); }
+            set { Load(); _mode = value; PlayerPrefs.SetInt(ModeKey, (int)value); Save(); }
         }
 
         /// "Weapon arena" mutator: every actor spawns with all weapons and full ammo.
         public static bool AllWeapons
         {
             get { Load(); return _allWeapons; }
-            set { Load(); _allWeapons = value; PlayerPrefs.SetInt(AllWeaponsKey, value ? 1 : 0); }
+            set { Load(); _allWeapons = value; PlayerPrefs.SetInt(AllWeaponsKey, value ? 1 : 0); Save(); }
         }
 
         public static int BotCount
         {
             get { Load(); return _bots; }
-            set { Load(); _bots = Mathf.Clamp(value, MinBots, MaxBots); PlayerPrefs.SetInt(BotsKey, _bots); }
+            set { Load(); _bots = Mathf.Clamp(value, MinBots, MaxBots); PlayerPrefs.SetInt(BotsKey, _bots); Save(); }
         }
+
+        /// Base bot skill (1..10) chosen on the settings page; saved immediately.
+        public static int BotSkill
+        {
+            get { Load(); return _botSkill; }
+            set { Load(); _botSkill = Mathf.Clamp(value, MinBotSkill, MaxBotSkill); PlayerPrefs.SetInt(BotSkillKey, _botSkill); Save(); }
+        }
+
+        /// Xonotic-style difficulty label for the slider.
+        public static string BotSkillName(int skill) => skill <= 3 ? "EASY" : skill <= 6 ? "MEDIUM" : skill <= 8 ? "HARD" : "NIGHTMARE";
+
+        static void Save() { if (Application.isPlaying) PlayerPrefs.Save(); }
 
         public static bool IsTeamMode => Mode != GameMode.Deathmatch;
 
-        /// dev.16: bot skill 1..10 per bot index. Xonotic servers run one `skill` (default 8);
-        /// we alternate 8 / 6 / 4 so a match has a strong, a medium and a weak bot.
-        public static int BotSkillFor(int index)
-        {
-            switch (index % 3) { case 0: return 8; case 1: return 6; default: return 4; }
-        }
+        /// Bot skill 1..10 per bot index: BotSkill, BotSkill-1, BotSkill-2 (cycling, never below 1)
+        /// so a match has a strong, a medium and a weak bot around the chosen difficulty.
+        /// dev.16 used a fixed 8 / 6 / 4; dev.18 default 3 → 3 / 2 / 1.
+        public static int BotSkillFor(int index) => Mathf.Clamp(BotSkill - (index % 3), MinBotSkill, MaxBotSkill);
 
         /// Capture limit for CTF (Xonotic default 10).
         public const int CaptureLimit = 10;
@@ -68,6 +83,14 @@ namespace MyXonotic
             _mode = (GameMode)Mathf.Clamp(PlayerPrefs.GetInt(ModeKey, 0), 0, 2);
             _allWeapons = PlayerPrefs.GetInt(AllWeaponsKey, 0) != 0;
             _bots = Mathf.Clamp(PlayerPrefs.GetInt(BotsKey, DefaultBots), MinBots, MaxBots);
+            _botSkill = Mathf.Clamp(PlayerPrefs.GetInt(BotSkillKey, DefaultBotSkill), MinBotSkill, MaxBotSkill);
+        }
+
+        /// Test hook: set the base bot skill without touching PlayerPrefs.
+        public static void OverrideBotSkillForTest(int skill)
+        {
+            _loaded = true;
+            _botSkill = Mathf.Clamp(skill, MinBotSkill, MaxBotSkill);
         }
 
         /// Test hook: forget any loaded/persisted values and use the given ones (no PlayerPrefs write).

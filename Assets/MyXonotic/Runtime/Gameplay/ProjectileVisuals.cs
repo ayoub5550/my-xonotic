@@ -12,8 +12,20 @@ namespace MyXonotic
     /// </summary>
     public static class ProjectileVisuals
     {
-        /// Resource name of the imported model for a weapon (null = keep the sphere).
-        public static string ModelResource(WeaponType weapon)
+        /// Every projectile prefab the weapons gate generates (ProjectileModelImporter.Sources
+        /// mirrors this list; Dev18Tests cross-checks). GameLoop reports how many load on device.
+        public static readonly string[] AllModelResources =
+        {
+            "Weapons/DevastatorProjectile", "Weapons/MortarProjectile", "Weapons/MinelayerProjectile", "Weapons/HagarProjectile",
+            "Weapons/BlasterProjectile", "Weapons/ElectroProjectile", "Weapons/ElectroBallProjectile", "Weapons/CrylinkProjectile",
+        };
+
+        /// Resource name of the imported model for a weapon / fire mode (null = keep the sphere).
+        /// Table from Xonotic qcsrc/common/models/all.inc + client/weapons/projectile.qc:
+        /// rocket.md3, grenademodel.md3, mine.md3, hagarmissile.mdl, laser.mdl (Blaster),
+        /// elaser.mdl (Electro primary "beam"), ebomb.mdl (Electro ball), plasmatrail.mdl (Crylink).
+        /// Fireball / Arc bolt have no model in the original (particles), Vortex/Rifle/Machinegun/Shotgun are hitscan.
+        public static string ModelResource(WeaponType weapon, bool secondary = false)
         {
             switch (weapon)
             {
@@ -21,10 +33,26 @@ namespace MyXonotic
                 case WeaponType.Mortar:
                 case WeaponType.Minelayer:
                 case WeaponType.Hagar:
+                case WeaponType.Blaster:
+                case WeaponType.Crylink:
                     return "Weapons/" + weapon + "Projectile";
+                case WeaponType.Electro:
+                    return secondary ? "Weapons/ElectroBallProjectile" : "Weapons/ElectroProjectile";
                 default:
                     return null;
             }
+        }
+
+        /// projectile.qc `this.scale`: rocket 2, hagar 0.75, everything else 1.
+        public static float ModelScale(WeaponType weapon) =>
+            weapon == WeaponType.Devastator ? 2f : weapon == WeaponType.Hagar ? 0.75f : 1f;
+
+        /// How many of the expected projectile prefabs are actually present (device evidence via GameLoop).
+        public static int LoadedModelCount()
+        {
+            int n = 0;
+            foreach (var r in AllModelResources) if (Resources.Load<GameObject>(r) != null) n++;
+            return n;
         }
 
         /// Weapons whose projectile leaves a smoke trail in the original (rocket / hagar / mortar).
@@ -33,10 +61,12 @@ namespace MyXonotic
 
         /// Instantiates the imported model under <paramref name="parent"/>. Model +X (Xonotic forward)
         /// is turned onto parent +Z so Projectile can simply LookRotation(velocity).
-        public static bool TryAttachModel(Transform parent, WeaponType weapon, out GameObject model)
+        public static bool TryAttachModel(Transform parent, WeaponType weapon, out GameObject model) => TryAttachModel(parent, weapon, false, out model);
+
+        public static bool TryAttachModel(Transform parent, WeaponType weapon, bool secondary, out GameObject model)
         {
             model = null;
-            string res = ModelResource(weapon);
+            string res = ModelResource(weapon, secondary);
             if (res == null) return false;
             var prefab = Resources.Load<GameObject>(res);
             if (prefab == null) return false;
@@ -44,7 +74,7 @@ namespace MyXonotic
             model.name = "Model";
             model.transform.localPosition = Vector3.zero;
             model.transform.localRotation = Quaternion.Euler(0f, -90f, 0f);
-            model.transform.localScale = Vector3.one;
+            model.transform.localScale = Vector3.one * ModelScale(weapon);
             foreach (var r in model.GetComponentsInChildren<Renderer>())
                 r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             return true;

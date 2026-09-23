@@ -77,6 +77,10 @@ namespace MyXonotic.EditorTools
             Time.fixedDeltaTime = 1f / 60f;
             PinShader("MyXonotic/VertexColor");
             PinShader("MyXonotic/Lightmapped");
+            PinShader("MyXonotic/LightmappedBlend");
+            PinShader("MyXonotic/LightmappedAdd");
+            PinShader("MyXonotic/Bloom");
+            PinShader("MyXonotic/Sky6Sided");
             UnpinShader("Standard"); // fallback only; pinning it forces ~24k variants through the shader compiler
             AssetDatabase.SaveAssets();
             Debug.Log("[my-xonotic] Local settings configured: Android ARM64 IL2CPP, no cloud build.");

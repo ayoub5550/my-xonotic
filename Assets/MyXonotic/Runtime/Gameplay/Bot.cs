@@ -78,15 +78,20 @@ namespace MyXonotic
         float _strategyTimer;
         float _retargetTimer;
         float _weaponThinkTimer;
-        float _thinkTimer;
         float _strafeDir = 1f;
         float _jumpTimer;
         float _stuckTime;
+        /// dev.18: seconds the combat strafe has been fully vetoed by SafeStep (see CombatFallback).
+        float _combatHold;
+        public const float CombatHoldGiveUp = 3f;
         Vector3 _progressAnchor;
         float _progressTimer;
         Pickup _wantedPickup;
         bool _goalIsEnemy;
         Vector3 _aimDir;
+        /// dev.18: aim.qc-style aiming state (bad-aim offset, mouse lag, turn rate, fire window).
+        BotAim _aim;
+        public BotAim Aim => _aim;
 
         void Awake()
         {
@@ -105,6 +110,7 @@ namespace MyXonotic
         {
             Skill = Mathf.Clamp(skill, 1, 10);
             AimErrorDegrees = AimErrorFor(Skill);
+            if (_aim == null) _aim = new BotAim(Skill); else _aim.SetSkill(Skill);
         }
 
         public static float AimErrorFor(int skill) => AimSkillOffset * (10 - Mathf.Clamp(skill, 1, 10)) / 5f;
@@ -114,6 +120,7 @@ namespace MyXonotic
 
         void OnRespawned(Actor actor)
         {
+            _aim?.Reset(transform.forward);
             if (ArenaBootstrap.TestMode || Weapons == null) return;
             Weapons.GiveWeapon((WeaponType)Random.Range((int)WeaponType.MachineGun, WeaponController.CoreWeaponCount));
         }
@@ -258,6 +265,50 @@ namespace MyXonotic
             return hit.distance < EdgeGuard;
         }
 
+        /// dev.18: is the position one step along <paramref name="wish"/> (at least 1 m) still on the
+        /// NavMesh (within 0.75 m, no big drop) and outside every lethal trigger_hurt? Returns the wish
+        /// direction when safe, Vector3.zero otherwise. Without a NavMesh only the trigger check applies.
+        public static Vector3 SafeStep(Vector3 position, Vector3 wish)
+        {
+            if (wish.sqrMagnitude < 1e-4f) return wish;
+            Vector3 step = wish.magnitude < 1f ? wish.normalized : wish;
+            Vector3 ahead = position + step;
+            if (InsideLethalTrigger(ahead)) return Vector3.zero;
+            if (MapNavMesh.Available)
+            {
+                NavMeshHit here, hit;
+                // Off-mesh already (ledge, stairs bake gap): the mesh cannot judge the step — only the trigger check applies.
+                if (!NavMesh.SamplePosition(position, out here, 0.75f, NavMesh.AllAreas)) return wish;
+                if (!NavMesh.SamplePosition(ahead, out hit, 0.75f, NavMesh.AllAreas)) return Vector3.zero;
+                if (hit.position.y < position.y - 1.5f) return Vector3.zero;
+            }
+            return wish;
+        }
+
+        /// dev.18 pure helper (tested): what a bot does while its guarded strafe is vetoed.
+        /// First follow the NavMesh path towards the goal (always on the mesh), after 1 s try the
+        /// guarded retreat, otherwise hold position (the caller drops the target at CombatHoldGiveUp).
+        public static Vector3 CombatFallback(float holdSeconds, Vector3 navDir, Vector3 safeRetreat)
+        {
+            if (navDir.sqrMagnitude > 0.01f) return navDir;
+            if (holdSeconds > 1f && safeRetreat.sqrMagnitude > 0.01f) return safeRetreat;
+            return Vector3.zero;
+        }
+
+        static readonly Collider[] _overlap = new Collider[8];
+
+        /// True when <paramref name="point"/> lies inside a trigger_hurt volume that kills in one tick.
+        public static bool InsideLethalTrigger(Vector3 point)
+        {
+            int n = Physics.OverlapSphereNonAlloc(point, 0.2f, _overlap, ~0, QueryTriggerInteraction.Collide);
+            for (int i = 0; i < n; i++)
+            {
+                var t = _overlap[i] != null ? _overlap[i].GetComponentInParent<MapTrigger>() : null;
+                if (t != null && t.TriggerKind == MapTrigger.Kind.Hurt && t.HurtDamagePerTick >= Actor.StartHealth) return true;
+            }
+            return false;
+        }
+
         /// dev.17 pure helper (tested): stuck when a goal is held and the bot moved less than
         /// ProgressMinDistance over ProgressWindow seconds — catches the "pressing into a wall
         /// with zero wish direction" case that the velocity-based check misses.
@@ -335,11 +386,36 @@ namespace MyXonotic
                     {
                         Vector3 side = Vector3.Cross(Vector3.up, flat) * _strafeDir;
                         float closeFactor = Mathf.Clamp((dist - preferred) / preferred, -1f, 1f);
-                        wishDir = BotNavigator.Flat(flat * closeFactor + side * StrafeBias);
+                        // dev.18: Test Lab dev.17 counted 9 bot suicides — combat strafing walked off ledges /
+                        // into trigger_hurt (NearNavMeshEdge guarded roaming only). Try the strafe, then the
+                        // mirrored strafe, else stand still and keep shooting.
+                        Vector3 want = BotNavigator.Flat(flat * closeFactor + side * StrafeBias);
+                        wishDir = SafeStep(transform.position, want);
+                        if (wishDir == Vector3.zero && want.sqrMagnitude > 0.01f)
+                        {
+                            _strafeDir = -_strafeDir;
+                            wishDir = SafeStep(transform.position, BotNavigator.Flat(flat * closeFactor - side * StrafeBias));
+                        }
+                        // dev.18 Test Lab run 1: both strafes vetoed in a corner froze the Game Loop pilot for
+                        // 85 s (0 frags). Never stand still for long: path towards the enemy, then back off,
+                        // then drop the fight and roam.
+                        _combatHold = wishDir == Vector3.zero ? _combatHold + Time.deltaTime : 0f;
+                        if (wishDir == Vector3.zero)
+                            wishDir = CombatFallback(_combatHold, navDir, SafeStep(transform.position, -flat));
+                        if (_combatHold > CombatHoldGiveUp)
+                        {
+                            _combatHold = 0f;
+                            wantJump = true;
+                            _retargetTimer = EnemyDetectionInterval;
+                            Target = null;
+                            _strategyTimer = 0f;
+                            _nav.Clear();
+                        }
                     }
                 }
                 else
                 {
+                    _combatHold = 0f;
                     wishDir = navDir;
                     wantJump = navJump;
                 }
@@ -402,7 +478,7 @@ namespace MyXonotic
             else _groundMover = null;
 
             _cc.Move(_velocity * Time.deltaTime + carry);
-            if (transform.position.y < ArenaBootstrap.VoidKillY) Actor.TakeDamage(10000, Vector3.zero, null);
+            if (transform.position.y < ArenaBootstrap.VoidKillY) Actor.TakeDamage(10000, Vector3.zero, null, Actor.CauseVoid);
 
             if (Animator != null) Animator.SetMotion(_velocity, transform.forward, grounded);
         }
@@ -528,41 +604,41 @@ namespace MyXonotic
         void EngageTarget(Vector3 toTarget, float dist)
         {
             if (Weapons == null || Target == null) return;
-            Vector3 flat = new Vector3(toTarget.x, 0f, toTarget.z);
-            if (flat.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(flat.normalized, Vector3.up);
-            if (dist > FireRange) return;
+            if (_aim == null) _aim = new BotAim(Skill);
+            Vector3 origin = transform.position + Vector3.up * 1.5f;
 
             ChooseWeapon(dist);
             var def = Weapons.CurrentDef;
             var fire = def.Primary;
 
+            // bot_shotlead: aim at where the target will be when the shot arrives.
+            Vector3 aimPoint = Target.position + Vector3.up * 1f;
+            if (fire.Mode != FireMode.Hitscan && fire.Speed > 0f)
+            {
+                var targetPlayer = Target.GetComponent<Player>();
+                var targetBot = Target.GetComponent<Bot>();
+                Vector3 vel = targetPlayer != null && targetPlayer.enabled ? targetPlayer.Velocity : targetBot != null ? targetBot.Velocity : Vector3.zero;
+                float flight = dist / fire.Speed;
+                aimPoint += vel * flight;
+                if (fire.GravityScale > 0f) aimPoint += Vector3.up * (0.5f * (800f / 32f) * fire.GravityScale * flight * flight);
+            }
+            Vector3 wanted = aimPoint - origin;
+
+            // dev.18: aim.qc model — the view turns towards the (deliberately imperfect) desired
+            // angle at a skill-limited rate; body yaw follows the view. Replaces the dev.16
+            // "random ±error every think tick" hand.
+            Vector3 dir = _aim.Update(wanted, true, Time.time, Time.deltaTime);
+            _aimDir = dir;
+            Vector3 flat = new Vector3(dir.x, 0f, dir.z);
+            if (flat.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(flat.normalized, Vector3.up);
+            Weapons.UpdateAim(origin, dir);
+
+            if (dist > FireRange) return;
             if (fire.SplashRadius > 0f && dist < fire.SplashRadius + 1.5f) return;
             if (fire.Mode == FireMode.Hook || fire.Mode == FireMode.Mine || fire.Mode == FireMode.Load) return;
             if (fire.Mode == FireMode.Beam && dist > fire.Speed) return;
-
-            Vector3 origin = transform.position + Vector3.up * 1.5f;
-
-            // Aim is re-evaluated at the skill think cadence (bot_ai_thinkinterval);
-            // between ticks the bot keeps firing along its last aim like a slow hand.
-            _thinkTimer -= Time.deltaTime;
-            if (_thinkTimer <= 0f || _aimDir == Vector3.zero)
-            {
-                _thinkTimer = ThinkIntervalFor(Skill);
-                Vector3 aimPoint = Target.position + Vector3.up * 1f;
-                if (fire.Mode != FireMode.Hitscan && fire.Speed > 0f)
-                {
-                    var targetPlayer = Target.GetComponent<Player>();
-                    var targetBot = Target.GetComponent<Bot>();
-                    Vector3 vel = targetPlayer != null && targetPlayer.enabled ? targetPlayer.Velocity : targetBot != null ? targetBot.Velocity : Vector3.zero;
-                    float flight = dist / fire.Speed;
-                    aimPoint += vel * flight;
-                    if (fire.GravityScale > 0f) aimPoint += Vector3.up * (0.5f * (800f / 32f) * fire.GravityScale * flight * flight);
-                }
-                Vector3 exact = (aimPoint - origin).normalized;
-                _aimDir = Quaternion.Euler(Random.Range(-AimErrorDegrees, AimErrorDegrees), Random.Range(-AimErrorDegrees, AimErrorDegrees), 0f) * exact;
-            }
-            Vector3 dir = _aimDir;
-            Weapons.UpdateAim(origin, dir);
+            // bot_aim fire tolerance: only pull the trigger inside the distance/skill cone, in windows.
+            if (!_aim.UpdateFire(wanted, dist, Time.time)) return;
             if (SplashWouldHitSelf(origin, dir, fire.SplashRadius, Target)) return;
             if (Weapons.TryFire(origin, dir, false) && Animator != null && fire.Refire >= 0.5f) Animator.PlayOneShot("shoot");
         }

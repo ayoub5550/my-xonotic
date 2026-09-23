@@ -93,12 +93,21 @@ namespace MyXonotic.EditorTools
                     case 2:
                         Menu(MenuScreen.Play); Shoot("menu-play"); waitFrames = 5; stage = 3; break;
                     case 3:
-                        Menu(MenuScreen.Settings); Shoot("menu-settings"); waitFrames = 5; stage = 4; break;
+                        Menu(MenuScreen.Settings); Shoot("menu-settings"); waitFrames = 5; stage = 30; break;
+                    case 30: // dev.18: one shot per settings tab
+                        ShowSettingsTab(SettingsTab.Audio); Shoot("menu-settings-audio"); waitFrames = 5; stage = 31; break;
+                    case 31:
+                        ShowSettingsTab(SettingsTab.Controls); Shoot("menu-settings-controls"); waitFrames = 5; stage = 32; break;
+                    case 32:
+                        ShowSettingsTab(SettingsTab.Game); Shoot("menu-settings-game"); waitFrames = 5; stage = 4; break;
                     case 4:
                         var catalog = MapCatalog.Load();
                         if (catalog == null || catalog.maps.Count == 0) throw new Exception("no MapCatalog");
                         mapScene = catalog.maps[0].sceneName;
-                        foreach (var e in catalog.maps) if (e.mapName == "boil") mapScene = e.sceneName;
+                        // dev.18: XONOTIC_PROBE_MAP=<mapName> picks the map (default boil).
+                        string wantMap = Environment.GetEnvironmentVariable("XONOTIC_PROBE_MAP");
+                        if (string.IsNullOrEmpty(wantMap)) wantMap = "boil";
+                        foreach (var e in catalog.maps) if (e.mapName == wantMap) mapScene = e.sceneName;
                         MatchSettings.OverrideForTest(GameMode.Deathmatch, true, 3);
                         SceneManager.LoadScene(mapScene, LoadSceneMode.Single);
                         waitFrames = 10; stage = 5; break;
@@ -124,6 +133,14 @@ namespace MyXonotic.EditorTools
             var menu = UnityEngine.Object.FindObjectOfType<MainMenu>();
             if (menu == null) throw new Exception("MainMenu not in scene");
             menu.ShowScreen(screen);
+            Canvas.ForceUpdateCanvases();
+        }
+
+        static void ShowSettingsTab(SettingsTab tab)
+        {
+            var menu = UnityEngine.Object.FindObjectOfType<MainMenu>();
+            if (menu == null || menu.Settings == null) throw new Exception("SettingsPage not built");
+            menu.Settings.Show(tab);
             Canvas.ForceUpdateCanvases();
         }
 

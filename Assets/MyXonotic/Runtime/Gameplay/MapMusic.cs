@@ -17,8 +17,14 @@ namespace MyXonotic.Gameplay
             _source.loop = true;
             _source.playOnAwake = false;
             _source.spatialBlend = 0f;
-            _source.volume = volume;
+            _source.volume = volume * GameSettings.MusicVolume / GameSettings.DefaultMusicVolume;
             _source.Play();
+        }
+
+        /// dev.18: re-read the music volume from GameSettings (called when the slider moves).
+        public void ApplyVolume()
+        {
+            if (_source != null) _source.volume = volume * GameSettings.MusicVolume / GameSettings.DefaultMusicVolume;
         }
     }
 }

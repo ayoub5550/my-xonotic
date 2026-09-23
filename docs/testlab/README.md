@@ -9,7 +9,8 @@
 | dev.16 | Galaxy S24 / Android 16 | Robo | `dev16/s24-robo.mp4` + `s24-robo-screenshots/` | Passed، 0 أخطاء Unity |
 | dev.16 | Galaxy A15 / Android 14 | Game Loop | `dev16/a15x-gameloop.mp4` + `a15x-results_scenario_1.json` | Passed لكن الطيار الآلي علق، `bot_frags=-10` |
 | dev.17 | Galaxy A15 / Android 14 | Game Loop | `dev17/a15x-gameloop.mp4` + `a15x-results_scenario_1.json` | Passed، الطيار يتحرك، البوتات تصيب اللاعب، `bot_suicides=9` |
+| dev.18 | Galaxy A15 / Android 14 | Game Loop (سيناريو 1+2) | `dev18/a15x-gameloop.mp4` + `a15x-results_scenario_1.json` + `a15x-results_scenario_2.json` | Passed؛ 3 تشغيلات (matrices `5087549620686682598`، `7105520146693537650`، `4868700399579265516`)؛ الأدلة من التشغيل 3 (APK النهائي `bc05de14…`): S1 `avg_fps=36.2`، `bot_suicides=8` (slime)، `player_suicides=0`؛ S2 `avg_fps=41.1`، 0 انتحار؛ 0 `E Unity`/FATAL في logcat |
 
 القاعدة: بعد كل تشغيل Test Lab، انسخ `video.mp4` و`results_scenario_N.json` إلى `docs/testlab/dev<N>/`، وولّد اللقطة المجمّعة:
 `ffmpeg -i video.mp4 -vf "fps=1/12,scale=480:-1,tile=4x3" -frames:v 1 <name>-frames.png`.
-لقطات Robo (~150 PNG لكل جهاز) لا تُرفع كاملة — عيّنة كل 10 لقطات فقط. الفيديوهات هنا نسخ مضغوطة (960px، x264 crf 28، بلا صوت) كي يبقى المستودع صغيرًا؛ الأصل بجودة الجهاز الكاملة مرفق كأصل (asset) في إصدار GitHub المقابل (`unity-v0.1.0-dev.16` و`dev.17`).
+لقطات Robo (~150 PNG لكل جهاز) لا تُرفع كاملة — عيّنة كل 10 لقطات فقط. الفيديوهات هنا نسخ مضغوطة (960px، x264 crf 28، بلا صوت) كي يبقى المستودع صغيرًا؛ الأصل بجودة الجهاز الكاملة مرفق كأصل (asset) في إصدار GitHub المقابل (`unity-v0.1.0-dev.16` و`dev.17` و`dev.18`).

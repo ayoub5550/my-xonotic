@@ -17,22 +17,38 @@ namespace MyXonotic.Menu
     ///  - PLAY: mode row (DM / TDM / CTF with the original gametype icons), ALL
     ///    WEAPONS toggle, BOTS - n +, and the map grid filtered to maps whose
     ///    .mapinfo lists the chosen gametype (SHOW ALL lifts the filter).
-    ///  - SETTINGS: touch controls (button size, look sensitivity, invert Y,
-    ///    left-handed) via TouchSettings, plus the DevCapture report buttons.
+    ///  - SETTINGS (dev.18, SettingsPage): tabs VIDEO / AUDIO / CONTROLS / GAME —
+    ///    effects/bloom/fps, volumes, touch controls + sensitivity preview, bot
+    ///    difficulty/count/mode, DevCapture report buttons. Saved on every change.
     /// Layout rules from dev.10/dev.12 still apply: positive rects everywhere,
     /// RectMask2D not Mask, anchor-pivoted edges. LocalTests.MainMenuGeometry
     /// builds every screen headlessly and checks the geometry.
     /// </summary>
     public sealed class MainMenu : MonoBehaviour
     {
-        static readonly Color Background = new Color32(14, 16, 22, 255);
-        static readonly Color CardColor = new Color32(30, 34, 46, 235);
-        static readonly Color CardPressed = new Color32(60, 70, 96, 255);
-        static readonly Color Accent = new Color32(255, 140, 40, 255);
-        static readonly Color AccentDark = new Color32(190, 95, 20, 255);
-        static readonly Color TextColor = new Color32(235, 235, 240, 255);
-        static readonly Color SubText = new Color32(170, 175, 190, 255);
-        static readonly Color PanelColor = new Color32(0, 36, 64, 150); // luma panel blue, translucent
+        public static readonly Color Background = new Color32(14, 16, 22, 255);
+        public static readonly Color CardColor = new Color32(30, 34, 46, 235);
+        public static readonly Color CardPressed = new Color32(60, 70, 96, 255);
+        public static readonly Color Accent = new Color32(255, 140, 40, 255);
+        public static readonly Color AccentDark = new Color32(190, 95, 20, 255);
+        public static readonly Color TextColor = new Color32(235, 235, 240, 255);
+        public static readonly Color SubText = new Color32(170, 175, 190, 255);
+        public static readonly Color PanelColor = new Color32(0, 36, 64, 150); // luma panel blue, translucent
+
+        /// dev.18: the code-built widget helpers, shared with SettingsPage.
+        public sealed class Widgets
+        {
+            readonly MainMenu _m;
+            public Widgets(MainMenu m) { _m = m; }
+            public Image Image(string name, Transform parent, Color color) => _m.MakeImage(name, parent, color);
+            public Text Text(string name, Transform parent, string value, int size, TextAnchor anchor, Color color, FontStyle style) => _m.MakeText(name, parent, value, size, anchor, color, style);
+            public GameObject Button(string name, Transform parent, string label, UnityEngine.Events.UnityAction onClick) => _m.MakeButton(name, parent, label, onClick);
+            public void Rect(RectTransform rt, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 offsetMin, Vector2 offsetMax) => SetRect(rt, anchorMin, anchorMax, pivot, offsetMin, offsetMax);
+        }
+
+        SettingsPage _settings;
+        /// dev.18 settings page (tabs VIDEO / AUDIO / CONTROLS / GAME); null until built.
+        public SettingsPage Settings => _settings;
 
         /// Min touch target height in reference (1280x720) pixels.
         const float ButtonH = 60f;
@@ -50,6 +66,7 @@ namespace MyXonotic.Menu
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (Application.isPlaying) GameSettings.Apply(); // dev.18
             _catalog = MapCatalog.Load();
             // dev.16: Firebase Test Lab Game Loop starts a match without a human.
             if (GameLoop.LaunchFromMenu(_catalog)) return;
@@ -366,98 +383,17 @@ namespace MyXonotic.Menu
 
         // ------------------------------------------------------------ SETTINGS
 
-        Text _scaleValue, _sensValue, _invertLabel, _leftLabel, _devSummary;
-        Image _invertImg, _leftImg;
-
+        /// dev.18: rebuilt as SettingsPage (tabs VIDEO / AUDIO / CONTROLS / GAME, sliders,
+        /// immediate save) after the owner's Poco F3 verdict on the dev.13 page.
         GameObject BuildSettings()
         {
             var screen = NewScreen("Settings");
             BuildHeader(screen, "SETTINGS");
-
-            var panel = MakeImage("TouchPanel", screen, PanelColor);
-            SetRect(panel.rectTransform, new Vector2(0f, 1f), new Vector2(0.49f, 1f), new Vector2(0f, 1f), new Vector2(20f, -420f), new Vector2(-8f, -90f));
-            var heading = MakeText("TouchHeading", panel.transform, "TOUCH CONTROLS", 18, TextAnchor.MiddleLeft, Accent, FontStyle.Bold);
-            SetRect(heading.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(16f, -44f), new Vector2(-16f, -8f));
-
-            float y = -56f;
-            _scaleValue = StepperRow(panel.rectTransform, "ButtonScale", "BUTTON SIZE", y,
-                () => { TouchSettings.ButtonScale -= TouchSettings.ButtonScaleStep; RefreshSettings(); },
-                () => { TouchSettings.ButtonScale += TouchSettings.ButtonScaleStep; RefreshSettings(); });
-            y -= 70f;
-            _sensValue = StepperRow(panel.rectTransform, "Sensitivity", "LOOK SENSITIVITY", y,
-                () => { TouchSettings.Sensitivity -= TouchSettings.SensitivityStep; RefreshSettings(); },
-                () => { TouchSettings.Sensitivity += TouchSettings.SensitivityStep; RefreshSettings(); });
-            y -= 70f;
-            _invertImg = ToggleRow(panel.rectTransform, "InvertY", "INVERT LOOK (Y)", y, out _invertLabel, () => { TouchSettings.InvertY = !TouchSettings.InvertY; RefreshSettings(); });
-            y -= 70f;
-            _leftImg = ToggleRow(panel.rectTransform, "LeftHanded", "LEFT-HANDED LAYOUT", y, out _leftLabel, () => { TouchSettings.LeftHanded = !TouchSettings.LeftHanded; RefreshSettings(); });
-            y -= 70f;
-            var reset = MakeButton("ResetTouch", panel.transform, "RESET DEFAULTS", () => { TouchSettings.ResetToDefaults(); RefreshSettings(); });
-            SetRect(reset.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(16f, y - 48f), new Vector2(256f, y));
-            reset.GetComponentInChildren<Text>().fontSize = 15;
-
-            // DevCapture panel: what the phone recorded, and two ways to hand it over.
-            var dev = MakeImage("DevPanel", screen, PanelColor);
-            SetRect(dev.rectTransform, new Vector2(0.51f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(8f, -420f), new Vector2(-20f, -90f));
-            var devHeading = MakeText("DevHeading", dev.transform, "DEVCAPTURE — DEVICE REPORT", 18, TextAnchor.MiddleLeft, Accent, FontStyle.Bold);
-            SetRect(devHeading.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(16f, -44f), new Vector2(-16f, -8f));
-            _devSummary = MakeText("DevSummary", dev.transform, "", 13, TextAnchor.UpperLeft, TextColor, FontStyle.Normal);
-            _devSummary.horizontalOverflow = HorizontalWrapMode.Wrap;
-            SetRect(_devSummary.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(16f, 72f), new Vector2(-16f, -50f));
-            var share = MakeButton("ShareLog", dev.transform, "SHARE LOG", () => DevCapture.Share());
-            share.GetComponent<Image>().color = Accent;
-            SetRect(share.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(16f, 12f), new Vector2(206f, 60f));
-            share.GetComponentInChildren<Text>().fontSize = 16;
-            var copy = MakeButton("CopyLog", dev.transform, "COPY LOG", () => { DevCapture.Copy(); RefreshSettings(); });
-            SetRect(copy.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(216f, 12f), new Vector2(406f, 60f));
-            copy.GetComponentInChildren<Text>().fontSize = 16;
-
-            var hint = MakeText("SettingsHint", screen,
-                "Button size and layout apply to FIRE / JUMP / ALT / WPN and the joystick. SHARE LOG opens the Android share sheet with the error report (send it to the developer).",
-                12, TextAnchor.LowerLeft, SubText, FontStyle.Normal);
-            SetRect(hint.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 0f), new Vector2(20f, 12f), new Vector2(-20f, 40f));
-            return screen.gameObject;
+            _settings = new SettingsPage(new Widgets(this));
+            return _settings.Build(screen);
         }
 
-        Text StepperRow(RectTransform parent, string name, string caption, float y, UnityEngine.Events.UnityAction minus, UnityEngine.Events.UnityAction plus)
-        {
-            var label = MakeText(name + "Caption", parent, caption, 16, TextAnchor.MiddleLeft, TextColor, FontStyle.Bold);
-            SetRect(label.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(16f, y - 56f), new Vector2(300f, y));
-            var m = MakeButton(name + "Minus", parent, "-", minus);
-            SetRect(m.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(340f, y - 56f), new Vector2(400f, y));
-            var value = MakeText(name + "Value", parent, "", 18, TextAnchor.MiddleCenter, Accent, FontStyle.Bold);
-            SetRect(value.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(404f, y - 56f), new Vector2(520f, y));
-            var p = MakeButton(name + "Plus", parent, "+", plus);
-            SetRect(p.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(524f, y - 56f), new Vector2(584f, y));
-            return value;
-        }
-
-        Image ToggleRow(RectTransform parent, string name, string caption, float y, out Text stateLabel, UnityEngine.Events.UnityAction onClick)
-        {
-            var label = MakeText(name + "Caption", parent, caption, 16, TextAnchor.MiddleLeft, TextColor, FontStyle.Bold);
-            SetRect(label.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(16f, y - 56f), new Vector2(300f, y));
-            var go = MakeButton(name, parent, "", onClick);
-            SetRect(go.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(340f, y - 56f), new Vector2(584f, y));
-            stateLabel = go.GetComponentInChildren<Text>();
-            stateLabel.fontSize = 16;
-            return go.GetComponent<Image>();
-        }
-
-        void RefreshSettings()
-        {
-            if (_scaleValue == null) return;
-            _scaleValue.text = TouchSettings.ButtonScale.ToString("0.0") + "×";
-            _sensValue.text = TouchSettings.Sensitivity.ToString("0.0") + "×";
-            _invertLabel.text = TouchSettings.InvertY ? "ON" : "OFF";
-            _invertImg.color = TouchSettings.InvertY ? Accent : CardColor;
-            _leftLabel.text = TouchSettings.LeftHanded ? "ON" : "OFF";
-            _leftImg.color = TouchSettings.LeftHanded ? Accent : CardColor;
-            var dc = DevCapture.Instance;
-            _devSummary.text = "errors " + RuntimeErrorLog.ErrorCount + " · warnings " + RuntimeErrorLog.WarningCount +
-                (dc != null && dc.SampleCount > 0 ? "\nlast: " + dc.LastSample : "") +
-                (!string.IsNullOrEmpty(RuntimeErrorLog.LastError) ? "\nlast error: " + RuntimeErrorLog.LastError : "") +
-                "\nlog file: " + RuntimeErrorLog.Path;
-        }
+        void RefreshSettings() => _settings?.Refresh();
 
         // ------------------------------------------------------------ helpers
 

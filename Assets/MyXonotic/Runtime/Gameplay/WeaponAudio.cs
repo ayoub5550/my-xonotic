@@ -86,7 +86,7 @@ namespace MyXonotic
             go.transform.position = position;
             var src = go.AddComponent<AudioSource>();
             src.clip = clip;
-            src.volume = volume;
+            src.volume = volume * GameSettings.SfxVolume; // dev.18: SETTINGS → AUDIO
             src.spatialBlend = spatial ? 1f : 0f;
             src.minDistance = 3f;
             src.maxDistance = 60f;

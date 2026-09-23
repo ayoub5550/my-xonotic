@@ -66,6 +66,7 @@ namespace MyXonotic
             if (!Active || catalog == null || catalog.maps == null || catalog.maps.Count == 0) return false;
             var entry = catalog.maps[(Scenario - 1) % catalog.maps.Count];
             MatchSettings.OverrideForTest(GameMode.Deathmatch, false, 3);
+            MatchSettings.OverrideBotSkillForTest(MatchSettings.DefaultBotSkill); // dev.18: the touch default, not whatever PlayerPrefs holds
             RuntimeErrorLog.Note("GameLoop launching " + entry.sceneName);
             MyXonotic.Menu.SceneFlow.LoadMap(entry.sceneName);
             return true;
@@ -114,8 +115,23 @@ namespace MyXonotic
                 sb.Append("bot_deaths=").Append(botDeaths).Append('\n');
                 sb.Append("bot_suicides=").Append(botSuicides).Append('\n');
                 sb.Append("player_suicides=").Append(arena.PlayerActor != null ? arena.PlayerActor.Suicides : 0).Append('\n');
+                // dev.18 diagnostics: where the suicides come from, and what the build actually shipped.
+                int sv = 0, sh = 0, ss = 0, so = 0;
+                foreach (var b in arena.Bots) if (b != null && b.Actor != null) { sv += b.Actor.SuicidesVoid; sh += b.Actor.SuicidesHurt; ss += b.Actor.SuicidesSelf; so += b.Actor.SuicidesOther; }
+                sb.Append("bot_suicide_void=").Append(sv).Append('\n');
+                sb.Append("bot_suicide_hurt=").Append(sh).Append('\n');
+                sb.Append("bot_suicide_self=").Append(ss).Append('\n');
+                sb.Append("bot_suicide_other=").Append(so).Append('\n');
+                var pa = arena.PlayerActor;
+                sb.Append("player_suicide_void=").Append(pa != null ? pa.SuicidesVoid : 0).Append('\n');
+                sb.Append("player_suicide_hurt=").Append(pa != null ? pa.SuicidesHurt : 0).Append('\n');
+                sb.Append("player_suicide_self=").Append(pa != null ? pa.SuicidesSelf : 0).Append('\n');
                 sb.Append("navmesh=").Append(MapNavMesh.Available ? 1 : 0).Append('\n');
             }
+            sb.Append("bot_skill=").Append(MatchSettings.BotSkillFor(0)).Append('/').Append(MatchSettings.BotSkillFor(1)).Append('/').Append(MatchSettings.BotSkillFor(2)).Append('\n');
+            sb.Append("projectile_models=").Append(ProjectileVisuals.LoadedModelCount()).Append('/').Append(ProjectileVisuals.AllModelResources.Length).Append('\n');
+            sb.Append("effects=").Append(GameSettings.EffectsName(GameSettings.Effects)).Append('\n');
+            sb.Append("bloom=").Append(GameSettings.BloomActive ? 1 : 0).Append('\n');
             sb.Append("last_error=").Append(RuntimeErrorLog.LastError.Replace('\n', ' ')).Append('\n');
             return sb.ToString();
         }

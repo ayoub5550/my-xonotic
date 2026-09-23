@@ -437,7 +437,7 @@ namespace MyXonotic
             _weaponNameText.text = def.Name.ToUpperInvariant() + powerups + state;
 
             _statusText.text = $"FRAGS {Player.Frags}   DEATHS {Player.Deaths}";
-            if (_devText != null) _devText.text = DevCapture.StatusLine();
+            if (_devText != null) _devText.text = GameSettings.ShowFps ? DevCapture.StatusLine() : ""; // dev.18: SETTINGS → VIDEO toggle
 
             if (_notifyTimer > 0f)
             {

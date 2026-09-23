@@ -60,7 +60,10 @@ namespace MyXonotic
         ParticleSystem _smoke;
         bool _orientToVelocity;
 
-        public static Projectile Spawn(Vector3 origin, Vector3 dir, FireDef fire, Actor instigator, WeaponType weapon)
+        public static Projectile Spawn(Vector3 origin, Vector3 dir, FireDef fire, Actor instigator, WeaponType weapon) =>
+            Spawn(origin, dir, fire, instigator, weapon, false);
+
+        public static Projectile Spawn(Vector3 origin, Vector3 dir, FireDef fire, Actor instigator, WeaponType weapon, bool secondary)
         {
             var def = WeaponController.GetDef(weapon);
             bool heavy = fire.SplashRadius > 2f;
@@ -69,7 +72,7 @@ namespace MyXonotic
             go.transform.localScale = Vector3.one * (heavy ? 0.3f : 0.16f);
 
             // dev.17: original Xonotic projectile model when imported, tinted sphere otherwise.
-            bool hasModel = Application.isPlaying && ProjectileVisuals.TryAttachModel(go.transform, weapon, out _);
+            bool hasModel = Application.isPlaying && ProjectileVisuals.TryAttachModel(go.transform, weapon, secondary, out _);
             if (hasModel)
             {
                 go.transform.localScale = Vector3.one;
@@ -121,7 +124,8 @@ namespace MyXonotic
             p.LifeTime = fire.FuseSeconds > 0f ? fire.FuseSeconds : 8f;
             p._trail = trail;
             p._orientToVelocity = hasModel;
-            if (Application.isPlaying && ProjectileVisuals.HasSmoke(weapon)) p._smoke = ProjectileVisuals.AddSmokeTrail(go.transform, def.Tint);
+            // dev.18: LOW effects preset skips the smoke particles.
+            if (Application.isPlaying && ProjectileVisuals.HasSmoke(weapon) && GameSettings.Effects != EffectsLevel.Low) p._smoke = ProjectileVisuals.AddSmokeTrail(go.transform, def.Tint);
             return p;
         }
 

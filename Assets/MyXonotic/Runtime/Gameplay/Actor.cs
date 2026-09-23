@@ -44,6 +44,12 @@ namespace MyXonotic
         public int Deaths { get; private set; }
         /// dev.17: deaths with no enemy killer (void, self-splash) — what Test Lab reports as bot_suicides.
         public int Suicides { get; private set; }
+        /// dev.18: why the killer-less deaths happened (Test Lab dev.17: bot_suicides=9 without a cause).
+        public int SuicidesVoid { get; private set; }
+        public int SuicidesHurt { get; private set; }
+        public int SuicidesSelf { get; private set; }
+        public int SuicidesOther { get; private set; }
+        public const string CauseVoid = "void", CauseHurt = "hurt";
         public bool IsDead { get; private set; }
 
         /// victim, killer (killer may be null for environmental/self death).
@@ -155,7 +161,7 @@ namespace MyXonotic
 
         /// Applies damage after armor absorption (ArenaMath.ApplyArmor is the pure,
         /// testable part) and routes knockback into whichever mover component exists.
-        public void TakeDamage(int rawDamage, Vector3 knockback, Actor instigator)
+        public void TakeDamage(int rawDamage, Vector3 knockback, Actor instigator, string cause = null)
         {
             if (IsDead || ArenaBootstrap.IsPaused || rawDamage <= 0) return;
             // Team modes: no friendly fire (self damage still applies).
@@ -180,17 +186,24 @@ namespace MyXonotic
 
             if (Health <= 0)
             {
-                Die(instigator);
+                Die(instigator, cause);
             }
         }
 
-        void Die(Actor killer)
+        void Die(Actor killer, string cause = null)
         {
             IsDead = true;
             Health = 0;
             Deaths++;
             if (killer != null && killer != this) killer.Frags++;
-            else { Frags--; Suicides++; }
+            else
+            {
+                Frags--; Suicides++;
+                if (killer == this) SuicidesSelf++;
+                else if (cause == CauseVoid) SuicidesVoid++;
+                else if (cause == CauseHurt) SuicidesHurt++;
+                else SuicidesOther++;
+            }
             StrengthRemaining = 0f;
             ShieldRemaining = 0f;
             var animator = GetComponentInChildren<CharacterAnimator>();

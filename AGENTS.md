@@ -1,5 +1,24 @@
 # my-xonotic — developer and agent handoff
 
+**Follow `docs/ROADMAP.md`** (dev.15 → dev.20, rules per release) before planning any new dev.N.
+
+## dev.15 weapon-mechanics checkpoint — 2026-09-23 (branch `feat/unity-dev15-weapon-mechanics`)
+
+Read `docs/UNITY-DEV15.md` first. Weapon *behaviour* is now ported from the
+Xonotic weapon .qc files: `FireDef` carries the mechanic fields (`SpeedUp`,
+`SpeedStart/SpeedAccel`, `Guided`, `BounceFactor/BounceStop/LifetimeAfterBounce`,
+`Remote*`, `Delay`, `BurstInterval`, `LoadMax/LoadTime/LoadHold`) and
+`WeaponController.TickMechanics(dt)` runs scheduled shots (bursts, melee
+delay), Vortex charge, machinegun sustained spread, Arc heat/overheat and the
+Hagar load/release. Owners must call `Weapons.UpdateAim(origin, dir)` every
+frame (Player and Bot do) — scheduled shots and Devastator guidance read it.
+`Projectile` handles the speed ramp, steering (`SteerTowards`), cfg bounce
+values, remote/combo blast stats and the Electro combo chain. Feedback (audio,
+ImpactEffects, WeaponView) is guarded with `Application.isPlaying` so the
+mechanics run in edit-mode tests (`Dev15WeaponTests`, editor tests PASS 742).
+Still not ported: projectile health, machinegun wall penetration, Crylink join.
+APK vc16 `0.1.0-dev.15`.
+
 ## dev.14 Xonotic-physics/balance checkpoint — 2026-09-23 (branch `feat/unity-dev14-xonotic-physics`)
 
 Read `docs/UNITY-DEV14.md` first. Movement is now a straight port of the

@@ -375,7 +375,7 @@ namespace MyXonotic
 
             // Never fire splash weapons into our own face; never fire hold-style weapons blindly.
             if (fire.SplashRadius > 0f && dist < fire.SplashRadius + 1.5f) return;
-            if (fire.Mode == FireMode.Hook || fire.Mode == FireMode.Mine) return;
+            if (fire.Mode == FireMode.Hook || fire.Mode == FireMode.Mine || fire.Mode == FireMode.Load) return;
             if (fire.Mode == FireMode.Beam && dist > fire.Speed) return;
 
             Vector3 origin = transform.position + Vector3.up * 1.5f;
@@ -398,6 +398,7 @@ namespace MyXonotic
             Vector3 dir = (aimPoint - origin).normalized;
             // Skill error.
             dir = Quaternion.Euler(Random.Range(-AimErrorDegrees, AimErrorDegrees), Random.Range(-AimErrorDegrees, AimErrorDegrees), 0f) * dir;
+            Weapons.UpdateAim(origin, dir);
             if (Weapons.TryFire(origin, dir, false) && Animator != null && fire.Refire >= 0.5f) Animator.PlayOneShot("shoot");
         }
     }

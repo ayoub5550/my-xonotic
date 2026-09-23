@@ -31,6 +31,20 @@ namespace MyXonotic
         public bool IsStuck { get; private set; }
         float _stuckTime;
 
+        // dev.15 mechanics
+        public FireDef Fire;
+        public bool Guided;
+        float _maxSpeed, _accel;
+        bool _bounced;
+        /// Mine countdown after proximity trigger (g_balance_minelayer_lifetime_countdown); -1 = not triggered.
+        float _mineCountdown = -1f;
+        /// Set by Explode when triggered remotely (uses Fire.Remote* stats) or by an electro combo.
+        bool _remote, _combo;
+        /// Electro combo chain: a ball that got combo-triggered explodes after this delay (Xonotic uses 0.1 s intervals).
+        const float ComboDelay = 0.1f;
+        float _comboTimer = -1f;
+        public bool IsElectroBall => Weapon == WeaponType.Electro && Bounces;
+
         /// Grace period right after spawning where a hit on the instigator's own
         /// body is ignored, so firing from the muzzle/camera position (which can sit
         /// inside the owner's own collider) does not self-detonate immediately.
@@ -76,7 +90,12 @@ namespace MyXonotic
             trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
             var p = go.AddComponent<Projectile>();
-            p.Velocity = dir.normalized * fire.Speed;
+            p.Fire = fire;
+            p.Velocity = dir.normalized * (fire.SpeedStart > 0f ? fire.SpeedStart : fire.Speed) + Vector3.up * fire.SpeedUp;
+            p._maxSpeed = fire.Speed;
+            p._accel = fire.SpeedAccel;
+            p.Guided = fire.Guided;
+            if (fire.BounceFactor > 0f) p.BounceDamping = fire.BounceFactor;
             p.Damage = fire.Damage;
             p.Knockback = fire.Knockback;
             p.EdgeDamage = fire.EdgeDamage;
@@ -101,6 +120,7 @@ namespace MyXonotic
             foreach (var p in snapshot)
             {
                 if (p == null || p.Instigator != owner || p._exploded) continue;
+                p._remote = p.Fire.RemoteRadius > 0f;
                 p.Explode(p.transform.position, null);
                 n++;
             }
@@ -131,22 +151,52 @@ namespace MyXonotic
                 return;
             }
 
+            if (_comboTimer >= 0f)
+            {
+                _comboTimer -= dt;
+                if (_comboTimer <= 0f) { Explode(transform.position, null); return; }
+            }
+
             if (IsStuck)
             {
-                // Armed mine: proximity trigger on enemies only.
+                if (_mineCountdown >= 0f)
+                {
+                    _mineCountdown -= dt;
+                    if (_mineCountdown <= 0f) Explode(transform.position, null);
+                    return;
+                }
+                // Armed mine: proximity trigger on enemies only, then a short countdown.
                 if (_age - _stuckTime < MineArmDelay) return;
-                foreach (var c in Physics.OverlapSphere(transform.position, MineTriggerRadius, ~0, QueryTriggerInteraction.Ignore))
+                float trigger = IsMine ? WeaponDef.MineProximityRadius : MineTriggerRadius;
+                foreach (var c in Physics.OverlapSphere(transform.position, trigger, ~0, QueryTriggerInteraction.Ignore))
                 {
                     var a = c.GetComponentInParent<Actor>();
                     if (a == null || a.IsDead || a == Instigator) continue;
                     if (Instigator != null && !Instigator.IsEnemyOf(a)) continue;
-                    Explode(transform.position, null);
+                    _mineCountdown = WeaponDef.MineCountdown;
                     return;
                 }
                 return;
             }
 
             if (GravityScale > 0f) Velocity += Vector3.down * (Gravity * GravityScale * dt);
+
+            // Devastator: speed ramp and steering towards the owner's aim while the trigger is held.
+            if (_accel > 0f && Velocity.sqrMagnitude > 0.0001f)
+            {
+                float sp = Velocity.magnitude;
+                if (sp < _maxSpeed) Velocity *= Mathf.Min(_maxSpeed, sp + _accel * dt) / sp;
+            }
+            if (Guided && _age >= WeaponDef.GuideDelay && Instigator != null)
+            {
+                var wc = Instigator.GetComponent<WeaponController>();
+                if (wc != null && wc.GuideActive)
+                {
+                    Vector3 goal = wc.AimOrigin + wc.AimDirection * WeaponDef.GuideGoal;
+                    if (Physics.Raycast(wc.AimOrigin, wc.AimDirection, out RaycastHit aimHit, WeaponDef.GuideGoal, ~0, QueryTriggerInteraction.Ignore)) goal = aimHit.point;
+                    Velocity = SteerTowards(Velocity, goal - transform.position, WeaponDef.GuideRateDeg * dt);
+                }
+            }
 
             float step = Velocity.magnitude * dt;
             if (step <= 0f) return;
@@ -175,10 +225,16 @@ namespace MyXonotic
                 }
                 if (Bounces && hitActor == null)
                 {
-                    // Reflect off world geometry, lose energy; explode once nearly at rest.
+                    // Reflect off world geometry, lose energy (bouncefactor); come to rest below bouncestop × gravity.
                     transform.position = hit.point + hit.normal * 0.03f;
                     Velocity = Vector3.Reflect(Velocity, hit.normal) * BounceDamping;
-                    if (Velocity.magnitude < 1.5f) Velocity = Vector3.zero;
+                    float stop = Fire.BounceStop > 0f ? Fire.BounceStop * Gravity : 1.5f;
+                    if (Velocity.magnitude < stop) Velocity = Vector3.zero;
+                    if (!_bounced)
+                    {
+                        _bounced = true;
+                        if (Fire.LifetimeAfterBounce > 0f) LifeTime = Mathf.Min(LifeTime, _age + Fire.LifetimeAfterBounce);
+                    }
                     return;
                 }
                 Explode(hit.point + hit.normal * 0.02f, hit.collider);
@@ -193,9 +249,26 @@ namespace MyXonotic
             _exploded = true;
             bool hitActorDirect = false;
 
-            if (SplashRadius > 0f)
+            int damage = Damage, edge = EdgeDamage;
+            float radius = SplashRadius, force = Knockback;
+            if (_remote && Fire.RemoteRadius > 0f) { damage = Fire.RemoteDamage; edge = Fire.RemoteEdgeDamage; radius = Fire.RemoteRadius; force = Fire.RemoteKnockback; }
+            if (_combo) { damage = WeaponDef.ElectroComboDamage; edge = WeaponDef.ElectroComboEdgeDamage; radius = WeaponDef.ElectroComboBlastRadius; force = WeaponDef.ElectroComboKnockback; }
+
+            // Electro combo: a primary bolt exploding near live electro balls sets them off (chain through the balls themselves).
+            if (Weapon == WeaponType.Electro && (!Bounces || _combo))
             {
-                Collider[] hits = Physics.OverlapSphere(point, SplashRadius, ~0, QueryTriggerInteraction.Ignore);
+                foreach (var other in Live)
+                {
+                    if (other == null || other == this || !other.IsElectroBall || other._exploded || other._comboTimer >= 0f) continue;
+                    if ((other.transform.position - point).sqrMagnitude > WeaponDef.ElectroComboRadius * WeaponDef.ElectroComboRadius) continue;
+                    other._combo = true;
+                    other._comboTimer = ComboDelay;
+                }
+            }
+
+            if (radius > 0f)
+            {
+                Collider[] hits = Physics.OverlapSphere(point, radius, ~0, QueryTriggerInteraction.Ignore);
                 var applied = new HashSet<Actor>();
                 foreach (Collider h in hits)
                 {
@@ -217,11 +290,11 @@ namespace MyXonotic
                         }
                     }
 
-                    float dmg = ArenaMath.SplashDamage(dist, SplashRadius, Damage, EdgeDamage);
+                    float dmg = ArenaMath.SplashDamage(dist, radius, damage, edge);
                     if (actor == Instigator) dmg *= SelfDamageFactor;
                     else hitActorDirect = true;
                     Vector3 toTarget = targetPoint - point;
-                    Vector3 kb = ArenaMath.SplashKnockback(toTarget, dist, SplashRadius, Knockback);
+                    Vector3 kb = ArenaMath.SplashKnockback(toTarget, dist, radius, force);
                     // Rocket-jumping: the owner always receives the full push even when self damage is reduced.
                     if (dmg <= 0f && actor != Instigator) continue;
                     actor.TakeDamage(Mathf.Max(0, Mathf.RoundToInt(dmg)), kb, Instigator);
@@ -237,8 +310,28 @@ namespace MyXonotic
                     hitActorDirect = true;
                 }
             }
-            ImpactEffects.Spawn(point, Vector3.up, Weapon, hitActorDirect, SplashRadius);
+            ImpactEffects.Spawn(point, Vector3.up, Weapon, hitActorDirect, radius);
             Destroy(gameObject);
         }
+
+        /// Rotates <paramref name="velocity"/> towards <paramref name="desired"/> by at most <paramref name="maxDegrees"/>, keeping its speed.
+        public static Vector3 SteerTowards(Vector3 velocity, Vector3 desired, float maxDegrees)
+        {
+            float speed = velocity.magnitude;
+            if (speed < 0.0001f || desired.sqrMagnitude < 0.0001f) return velocity;
+            Vector3 dir = Vector3.RotateTowards(velocity / speed, desired.normalized, maxDegrees * Mathf.Deg2Rad, 0f);
+            return dir * speed;
+        }
+
+        /// Test hook: marks this projectile as remotely detonated on its next Explode.
+        public void MarkRemoteForTest() => _remote = Fire.RemoteRadius > 0f;
+        /// Test hook: effective blast stats for the pending explosion (damage, edge, radius, force).
+        public (int damage, int edge, float radius, float force) EffectiveBlast()
+        {
+            if (_combo) return (WeaponDef.ElectroComboDamage, WeaponDef.ElectroComboEdgeDamage, WeaponDef.ElectroComboBlastRadius, WeaponDef.ElectroComboKnockback);
+            if (_remote && Fire.RemoteRadius > 0f) return (Fire.RemoteDamage, Fire.RemoteEdgeDamage, Fire.RemoteRadius, Fire.RemoteKnockback);
+            return (Damage, EdgeDamage, SplashRadius, Knockback);
+        }
+        public bool ComboPending => _comboTimer >= 0f;
     }
 }

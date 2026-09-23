@@ -426,7 +426,15 @@ namespace MyXonotic
             string powerups = "";
             if (Player.HasStrength) powerups += " <color=#ff4aa0>STR " + Mathf.CeilToInt(Player.StrengthRemaining) + "</color>";
             if (Player.HasShield) powerups += " <color=#4ae0ff>SHLD " + Mathf.CeilToInt(Player.ShieldRemaining) + "</color>";
-            _weaponNameText.text = def.Name.ToUpperInvariant() + powerups;
+            // dev.15 weapon state readouts (Xonotic shows these on the weapon panel).
+            string state = "";
+            if (Weapons != null)
+            {
+                if (Weapons.Current == WeaponType.Vortex) state = $" <color=#8ee6ff>CHG {Mathf.RoundToInt(Weapons.VortexCharge * 100)}%</color>";
+                else if (Weapons.Current == WeaponType.Arc) state = Weapons.ArcOverheated ? " <color=#ff5a3c>OVERHEAT</color>" : $" <color=#ffb44a>HEAT {Mathf.RoundToInt(Weapons.ArcHeat * 100)}%</color>";
+                else if (Weapons.Current == WeaponType.Hagar && Weapons.HagarLoaded > 0) state = $" <color=#ffd27a>LOAD {Weapons.HagarLoaded}/4</color>";
+            }
+            _weaponNameText.text = def.Name.ToUpperInvariant() + powerups + state;
 
             _statusText.text = $"FRAGS {Player.Frags}   DEATHS {Player.Deaths}";
             if (_devText != null) _devText.text = DevCapture.StatusLine();

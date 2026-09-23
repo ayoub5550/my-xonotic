@@ -15,6 +15,7 @@ namespace MyXonotic
         public int Damage;
         public float Knockback;
         public float SplashRadius;
+        public int EdgeDamage;
         public float SelfDamageFactor = 0.5f;
         public Actor Instigator;
         public WeaponType Weapon;
@@ -78,6 +79,7 @@ namespace MyXonotic
             p.Velocity = dir.normalized * fire.Speed;
             p.Damage = fire.Damage;
             p.Knockback = fire.Knockback;
+            p.EdgeDamage = fire.EdgeDamage;
             p.SplashRadius = fire.SplashRadius;
             p.SelfDamageFactor = fire.SelfDamageFactor;
             p.Instigator = instigator;
@@ -215,7 +217,7 @@ namespace MyXonotic
                         }
                     }
 
-                    float dmg = ArenaMath.SplashDamage(dist, SplashRadius, Damage);
+                    float dmg = ArenaMath.SplashDamage(dist, SplashRadius, Damage, EdgeDamage);
                     if (actor == Instigator) dmg *= SelfDamageFactor;
                     else hitActorDirect = true;
                     Vector3 toTarget = targetPoint - point;

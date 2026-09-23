@@ -60,6 +60,8 @@ namespace MyXonotic
     {
         public FireMode Mode;
         public int Damage;
+        /// Splash damage at the edge of <see cref="SplashRadius"/> (Xonotic edgedamage); Damage at the centre.
+        public int EdgeDamage;
         /// Seconds between shots.
         public float Refire;
         public int Shots;
@@ -79,9 +81,13 @@ namespace MyXonotic
     }
 
     /// <summary>
-    /// Original, independent tuning per weapon. Numbers are an approximation
-    /// of the publicly documented Xonotic 0.8.6 balance (damage/refire/speed
-    /// as numeric facts, converted from 32 qu = 1 m); no engine code is copied.
+    /// Per-weapon tuning taken from Xonotic 0.8.6 <c>bal-wep-xonotic.cfg</c>
+    /// (dev.14: numbers synced 1:1 — damage, edge damage, refire, projectile
+    /// speed, splash radius, force, ammo, spread). Units: 32 qu = 1 m, so
+    /// speeds/radii are the cfg value × Q; <see cref="FireDef.Knockback"/> is the
+    /// cfg <c>force</c> × Q and is added straight to the victim's velocity
+    /// (m/s), negative values pull (Crylink). Spread is the cfg ratio converted to
+    /// a cone half-angle. Self splash damage uses g_balance_selfdamagepercent 0.65.
     /// </summary>
     [Serializable]
     public struct WeaponDef
@@ -97,76 +103,81 @@ namespace MyXonotic
         public Color Tint;
 
         const float Q = 1f / 32f; // quake units -> metres
+        public const float SelfDamagePercent = 0.65f; // g_balance_selfdamagepercent
 
-        static FireDef Hitscan(int dmg, float refire, int shots, float spread, float kb, int cost) => new FireDef
+        /// Xonotic spread is a ratio applied to a random unit vector orthogonal to the aim direction.
+        static float SpreadDeg(float ratio) => Mathf.Atan(ratio) * Mathf.Rad2Deg;
+
+        static FireDef Hitscan(int dmg, float refire, int shots, float spreadRatio, float force, int cost) => new FireDef
         {
-            Mode = FireMode.Hitscan, Damage = dmg, Refire = refire, Shots = shots, SpreadDegrees = spread,
-            Knockback = kb, AmmoCost = cost, SelfDamageFactor = 0f
+            Mode = FireMode.Hitscan, Damage = dmg, Refire = refire, Shots = shots, SpreadDegrees = SpreadDeg(spreadRatio),
+            Knockback = force * Q, AmmoCost = cost, SelfDamageFactor = 0f
         };
 
-        static FireDef Proj(FireMode mode, int dmg, float refire, int shots, float spread, float speed,
-            float splash, float kb, int cost, float fuse = 0f, float gravity = 0f, float selfDmg = 0.5f) => new FireDef
+        static FireDef Proj(FireMode mode, int dmg, int edge, float refire, int shots, float spreadRatio, float speedQu,
+            float radiusQu, float forceQu, int cost, float fuse = 0f, float gravity = 0f, float selfDmg = SelfDamagePercent) => new FireDef
         {
-            Mode = mode, Damage = dmg, Refire = refire, Shots = shots, SpreadDegrees = spread, Speed = speed,
-            SplashRadius = splash, Knockback = kb, AmmoCost = cost, FuseSeconds = fuse, GravityScale = gravity,
-            SelfDamageFactor = selfDmg
+            Mode = mode, Damage = dmg, EdgeDamage = edge, Refire = refire, Shots = shots, SpreadDegrees = SpreadDeg(spreadRatio),
+            Speed = speedQu * Q, SplashRadius = radiusQu * Q, Knockback = forceQu * Q, AmmoCost = cost, FuseSeconds = fuse,
+            GravityScale = gravity, SelfDamageFactor = selfDmg
         };
 
         public static WeaponDef Blaster() => new WeaponDef
         {
             Type = WeaponType.Blaster, Name = "Blaster", ShortName = "BLS", Ammo = AmmoType.None, PickupAmmo = 0,
             Tint = new Color(1f, 0.55f, 0.1f),
-            Primary = Proj(FireMode.Projectile, 20, 0.7f, 1, 0f, 6000f * Q * 0.5f, 60f * Q, 9f, 0, selfDmg: 0.3f),
-            // Secondary: same bolt, stronger self-push (laser-jump approximation).
-            Secondary = Proj(FireMode.Projectile, 25, 0.7f, 1, 0f, 6000f * Q * 0.5f, 70f * Q, 14f, 0, selfDmg: 0.3f)
+            Primary = Proj(FireMode.Projectile, 20, 10, 0.7f, 1, 0f, 6000f, 60f, 375f, 0, fuse: 5f),
+            Secondary = Proj(FireMode.Projectile, 25, 12, 0.7f, 1, 0f, 6000f, 70f, 360f, 0, fuse: 5f)
         };
 
         public static WeaponDef Shotgun() => new WeaponDef
         {
             Type = WeaponType.Shotgun, Name = "Shotgun", ShortName = "SG", Ammo = AmmoType.Shells, PickupAmmo = 15,
             Tint = new Color(0.85f, 0.8f, 0.6f),
-            Primary = Hitscan(3, 0.75f, 14, 4.5f, 1.2f, 1),
-            Secondary = new FireDef { Mode = FireMode.Melee, Damage = 80, Refire = 1.25f, Shots = 1, Speed = 2.2f, Knockback = 8f, AmmoCost = 0 }
+            Primary = Hitscan(4, 0.75f, 12, 0.12f, 15f, 1),
+            // Melee: g_balance_shotgun_secondary_melee_range 120 qu.
+            Secondary = new FireDef { Mode = FireMode.Melee, Damage = 70, Refire = 1.25f, Shots = 1, Speed = 120f * Q, Knockback = 200f * Q, AmmoCost = 0 }
         };
 
         public static WeaponDef MachineGun() => new WeaponDef
         {
             Type = WeaponType.MachineGun, Name = "Machine Gun", ShortName = "MG", Ammo = AmmoType.Bullets, PickupAmmo = 60,
             Tint = new Color(0.9f, 0.9f, 0.3f),
-            Primary = Hitscan(10, 0.1f, 1, 1.6f, 0.9f, 1),
-            // Secondary: accurate 3-round burst.
-            Secondary = Hitscan(14, 0.45f, 3, 0.4f, 1.2f, 3)
+            Primary = Hitscan(10, 0.1f, 1, 0.03f, 3f, 1),
+            // Burst mode: 3 × first_damage 14, burst_refire2 0.45.
+            Secondary = Hitscan(14, 0.45f, 3, 0.02f, 3f, 3)
         };
 
         public static WeaponDef Mortar() => new WeaponDef
         {
             Type = WeaponType.Mortar, Name = "Mortar", ShortName = "MRT", Ammo = AmmoType.Rockets, PickupAmmo = 15,
             Tint = new Color(0.4f, 0.8f, 0.4f),
-            Primary = Proj(FireMode.Ballistic, 55, 0.8f, 1, 0f, 2000f * Q, 110f * Q, 10f, 2, fuse: 5f, gravity: 1f),
-            Secondary = Proj(FireMode.Bouncing, 55, 0.7f, 1, 0f, 1400f * Q, 110f * Q, 10f, 2, fuse: 2.5f, gravity: 1f)
+            Primary = Proj(FireMode.Ballistic, 55, 25, 0.8f, 1, 0f, 1900f, 120f, 250f, 2, fuse: 20f, gravity: 1f),
+            Secondary = Proj(FireMode.Bouncing, 55, 30, 0.7f, 1, 0f, 1400f, 120f, 250f, 2, fuse: 2.5f, gravity: 1f)
         };
 
         public static WeaponDef Electro() => new WeaponDef
         {
             Type = WeaponType.Electro, Name = "Electro", ShortName = "ELC", Ammo = AmmoType.Cells, PickupAmmo = 25,
             Tint = new Color(0.3f, 0.6f, 1f),
-            Primary = Proj(FireMode.Projectile, 40, 0.25f, 1, 0f, 2500f * Q, 100f * Q, 8f, 2),
-            Secondary = Proj(FireMode.Bouncing, 50, 0.6f, 1, 0f, 1000f * Q, 150f * Q, 12f, 2, fuse: 4f, gravity: 0.6f)
+            Primary = Proj(FireMode.Projectile, 40, 20, 0.6f, 1, 0f, 2500f, 100f, 200f, 4, fuse: 5f),
+            Secondary = Proj(FireMode.Bouncing, 30, 15, 1.2f, 1, 0f, 1000f, 150f, 50f, 2, fuse: 4f, gravity: 0.6f)
         };
 
         public static WeaponDef Crylink() => new WeaponDef
         {
             Type = WeaponType.Crylink, Name = "Crylink", ShortName = "CRY", Ammo = AmmoType.Cells, PickupAmmo = 25,
             Tint = new Color(0.85f, 0.3f, 0.9f),
-            Primary = Proj(FireMode.Projectile, 12, 0.7f, 4, 3.5f, 2000f * Q, 50f * Q, 6f, 3),
-            Secondary = Proj(FireMode.Projectile, 30, 0.7f, 1, 0f, 3000f * Q, 60f * Q, 7f, 2)
+            // Negative force: Crylink pulls its victims towards the shooter.
+            Primary = Proj(FireMode.Projectile, 10, 5, 0.7f, 6, 0.08f, 2000f, 80f, -50f, 3, fuse: 5f),
+            Secondary = Proj(FireMode.Projectile, 8, 4, 0.7f, 5, 0.01f, 3000f, 100f, -200f, 3, fuse: 5f)
         };
 
         public static WeaponDef Vortex() => new WeaponDef
         {
             Type = WeaponType.Vortex, Name = "Vortex", ShortName = "VOR", Ammo = AmmoType.Cells, PickupAmmo = 25,
             Tint = new Color(0.4f, 0.9f, 1f),
-            Primary = Hitscan(80, 1.5f, 1, 0f, 12f, 6),
+            Primary = Hitscan(80, 1.5f, 1, 0f, 200f, 6),
             Secondary = new FireDef { Mode = FireMode.Zoom, Refire = 0f }
         };
 
@@ -174,16 +185,16 @@ namespace MyXonotic
         {
             Type = WeaponType.Hagar, Name = "Hagar", ShortName = "HAG", Ammo = AmmoType.Rockets, PickupAmmo = 25,
             Tint = new Color(1f, 0.5f, 0.3f),
-            Primary = Proj(FireMode.Projectile, 25, 0.16f, 1, 1.0f, 2200f * Q, 65f * Q, 6f, 1),
-            // Secondary: four-rocket volley.
-            Secondary = Proj(FireMode.Projectile, 25, 0.75f, 4, 2.5f, 2000f * Q, 65f * Q, 6f, 4)
+            Primary = Proj(FireMode.Projectile, 25, 12, 0.16667f, 1, 0f, 2200f, 65f, 100f, 1, fuse: 5f),
+            // Secondary: four-rocket volley (Xonotic loads up to 4 and fires them together).
+            Secondary = Proj(FireMode.Projectile, 35, 17, 0.75f, 4, 0.05f, 2000f, 80f, 75f, 4, fuse: 5f)
         };
 
         public static WeaponDef Devastator() => new WeaponDef
         {
             Type = WeaponType.Devastator, Name = "Devastator", ShortName = "DEV", Ammo = AmmoType.Rockets, PickupAmmo = 15,
             Tint = new Color(1f, 0.25f, 0.15f),
-            Primary = Proj(FireMode.Ballistic, 80, 0.9f, 1, 0f, 1300f * Q, 110f * Q, 14f, 1, fuse: 10f, gravity: 0f),
+            Primary = Proj(FireMode.Ballistic, 80, 40, 1.1f, 1, 0f, 1300f, 110f, 400f, 4, fuse: 10f, gravity: 0f),
             Secondary = new FireDef { Mode = FireMode.Detonate, Refire = 0.3f }
         };
 
@@ -191,16 +202,15 @@ namespace MyXonotic
         {
             Type = WeaponType.Rifle, Name = "Rifle", ShortName = "RIF", Ammo = AmmoType.Bullets, PickupAmmo = 40,
             Tint = new Color(0.75f, 0.65f, 0.45f),
-            Primary = Hitscan(80, 1.2f, 1, 0f, 10f, 10),
-            // Secondary: fast, weaker, slightly inaccurate shots.
-            Secondary = Hitscan(20, 0.15f, 1, 1.2f, 4f, 2)
+            Primary = Hitscan(80, 1.2f, 1, 0f, 100f, 10),
+            Secondary = Hitscan(20, 0.9f, 4, 0.04f, 50f, 10)
         };
 
         public static WeaponDef Minelayer() => new WeaponDef
         {
             Type = WeaponType.Minelayer, Name = "Mine Layer", ShortName = "MIN", Ammo = AmmoType.Rockets, PickupAmmo = 20,
             Tint = new Color(0.6f, 0.75f, 0.35f),
-            Primary = Proj(FireMode.Mine, 40, 1.5f, 1, 0f, 750f * Q, 150f * Q, 10f, 5, fuse: 60f, gravity: 1f, selfDmg: 0.5f),
+            Primary = Proj(FireMode.Mine, 40, 20, 1.5f, 1, 0f, 1000f, 175f, 250f, 4, fuse: 60f, gravity: 1f),
             Secondary = new FireDef { Mode = FireMode.Detonate, Refire = 0.3f }
         };
 
@@ -208,18 +218,18 @@ namespace MyXonotic
         {
             Type = WeaponType.Arc, Name = "Arc", ShortName = "ARC", Ammo = AmmoType.Cells, PickupAmmo = 25,
             Tint = new Color(0.55f, 0.85f, 1f),
-            // Beam: 15 damage every 0.2 s while held (75 dps), 1 cell per tick, 25 m range (Speed = range).
-            Primary = new FireDef { Mode = FireMode.Beam, Damage = 15, Refire = 0.2f, Shots = 1, Speed = 25f, Knockback = 1.5f, AmmoCost = 1 },
-            Secondary = Proj(FireMode.Projectile, 30, 0.5f, 1, 0f, 2000f * Q, 60f * Q, 6f, 2)
+            // Beam: 100 dps / 600 force per second / 6 cells per second, ticked every 0.2 s; range 1000 qu (Speed = range).
+            Primary = new FireDef { Mode = FireMode.Beam, Damage = 20, Refire = 0.2f, Shots = 1, Speed = 1000f * Q, Knockback = 120f * Q, AmmoCost = 1 },
+            Secondary = Proj(FireMode.Projectile, 25, 12, 0.16667f, 1, 0f, 2300f, 65f, 120f, 1, fuse: 5f)
         };
 
         public static WeaponDef Fireball() => new WeaponDef
         {
             Type = WeaponType.Fireball, Name = "Fireball", ShortName = "FRB", Ammo = AmmoType.None, PickupAmmo = 0,
             Tint = new Color(1f, 0.6f, 0.1f),
-            Primary = Proj(FireMode.Ballistic, 200, 2f, 1, 0f, 1200f * Q, 200f * Q, 30f, 0, fuse: 10f, gravity: 0f, selfDmg: 0.3f),
-            // Secondary: three bouncing fire mines.
-            Secondary = Proj(FireMode.Bouncing, 40, 1.5f, 3, 6f, 900f * Q, 60f * Q, 6f, 0, fuse: 4f, gravity: 1f, selfDmg: 0.3f)
+            Primary = Proj(FireMode.Ballistic, 200, 50, 2f, 1, 0f, 1200f, 200f, 600f, 0, fuse: 15f, gravity: 0f),
+            // Secondary: three bouncing fire mines (firemine: 40 damage, 900 qu/s, 7 s).
+            Secondary = Proj(FireMode.Bouncing, 40, 20, 1.5f, 3, 0.1f, 900f, 60f, 100f, 0, fuse: 7f, gravity: 1f)
         };
 
         public static WeaponDef Hook() => new WeaponDef
@@ -227,8 +237,8 @@ namespace MyXonotic
             Type = WeaponType.Hook, Name = "Grappling Hook", ShortName = "HOK", Ammo = AmmoType.None, PickupAmmo = 0,
             Tint = new Color(0.7f, 0.7f, 0.75f),
             Primary = new FireDef { Mode = FireMode.Hook, Refire = 0.2f, Speed = 2000f * Q },
-            // Secondary: gravity bomb that detonates on a fuse.
-            Secondary = Proj(FireMode.Bouncing, 50, 1.2f, 1, 0f, 1000f * Q, 100f * Q, 10f, 0, fuse: 3f, gravity: 1f, selfDmg: 0.5f)
+            // Secondary: gravity bomb (25 dmg, radius 500, force −2000 = pulls everything in), 3 s refire.
+            Secondary = Proj(FireMode.Bouncing, 25, 5, 3f, 1, 0f, 1000f, 500f, -2000f, 0, fuse: 3f, gravity: 1f)
         };
 
         public static WeaponDef For(WeaponType type)

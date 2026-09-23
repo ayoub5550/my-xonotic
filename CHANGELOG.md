@@ -1,5 +1,24 @@
 # سجل التغييرات
 
+## 0.1.0-dev.14 — 2026-09-23 — فيزياء Xonotic الأصلية، توازن الأسلحة من bal-wep-xonotic.cfg، تجدّد الصحة، أزرار لمس بنمط Warzone Mobile
+
+- **الحركة** (`Runtime/Gameplay/XonoticPhysics.cs` جديد): نقل `PM_Accelerate`
+  (QW clamp، `sv_airaccel_qw -0.8`)، `CPM_PM_Aircontrol` (100/power 2)، مزج الـstrafe
+  (18 / 100 qu/s)، `airstopaccelerate`، واحتكاك الأرض المستقل عن الإطار من
+  `physicsX.cfg` — bunny-hop وair control وقفزات الصواريخ/الليزر تعمل كالأصل.
+  auto-hop بإبقاء JUMP مضغوطًا. الدفع من الأسلحة يُضاف للسرعة مباشرة (لاعب وبوت).
+- **الأسلحة**: كل `WeaponDef` مزامَن مع `bal-wep-xonotic.cfg` (Blaster 6000 qu/s،
+  Shotgun 12×4، Electro 0.6 ث/4 خلايا، Crylink 6 قذائف تجذب، Devastator 1.1 ث/force 400،
+  Rifle ثانوي 4×20، Arc 100 dps…) + ضرر الحافة (`EdgeDamage`) في falloff الانفجار،
+  ضرر الذات 0.65.
+- **الصحة**: regen تحت 100 بعد 5 ث من آخر ضرر، rot فوق 100 للصحة والدرع
+  (`Actor.TickRegen`).
+- **أزرار اللمس** (`TouchGlyphs.cs` جديد + `Hud.DrawGlyphButton`): أقراص داكنة شفافة
+  بإطار أبيض ورموز بيضاء مرسومة برمجيًا (رصاصة/مصوِّب/سهم/شيفرون) تضيء أثناء الضغط،
+  حسب لقطة المالك من Warzone Mobile. المواضع لم تتغيّر. مهمة `touch-skin` للمعاينة.
+- اختبارات Editor: PASS **698** (كان 671) — `Dev14PhysicsTests`. playtest وgameplay-playtest نجحا.
+- APK versionCode 15: `my-xonotic-full.apk` 404,785,588 بايت، SHA256 `9d9a70954d6cc1229d1b807fba65d1a5fad242bca93b4e9790ba1f3effec4bdd`، توقيع debug، غير مُجرَّب على جهاز. التفاصيل في `docs/UNITY-DEV14.md`.
+
 ## 0.1.0-dev.13 — 2026-09-23 — DevCapture، صيد البوتات وتصحيح spawns، قائمة دخول جديدة، HUD بأيقونات الأصل، إعدادات اللمس
 
 - **DevCapture** (`Runtime/Debugging/DevCapture.cs`): عيّنة كل 5 ث (FPS/أسوأ إطار/ذاكرة/

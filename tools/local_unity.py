@@ -31,6 +31,7 @@ METHODS = {
     "content-test": "MyXonotic.EditorTools.ContentRegressionTests.Run",
     "weapons": "MyXonotic.EditorTools.IqmWeaponImporter.GenerateWeaponAssetsMenu",
     "visual-probe": "MyXonotic.EditorTools.VisualProbe.Run",
+    "touch-skin": "MyXonotic.EditorTools.TouchSkinPreview.Run",
 }
 
 

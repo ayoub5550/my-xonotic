@@ -28,6 +28,7 @@ namespace MyXonotic.EditorTools
             Check(ArenaMath.ApplyArmor(50, ref armor, 0.6f) == 20 && armor == 70,
                 "armor conservation");
             Check(ArenaMath.SplashDamage(5, 5, 90) == 0, "splash radius cutoff");
+            Dev14PhysicsTests.Run(Check);
             LocalBuild.CreateDevelopmentScene();
             var bootstrap = UnityEngine.Object.FindObjectOfType<ArenaBootstrap>();
             Check(bootstrap != null, "serialized bootstrap");

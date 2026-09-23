@@ -54,7 +54,6 @@ namespace MyXonotic
 
         CharacterController _cc;
         Vector3 _velocity;
-        Vector3 _externalImpulse;
         Vector3 _wanderTarget;
         float _repickTimer;
         float _weaponThinkTimer;
@@ -147,17 +146,16 @@ namespace MyXonotic
             return null;
         }
 
-        public void ApplyExternalImpulse(Vector3 impulse) => _externalImpulse += impulse;
+        /// dev.14: knockback goes straight into velocity (Xonotic Damage()).
+        public void ApplyExternalImpulse(Vector3 impulse) => _velocity += impulse;
         public void Launch(Vector3 velocity)
         {
             _velocity = velocity;
-            _externalImpulse = Vector3.zero;
         }
 
         public void ResetMotion()
         {
             _velocity = Vector3.zero;
-            _externalImpulse = Vector3.zero;
             _wanderTarget = transform.position;
             _repickTimer = 0f;
             _wantedPickup = null;
@@ -268,8 +266,7 @@ namespace MyXonotic
             if (_groundMover != null && Time.time - _groundMoverTime < 0.15f) carry = _groundMover.LastDelta;
             else _groundMover = null;
 
-            _cc.Move((_velocity + _externalImpulse) * Time.deltaTime + carry);
-            _externalImpulse = Vector3.Lerp(_externalImpulse, Vector3.zero, 6f * Time.deltaTime);
+            _cc.Move(_velocity * Time.deltaTime + carry);
             if (transform.position.y < ArenaBootstrap.VoidKillY) Actor.TakeDamage(10000, Vector3.zero, null);
 
             if (Animator != null) Animator.SetMotion(_velocity, transform.forward, grounded);

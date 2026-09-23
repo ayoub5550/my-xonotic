@@ -9,21 +9,27 @@ namespace MyXonotic
     /// weapon switch) so several can act at once (e.g. move + look + fire together).
     /// The FIRE (and ALT) finger can also aim: if no dedicated look finger is down,
     /// dragging the finger that is holding FIRE turns the camera, matching the
-    /// owner's LibreQuake touch reference. Basic numeric movement targets reference
-    /// Xonotic physicsX.cfg; advanced air control, ramp behavior and step sliding
-    /// are NOT a faithful reimplementation yet (movement constants unchanged).
+    /// owner's LibreQuake touch reference. Movement (dev.14) is the Xonotic
+    /// physicsX.cfg model ported in <see cref="XonoticPhysics"/>: ground friction +
+    /// acceleration, QW-clamped air acceleration with strafe blend and CPM air
+    /// control (bunny-hop / air-turn), auto-hop while JUMP is held, and weapon
+    /// knockback added straight to velocity (rocket/laser jumps carry into the air).
     /// </summary>
     [RequireComponent(typeof(CharacterController))]
     [RequireComponent(typeof(Actor))]
     public sealed class Player : MonoBehaviour
     {
-        public const float WalkSpeed = 360f / 32f;
-        public const float Acceleration = 15f;
-        public const float AirAcceleration = 2f;
-        public const float GroundFriction = 6f;
-        public const float StopSpeed = 100f / 32f;
-        public const float JumpSpeed = 260f / 32f;
-        public const float Gravity = -800f / 32f;
+        public const float WalkSpeed = XonoticPhysics.MaxSpeed;
+        public const float Acceleration = XonoticPhysics.Accelerate;
+        public const float AirAcceleration = XonoticPhysics.AirAccelerate;
+        public const float GroundFriction = XonoticPhysics.Friction;
+        public const float StopSpeed = XonoticPhysics.StopSpeed;
+        public const float JumpSpeed = XonoticPhysics.JumpVelocity;
+        public const float Gravity = -XonoticPhysics.Gravity;
+        /// Seconds after leaving the ground during which a jump is still accepted
+        /// (Xonotic's engine reports onground for the step frame; CharacterController
+        /// flickers on ramps/stairs, so a tiny coyote window keeps hops reliable).
+        public const float JumpCoyoteTime = 0.06f;
         public const float LookSensitivityMouse = 3.5f;
         public const float LookSensitivityTouch = 3.2f;
 
@@ -78,7 +84,6 @@ namespace MyXonotic
 
         CharacterController _cc;
         Vector3 _velocity;
-        Vector3 _externalImpulse;
         float _pitch;
         float _yaw;
 
@@ -152,7 +157,6 @@ namespace MyXonotic
         public void ResetForRespawn(float yaw)
         {
             _velocity = Vector3.zero;
-            _externalImpulse = Vector3.zero;
             HookAnchor = null;
             _groundMover = null;
             _pitch = 0f;
@@ -212,22 +216,33 @@ namespace MyXonotic
             }
             else
             {
+                if (IsGrounded) _lastGroundedTime = Time.time;
+                bool canJump = jump && (IsGrounded || Time.time - _lastGroundedTime <= JumpCoyoteTime) && _velocity.y <= JumpSpeed * 0.5f;
+                if (canJump)
+                {
+                    // PlayerJump(): jumping happens before the movement step and
+                    // clears onground, so this frame runs the air path (no friction).
+                    _velocity.y = JumpSpeed;
+                    IsGrounded = false;
+                    _lastGroundedTime = -10f;
+                    JumpCount++;
+                }
+
                 if (IsGrounded)
                 {
-                    if (!jump) horizontal = ArenaMath.ApplyGroundFriction(horizontal, GroundFriction, StopSpeed, dt);
-                    horizontal = ArenaMath.Accelerate(horizontal, wishDir, wishSpeed, Acceleration, dt);
+                    if (_velocity.y < 0f) _velocity.y = 0f;
+                    horizontal = XonoticPhysics.GroundMove(horizontal, wishDir, wishSpeed, dt);
                 }
                 else
                 {
-                    horizontal = ArenaMath.Accelerate(horizontal, wishDir, wishSpeed, AirAcceleration, dt);
+                    horizontal = XonoticPhysics.AirMove(horizontal, moveInput, wishDir, wishSpeed, dt);
                 }
                 _velocity.x = horizontal.x;
                 _velocity.z = horizontal.z;
 
-                if (IsGrounded && _velocity.y < 0f) _velocity.y = -1f;
                 _velocity.y += Gravity * dt;
-
-                if (IsGrounded && jump) _velocity.y = JumpSpeed;
+                // Keep a small downward bias while standing so CharacterController keeps reporting ground.
+                if (IsGrounded && !canJump && _velocity.y < 0f) _velocity.y = Mathf.Max(_velocity.y, -1f);
             }
 
             // Ride moving platforms/doors: add the mover's displacement this frame.
@@ -235,10 +250,19 @@ namespace MyXonotic
             if (_groundMover != null && Time.time - _groundMoverTime < 0.15f) carry = _groundMover.LastDelta;
             else _groundMover = null;
 
-            var flags = _cc.Move((_velocity + _externalImpulse) * dt + carry);
+            Vector3 before = transform.position;
+            var flags = _cc.Move(_velocity * dt + carry);
             if ((flags & CollisionFlags.Above) != 0 && _velocity.y > 0) _velocity.y = 0;
             IsGrounded = (flags & CollisionFlags.Below) != 0 || _cc.isGrounded;
-            _externalImpulse = Vector3.Lerp(_externalImpulse, Vector3.zero, 6f * dt);
+            // Clip horizontal velocity against walls the controller stopped us on
+            // (otherwise the Quake accelerate keeps "wanting" through the wall).
+            if ((flags & CollisionFlags.Sides) != 0 && dt > 0f)
+            {
+                Vector3 actual = (transform.position - before - carry) / dt;
+                Vector3 h = new Vector3(_velocity.x, 0f, _velocity.z);
+                Vector3 ha = new Vector3(actual.x, 0f, actual.z);
+                if (ha.sqrMagnitude < h.sqrMagnitude) { _velocity.x = ha.x; _velocity.z = ha.z; }
+            }
             if (transform.position.y < ArenaBootstrap.VoidKillY) Actor.TakeDamage(10000, Vector3.zero, null);
 
             if (Weapons != null && ViewCamera != null)
@@ -290,7 +314,19 @@ namespace MyXonotic
             _groundMoverTime = Time.time;
         }
 
-        public void ApplyExternalImpulse(Vector3 impulse) => _externalImpulse += impulse;
+        /// Weapon knockback (Xonotic Damage(): <c>velocity += force</c>). Added
+        /// straight to the physics velocity so rocket/laser jumps carry into the air
+        /// model; a small upward component unsticks the controller from the floor.
+        public void ApplyExternalImpulse(Vector3 impulse)
+        {
+            if (impulse.sqrMagnitude <= 0f) return;
+            _velocity += impulse;
+            if (impulse.y > 0.5f && IsGrounded) { IsGrounded = false; _lastGroundedTime = -10f; }
+        }
+
+        /// Number of jumps started (auto-hop included); for tests.
+        public int JumpCount { get; private set; }
+        float _lastGroundedTime = -10f;
 
         /// Trigger hook (e.g. jump pads): sets velocity directly — NOT additive
         /// with current velocity — and clears any residual external impulse, so
@@ -300,7 +336,6 @@ namespace MyXonotic
         public void Launch(Vector3 velocity)
         {
             _velocity = velocity;
-            _externalImpulse = Vector3.zero;
         }
 
         void ReadInput(out Vector2 move, out Vector2 look, out bool jump,

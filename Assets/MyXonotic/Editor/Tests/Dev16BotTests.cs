@@ -41,7 +41,9 @@ namespace MyXonotic.EditorTools
             check(Mathf.Approximately(Bot.AimErrorFor(10), 0f) && Mathf.Approximately(Bot.AimErrorFor(5), 1.8f) && Bot.AimErrorFor(1) > Bot.AimErrorFor(4), "aim error 0° at skill 10, 1.8° at 5, grows downward");
             check(Bot.ThinkIntervalFor(10) < Bot.ThinkIntervalFor(4) && Mathf.Approximately(Bot.ThinkIntervalFor(10), 0.05f), "think interval scales with skill");
             check(Bot.BunnyhopsAt(7) && Bot.BunnyhopsAt(10) && !Bot.BunnyhopsAt(6), "bunnyhop from skill 7");
-            check(MatchSettings.BotSkillFor(0) == 8 && MatchSettings.BotSkillFor(1) == 6 && MatchSettings.BotSkillFor(2) == 4 && MatchSettings.BotSkillFor(3) == 8, "bot skills 8/6/4 cycle");
+            MatchSettings.OverrideBotSkillForTest(8); // dev.16 shipped a fixed 8/6/4; dev.18 derives it from the difficulty setting
+            check(MatchSettings.BotSkillFor(0) == 8 && MatchSettings.BotSkillFor(1) == 7 && MatchSettings.BotSkillFor(2) == 6 && MatchSettings.BotSkillFor(3) == 8, "bot skills cycle base/base-1/base-2");
+            MatchSettings.OverrideBotSkillForTest(MatchSettings.DefaultBotSkill);
 
             // ---------------- item want ----------------
             check(Bot.ItemWant(PickupType.Health, WeaponType.Blaster, false, 30, 0, 1, 0) > Bot.ItemWant(PickupType.Health, WeaponType.Blaster, false, 60, 0, 1, 0), "low health wants health more");

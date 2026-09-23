@@ -263,7 +263,7 @@ namespace MyXonotic
                 Vector3 ha = new Vector3(actual.x, 0f, actual.z);
                 if (ha.sqrMagnitude < h.sqrMagnitude) { _velocity.x = ha.x; _velocity.z = ha.z; }
             }
-            if (transform.position.y < ArenaBootstrap.VoidKillY) Actor.TakeDamage(10000, Vector3.zero, null);
+            if (transform.position.y < ArenaBootstrap.VoidKillY) Actor.TakeDamage(10000, Vector3.zero, null, Actor.CauseVoid);
 
             if (Weapons != null && ViewCamera != null)
             {

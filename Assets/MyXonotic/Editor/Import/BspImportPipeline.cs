@@ -27,6 +27,8 @@ namespace MyXonotic.EditorTools
         private const string SharedTextureFolder = "Assets/MyXonotic/Generated/Textures";
         private const string VertexColorShaderName = "MyXonotic/VertexColor";
         private const string LightmappedShaderName = "MyXonotic/Lightmapped";
+        private const string LightmappedBlendShaderName = "MyXonotic/LightmappedBlend";
+        private const string LightmappedAddShaderName = "MyXonotic/LightmappedAdd";
         private const string SkySixSidedShaderName = "MyXonotic/Sky6Sided";
 
         // A legitimate Q3-family map .bsp is typically a few hundred KB to
@@ -524,9 +526,11 @@ namespace MyXonotic.EditorTools
             }
 
             Texture2D diffuse = null;
+            string diffusePathUsed = null;
             if (shaderValid)
             {
                 string diffusePath = resolver.ResolveDiffuse(shaderName, out script);
+                diffusePathUsed = diffusePath;
                 if (diffusePath == null)
                 {
                     warnings.Add("No texture resolved for shader '" + shaderName + "'; check XONOTIC_CONTENT_ROOTS/ThirdParty coverage. Group uses fallback material.");
@@ -557,8 +561,38 @@ namespace MyXonotic.EditorTools
 
             var shader = lightmappedShader != null ? lightmappedShader
                 : (fallbackShader != null ? fallbackShader : Shader.Find("Hidden/InternalErrorShader"));
+            // dev.18: Q3 blend semantics — translucent (blend / dp_water) and additive (add) stages
+            // get their own shader variants instead of the dev.5 "0.5 alpha-cutout for everything" rule.
+            var blendKind = ClassifyBlend(script);
+            if (blendKind == BlendKind.Blend) { var s = Shader.Find(LightmappedBlendShaderName); if (s != null) shader = s; }
+            else if (blendKind == BlendKind.Additive) { var s = Shader.Find(LightmappedAddShaderName); if (s != null) shader = s; }
+
             var mat = new Material(shader) { name = materialName };
             mat.SetTexture("_MainTex", diffuse);
+            if (blendKind == BlendKind.Blend && script != null && script.WaterLike) mat.SetColor("_Tint", new Color(1f, 1f, 1f, 0.75f)); // dp_water: no refraction pass here, plain 75 % alpha
+
+            // dev.18: DarkPlaces draws <texture>_glow fullbright on top of the lit diffuse; Xonotic maps
+            // carry hundreds of these (light strips, panels, lava). Also an explicit additive glow stage.
+            string glowPath = ResolveGlowPath(shaderName, diffusePathUsed, script, resolver);
+            if (glowPath != null)
+            {
+                Texture2D glow;
+                if (!diffuseCache.TryGetValue(glowPath, out glow))
+                {
+                    string reason;
+                    var loadedGlow = BspTextureLoader.Load(glowPath, srgb: true, failureReason: out reason);
+                    if (loadedGlow != null)
+                    {
+                        string texAssetPath = SharedTextureFolder + "/" + MakeSafeFolderName(Path.GetFileNameWithoutExtension(glowPath)) + "_" + StableShortHash(glowPath) + ".asset";
+                        glow = CreateOrReplaceTexture(loadedGlow, texAssetPath, true);
+                        manifestEntries.Add(ManifestEntry.For("glow", shaderName, glowPath));
+                    }
+                    diffuseCache[glowPath] = glow;
+                }
+                if (glow != null) { mat.SetTexture("_GlowTex", glow); mat.SetFloat("_HasGlow", 1f); }
+            }
+            var scroll = ScrollOf(script);
+            if (scroll != Vector2.zero) mat.SetVector("_Scroll", new Vector4(scroll.x, scroll.y, 0f, 0f));
 
             // Lighting source: internal lump block, else external lightmap
             // image, else per-vertex colour (LightMode 2), matching what
@@ -599,15 +633,87 @@ namespace MyXonotic.EditorTools
             // blendfunc filter" and additive glow stages — so every lightmapped
             // wall became a 0.5 alpha-cutout and any diffuse whose alpha
             // channel carries gloss/other data disappeared (empty areas).
-            bool wantsAlphaTest = script != null && script.Stages.Any(st => !st.UsesLightmap && StageCarvesAlpha(st));
+            bool wantsAlphaTest = blendKind == BlendKind.Cutout;
             if (wantsAlphaTest)
             {
                 mat.EnableKeyword("_ALPHATEST_ON");
                 mat.SetFloat("_Cutoff", 0.5f);
-                warnings.Add("Shader '" + shaderName + "' has an alpha-blended/alpha-tested stage; approximated here as a 0.5 alpha-cutout, not true translucency (no blend pass in Resources/Lightmapped.shader).");
+                warnings.Add("Shader '" + shaderName + "' has an alpha-tested stage (alphaFunc, or an alpha-blended base under a lightmap); rendered as a 0.5 alpha-cutout. Translucent/additive shaders now use LightmappedBlend/LightmappedAdd.");
             }
 
             return CreateOrReplaceAsset(mat, folder + "/materials/" + materialName + ".mat");
+        }
+
+        public enum BlendKind { Opaque, Cutout, Blend, Additive }
+
+        /// <summary>
+        /// dev.18: how a Q3 material's base (first non-lightmap) stage composites. alphaFunc → cutout
+        /// (grates); blendfunc blend / GL_SRC_ALPHA or DarkPlaces water → translucent; blendfunc add /
+        /// GL_ONE GL_ONE on a surface without a lightmap stage → additive (beams, glow panels); else opaque.
+        /// Pure (tested in Dev18Tests).
+        /// </summary>
+        public static BlendKind ClassifyBlend(MaterialScript script)
+        {
+            if (script == null) return BlendKind.Opaque;
+            MaterialScript.StageInfo baseStage = null;
+            bool hasLightmapStage = false;
+            foreach (var st in script.Stages)
+            {
+                if (st.UsesLightmap) { hasLightmapStage = true; continue; }
+                if (baseStage == null && !string.IsNullOrEmpty(st.Map) && !st.Map.StartsWith("$")) baseStage = st;
+            }
+            if (script.WaterLike) return BlendKind.Blend;
+            if (baseStage == null) return BlendKind.Opaque;
+            if (!string.IsNullOrEmpty(baseStage.AlphaFunc)) return BlendKind.Cutout;
+            string bf = baseStage.BlendFunc ?? "";
+            bool additive = bf == "ADD" || bf == "GL_ONE GL_ONE" || bf == "GL_SRC_ALPHA GL_ONE";
+            if (additive && !hasLightmapStage) return BlendKind.Additive;
+            bool srcAlpha = bf == "BLEND" || bf.Contains("GL_SRC_ALPHA") || bf.Contains("GL_ONE_MINUS_SRC_ALPHA");
+            if (srcAlpha && (script.Has("trans") || !hasLightmapStage)) return BlendKind.Blend;
+            if (srcAlpha) return BlendKind.Cutout; // lightmapped surface with an alpha-blended base: keep the cutout approximation
+            return BlendKind.Opaque;
+        }
+
+        /// <summary>tcMod scroll of the base stage (zero when none).</summary>
+        public static Vector2 ScrollOf(MaterialScript script)
+        {
+            if (script == null) return Vector2.zero;
+            foreach (var st in script.Stages)
+                if (!st.UsesLightmap && !string.IsNullOrEmpty(st.Map) && !st.Map.StartsWith("$")) return st.TcModScroll;
+            return Vector2.zero;
+        }
+
+        /// <summary>Content-relative glow companion name for a resolved diffuse: &lt;path without ext&gt;_glow.</summary>
+        public static string GlowPathFor(string shaderName, string resolvedDiffusePath)
+        {
+            string rel = null;
+            if (!string.IsNullOrEmpty(resolvedDiffusePath))
+            {
+                string norm = resolvedDiffusePath.Replace('\\', '/');
+                int idx = norm.IndexOf("/textures/", StringComparison.OrdinalIgnoreCase);
+                if (idx < 0) idx = norm.IndexOf("/models/", StringComparison.OrdinalIgnoreCase);
+                if (idx >= 0) rel = norm.Substring(idx + 1);
+            }
+            if (rel == null) rel = shaderName;
+            rel = Path.ChangeExtension(rel, null);
+            return rel + "_glow";
+        }
+
+        /// <summary>Find the glow image: the implicit *_glow companion, else an explicit additive stage map.</summary>
+        static string ResolveGlowPath(string shaderName, string diffusePath, MaterialScript script, XonoticContentResolver resolver)
+        {
+            var glow = resolver.FindImage(GlowPathFor(shaderName, diffusePath));
+            if (glow != null) return glow;
+            if (script == null) return null;
+            bool first = true;
+            foreach (var st in script.Stages)
+            {
+                if (st.UsesLightmap || string.IsNullOrEmpty(st.Map) || st.Map.StartsWith("$")) continue;
+                if (first) { first = false; continue; }
+                string bf = st.BlendFunc ?? "";
+                if (bf == "ADD" || bf == "GL_ONE GL_ONE") { var g = resolver.FindImage(st.Map); if (g != null) return g; }
+            }
+            return null;
         }
 
         /// <summary>True when a stage's alphaFunc/blendFunc uses the texture alpha as coverage.</summary>

@@ -751,7 +751,7 @@ namespace MyXonotic
                         FireBeam(origin, dir, fire, weapon);
                         break;
                     default:
-                        Projectile.Spawn(origin, dir, fire, Owner, weapon);
+                        Projectile.Spawn(origin, dir, fire, Owner, weapon, alt);
                         break;
                 }
             }

@@ -16,10 +16,12 @@ namespace MyXonotic.EditorTools
         {
             // ---------------- visuals ----------------
             check(ProjectileVisuals.ModelResource(WeaponType.Devastator) == "Weapons/DevastatorProjectile", "rocket model resource name");
-            check(ProjectileVisuals.ModelResource(WeaponType.Blaster) == null && ProjectileVisuals.ModelResource(WeaponType.Electro) == null, "bolt weapons keep the glowing sphere");
+            check(ProjectileVisuals.ModelResource(WeaponType.Vortex) == null && ProjectileVisuals.ModelResource(WeaponType.Fireball) == null, "hitscan / particle weapons keep the sphere fallback (dev.18: bolts now have models)");
             check(ProjectileVisuals.HasSmoke(WeaponType.Devastator) && ProjectileVisuals.HasSmoke(WeaponType.Hagar) && !ProjectileVisuals.HasSmoke(WeaponType.Crylink), "smoke only for rocket-class shots");
             foreach (var src in ProjectileModelImporter.Sources)
-                check(ProjectileVisuals.ModelResource(src.Weapon) == "Weapons/" + src.Weapon + "Projectile", "importer source matches runtime lookup: " + src.Weapon);
+                check(System.Array.IndexOf(ProjectileVisuals.AllModelResources, src.ResourceName) >= 0 &&
+                      (ProjectileVisuals.ModelResource(src.Weapon, false) == src.ResourceName || ProjectileVisuals.ModelResource(src.Weapon, true) == src.ResourceName),
+                      "importer source matches runtime lookup: " + src.ResourceName);
             var mat = ParticleFx.Material();
             check(mat != null && (!mat.HasProperty("_VertexWeight") || Mathf.Approximately(mat.GetFloat("_VertexWeight"), 1f)), "particle material uses per-particle colour");
             check(Resources.Load<GameObject>("Weapons/DevastatorProjectile") != null, "rocket.md3 imported as Resources/Weapons/DevastatorProjectile (run weapons gate)");

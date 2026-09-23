@@ -221,7 +221,7 @@ namespace MyXonotic
             // (a bounding box has no meaningful "hurt surface normal" without the
             // real brush faces); environmental damage, no instigator.
             int dmg = HurtDamagePerTick <= LegacyDefaultHurtDamagePerTick ? DefaultHurtDamagePerTick : HurtDamagePerTick;
-            actor.TakeDamage(dmg, Vector3.zero, null);
+            actor.TakeDamage(dmg, Vector3.zero, null, Actor.CauseHurt);
         }
 
         /// <summary>

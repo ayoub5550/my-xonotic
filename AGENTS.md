@@ -3,6 +3,35 @@
 **Follow `docs/ROADMAP.md`** (dev.15 → dev.20, rules per release) before planning any new dev.N.
 **Device testing is always done on Firebase Test Lab** — `docs/DEVICE-TESTING.md`, `tools/ftl_robo.sh`; every APK runs on real phones there before the release is announced.
 
+## dev.18 visuals-settings-bots checkpoint — 2026-09-23 (branch `feat/unity-dev18-visuals-settings-bots`)
+
+Read `docs/UNITY-DEV18.md` first. Map surfaces are now classified from the
+original shader scripts (`BspImportPipeline.BlendKind` Opaque/Cutout/Blend/
+Additive, `tcMod scroll` → `_Scroll`, `*_glow` → `_GlowTex`, `dp_water` →
+translucent) onto `Lightmapped` / `LightmappedBlend` / `LightmappedAdd`
+(texture × lightmap × 2, glow **screen-blended** — additive glow blew light
+strips out to white slabs on the A15). `MobileBloom` (quarter-res, 0.85/0.45)
+sits on the arena camera and is off in `GameSettings.Effects == Low`.
+`LocalBuild` pins the new shaders in GraphicsSettings at build time.
+`Runtime/Menu/SettingsPage.cs` is the tabbed SETTINGS page (VIDEO/AUDIO/
+CONTROLS/GAME) backed by `GameSettings` (`mx_*` PlayerPrefs, saved on every
+change). Bot skill defaults to **3/2/1** (`MatchSettings.BotSkill`, slider 1–10,
+`BotSkillFor(i) = clamp(skill − i%3)`); `BotAim` holds the aim.qc constants;
+`Bot.CombatFallback` prevents the freeze when both guarded strafes are vetoed
+(seen in Test Lab run 1). `Runtime/Content/Mdl/MdlReader.cs` reads Quake MDL so
+all 8 projectile models are original (`projectile_models=8/8` in the Game Loop
+report, which also lists suicide causes `*_suicide_void/hurt/self/other`).
+Editor tests PASS 1074. **Fresh checkout trap (bit dev.13 and dev.18):** run the
+`prepare_unity_textures.py` commands from `docs/UNITY-DEV8.md` before
+`prepare-maps`, or every character imports untextured (white bots on device,
+APK ~20 MB smaller, `grep -c "no image resolved" Artifacts/full-game-maps.json`
+> 0) while every gate still passes. `tools/ftl_robo.sh … game-loop` runs both
+scenarios (120 s afterslime + 180 s atelier, ≈317 s per device). Open for
+dev.19: bot/player deaths in afterslime slime (`*_suicide_hurt`) — exclude
+`trigger_hurt` volumes from bot movement targets; dev.17's original items/
+announcer/sounds/scoreboard still pending. Unity on Linux needs Android
+`cmdline-tools` 6.0 (Java 11); 12.0 breaks "update Android SDK package list".
+
 ## dev.17 projectile-visuals checkpoint — 2026-09-23 (branch `feat/unity-dev17-projectile-visuals`)
 
 Read `docs/UNITY-DEV17.md` first. Projectiles now use the original Xonotic models

@@ -104,6 +104,7 @@ namespace MyXonotic
             GameState.Reset();
             IsPaused = false;
             Application.targetFrameRate = 60;
+            if (Application.isPlaying) GameSettings.Apply(); // dev.18: frame cap + volumes from the settings page
             Input.simulateMouseWithTouches = false;
 
             Mode = TestMode ? GameMode.Deathmatch : MatchSettings.Mode;
@@ -462,6 +463,7 @@ namespace MyXonotic
             cam.nearClipPlane = 0.05f;
             cam.fieldOfView = 85f;
             cameraGO.AddComponent<AudioListener>();
+            if (Application.isPlaying) cameraGO.AddComponent<MobileBloom>(); // dev.18: reads GameSettings.BloomActive every frame
 
             var player = go.AddComponent<Player>();
             player.ViewCamera = cam;

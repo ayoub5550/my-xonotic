@@ -32,6 +32,7 @@ namespace MyXonotic.EditorTools
             Dev15WeaponTests.Run(Check);
             Dev16BotTests.Run(Check);
             Dev17VisualBotTests.Run(Check);
+            Dev18Tests.Run(Check);
             LocalBuild.CreateDevelopmentScene();
             var bootstrap = UnityEngine.Object.FindObjectOfType<ArenaBootstrap>();
             Check(bootstrap != null, "serialized bootstrap");
@@ -168,11 +169,24 @@ namespace MyXonotic.EditorTools
             }
 
             menu.ShowScreen(MenuScreen.Settings);
-            Check(go.transform.Find("MenuCanvas/SafeArea/Settings/TouchPanel/ButtonScaleValue") != null, "settings has button-size stepper");
-            Check(go.transform.Find("MenuCanvas/SafeArea/Settings/TouchPanel/SensitivityValue") != null, "settings has sensitivity stepper");
-            Check(go.transform.Find("MenuCanvas/SafeArea/Settings/TouchPanel/InvertY") != null, "settings has invert toggle");
-            Check(go.transform.Find("MenuCanvas/SafeArea/Settings/TouchPanel/LeftHanded") != null, "settings has left-handed toggle");
-            Check(go.transform.Find("MenuCanvas/SafeArea/Settings/DevPanel/ShareLog") != null, "settings has DevCapture SHARE LOG");
+            // dev.18: tabbed page — every tab is laid out and checked (Dev18Tests walks the details).
+            Check(menu.Settings != null, "settings page built");
+            foreach (SettingsTab tab in Enum.GetValues(typeof(SettingsTab)))
+            {
+                menu.Settings.Show(tab);
+                Canvas.ForceUpdateCanvases();
+                foreach (var rt in go.GetComponentsInChildren<RectTransform>(false)) LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+                foreach (var g in go.GetComponentsInChildren<Graphic>(false))
+                {
+                    var r = g.rectTransform.rect;
+                    Check(r.width > 0f && r.height > 0f, "settings tab " + tab + " graphic '" + g.name + "' has a positive rect");
+                }
+            }
+            Check(go.transform.Find("MenuCanvas/SafeArea/Settings/TabVideo") != null && go.transform.Find("MenuCanvas/SafeArea/Settings/TabGame") != null, "settings has VIDEO … GAME tabs");
+            Check(go.transform.Find("MenuCanvas/SafeArea/Settings/SettingsPanel/Controls/Rows/ButtonScaleSlider") != null, "settings has button-size slider");
+            Check(go.transform.Find("MenuCanvas/SafeArea/Settings/SettingsPanel/Controls/Rows/InvertY") != null, "settings has invert toggle");
+            Check(go.transform.Find("MenuCanvas/SafeArea/Settings/SettingsPanel/Controls/Rows/LeftHanded") != null, "settings has left-handed toggle");
+            Check(go.transform.Find("MenuCanvas/SafeArea/Settings/SettingsPanel/Game/DevPanel/ShareLog") != null, "settings has DevCapture SHARE LOG");
             UnityEngine.Object.DestroyImmediate(go);
         }
 

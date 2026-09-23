@@ -19,12 +19,16 @@ namespace MyXonotic.EditorTools
         public string SkyEnv;          // skyParms <env/name> ...
         public bool CullNone;
         public bool PolygonOffset;
+        /// dev.18: DarkPlaces water/refraction (dp_water, dp_refract) — rendered translucent here.
+        public bool WaterLike;
 
         public sealed class StageInfo
         {
             public string Map;
             public string BlendFunc;   // raw tokens joined by space
             public string AlphaFunc;
+            /// dev.18: tcMod scroll s t (texture units per second), zero when absent.
+            public UnityEngine.Vector2 TcModScroll;
             public bool UsesLightmap => Map == "$lightmap";
         }
 
@@ -185,6 +189,9 @@ namespace MyXonotic.EditorTools
         // ------------------------------------------------------------------
         // Minimal tokenizer for the brace-structured script format.
         // ------------------------------------------------------------------
+        /// dev.18 test alias for <see cref="ParseScriptFile"/>.
+        public static List<MaterialScript> ParseShaderScripts(string text) => ParseScriptFile(text);
+
         public static List<MaterialScript> ParseScriptFile(string text)
         {
             var tokens = Tokenize(text);
@@ -254,6 +261,9 @@ namespace MyXonotic.EditorTools
                         }
                         break;
                     case "polygonoffset": script.PolygonOffset = true; break;
+                    case "dp_water":
+                    case "dp_refract":
+                        script.WaterLike = true; break; // (dp_reflect / dpreflectcube are opaque reflections, not translucency)
                 }
             }
             else
@@ -269,6 +279,15 @@ namespace MyXonotic.EditorTools
                         break;
                     case "blendfunc": stage.BlendFunc = string.Join(" ", line.Skip(1)).ToUpperInvariant(); break;
                     case "alphafunc": stage.AlphaFunc = string.Join(" ", line.Skip(1)).ToUpperInvariant(); break;
+                    case "tcmod":
+                        if (line.Count > 3 && line[1].ToLowerInvariant() == "scroll")
+                        {
+                            float s, t;
+                            if (float.TryParse(line[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out s) &&
+                                float.TryParse(line[3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out t))
+                                stage.TcModScroll = new UnityEngine.Vector2(s, t);
+                        }
+                        break;
                 }
             }
             line.Clear();

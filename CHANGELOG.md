@@ -1,5 +1,15 @@
 # سجل التغييرات
 
+## 0.1.0-dev.18 — 2026-09-23 — الجرافيك الأصلي (lightmaps/glow/شفافية/bloom)، صفحة إعدادات بتبويبات، بوتات 3/2/1 مع منزلق، طلقات MDL
+
+- **الجرافيك** (`BspImportPipeline.cs`, `Lightmapped.shader`, `LightmappedBlend.shader`/`LightmappedAdd.shader`/`Bloom.shader` جديدة، `MobileBloom.cs`): تصنيف سطوح BSP إلى Opaque/Cutout/Blend/Additive من scripts الأصلية، `tcMod scroll`، توهج `*_glow` بمزج screen، `dp_water` شفاف، bloom بربع الدقة مع وضع LOW يعطّله. 29 خريطة: 2259 Lightmapped / 118 Add / 60 Blend / 29 Sky6Sided، 261 مادة بتوهج، 0 lightmap fallback.
+- **صفحة الإعدادات** (`Runtime/Menu/SettingsPage.cs` جديد، `GameSettings.cs` جديد): تبويبات VIDEO / AUDIO / CONTROLS / GAME، أزرار لمس كبيرة، حفظ فوري (`mx_*`)، معاينة الحساسية، منزلق صعوبة البوت، Effects/Bloom/FPS/أحجام الصوت.
+- **البوتات** (`BotAim.cs` جديد، `MatchSettings.cs`, `Bot.cs`): المهارة الافتراضية **3/2/1** (كانت 8/6/4) مع منزلق 1–10، ثوابت `bot_ai_aimskill_*` من `aim.qc`؛ `CombatFallback` يمنع تجمّد البوت/الطيار حين تُرفض خطوات الالتفاف (رآه Test Lab في التشغيل الأول).
+- **الطلقات** (`Runtime/Content/Mdl/MdlReader.cs` جديد، `ProjectileModelImporter.cs`): قارئ MDL → 8/8 نماذج أصلية (Hagar `hagarmissile`، Blaster `laser`، Electro `elaser`/`ebomb`، Crylink `plasmatrail` إلى جانب rocket/grenademodel/mine)؛ التقرير يحصيها على الجهاز (`projectile_models=8/8`).
+- تقرير Game Loop: أسباب الانتحار (`*_suicide_void/hurt/self/other`)، `bot_skill`، `effects`، `bloom`.
+- اختبارات Editor: PASS **1074** (كان 809) — `Dev18Tests`. playtest وgameplay-playtest PASS.
+- APK versionCode 19: 413,413,477 بايت، sha256 `bc05de144bacf8ab265777ffa39ecdd452c7be52018c1bc447809c9fef63be25`، توقيع debug (لم يتغيّر).  **Firebase Test Lab** Game Loop على A15/Android 14 ثلاث مرات (`docs/UNITY-DEV18.md`): الطيار يتحرك، نماذج الطلقات وlightmaps ظاهرة، لا ألواح بيضاء؛ التشغيل 3 (matrix `4868700399579265516`، APK النهائي): S1 `avg_fps=36.2`، `player_frags=1`، `player_deaths=0`، `player_suicides=0`، **`bot_suicides=8` كلها slime (`hurt`)** — هدف ≤ 2 لم يتحقّق؛ S2 `avg_fps=41.1`، 0 انتحار؛ logcat 0 `E Unity`/FATAL؛ البوتات بخاماتها الأصلية بعد انتكاسة خامات (التشغيل 2 كان بيضاء). **مفتوح لـ dev.19**: انتحار slime في afterslime (`*_suicide_hurt`)، بنود dev.17 الأصلية (العناصر/المعلن/الأصوات/scoreboard)، decals/gibs/bob.
+
 ## 0.1.0-dev.17 — 2026-09-23 — نماذج الطلقات الأصلية، دخان وكرات نار، بوتات لا تنتحر، طيار آلي يتحرك
 
 - **الطلقات** (`Editor/Import/ProjectileModelImporter.cs` + `Runtime/Gameplay/ProjectileVisuals.cs` جديدان): نماذج Xonotic الأصلية للـ Devastator (`rocket` IQM)، Mortar (`grenademodel` IQM)، Minelayer (`mine` MD3) وHagar (`tagrocket` MD3 كبديل) تُستورد إلى `Resources/Weapons/*Projectile.prefab` أثناء `weapons`؛ توجيه النموذج مع السرعة، ذيل دخان جسيمي، كرة نار عند كل انفجار (`ImpactEffects`). Blaster/Electro/Crylink تبقى كرات ملوّنة (MDL غير مدعوم).

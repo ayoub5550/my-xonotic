@@ -41,7 +41,22 @@ dev.14 نقل *أرقام* الأسلحة. dev.15 ينقل *سلوكها* من `
 | playtest / gameplay-playtest | PASS (نجحا، صفر أخطاء؛ الضوضاء الوحيدة ALSA/FMOD من بيئة الحاوية) |
 | android (vc16) | 2026-09-23 12:35 UTC (412.7 ث) — `my-xonotic-full.apk` 404,824,528 بايت، SHA256 `868dd71739963fb38be680534c00e1d8d78dbd970d7dde374c5dffc6af0400d0`، توقيع debug |
 
-غير مُتحقَّق منه على جهاز حقيقي: إحساس التوجيه على اللمس، وضوح قراءات HUD، الأداء مع كرات Electro المتسلسلة.
+## اختبار على أجهزة حقيقية — Firebase Test Lab (Robo، 2026-09-23 13:19 UTC)
+
+أول تشغيل مُوثَّق للعبة على هواتف حقيقية (الإجراء في `docs/DEVICE-TESTING.md`). المصفوفة: `6501329712695047192` في مشروع `ayoub-261d7`.
+
+| الجهاز | Android | النتيجة | ملاحظات |
+|---|---|---|---|
+| Samsung Galaxy S24 (`SC-51E`) | 16 | **Passed** (5.8 د) | 60 FPS ثابت (17 ms)، بدون Crash/ANR |
+| Samsung Galaxy A15 5G (`a15x`) | 14 | **Passed** (6.3 د) | 30–43 FPS، أسوأ إطار 89 ms، أول إطار 2.1 ث |
+
+أخطاء logcat (تحدّد نطاق dev.16 حسب قاعدة 6/8 في ROADMAP):
+1. `E Unity: Can't add component because class 'CapsuleCollider' doesn't exist!` في `ArenaPrimitives.Grab` ← `ArenaBootstrap.BuildPlayer` على الجهازين. السبب: `stripEngineCode: 1` يحذف `CapsuleCollider` لأن لا كود يشير إليه مباشرة، و`GameObject.CreatePrimitive(Capsule)` يحتاجه. لا يظهر في المحرر إطلاقًا. الحل: `Assets/link.xml` يحفظ `UnityEngine.PhysicsModule` + مرجع صريح للنوع.
+2. أداء A15 (هاتف متوسط) دون 60 FPS — يحتاج تحسينًا (ظلال/دقة عرض دينامية/LOD).
+3. البوتات غالبًا `visible 0` أثناء 6 دقائق — لا تقترب من اللاعب؛ يؤكد أولوية NavMesh bots.
+4. Robo لا يستخدم عصا الحركة؛ dev.16 يضيف Game Loop (`com.google.intent.action.TEST_LOOP`) لتشغيل مباراة آلية.
+
+غير مُتحقَّق منه بعد: إحساس التوجيه على اللمس (يحتاج يدًا بشرية)، وضوح HUD على شاشة صغيرة.
 
 ## لم يُنقل بعد (مؤجَّل)
 

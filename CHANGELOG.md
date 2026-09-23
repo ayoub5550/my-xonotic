@@ -9,7 +9,7 @@
 - **Vortex**: شحن 0.5→1 بمعدل 0.6/s؛ ضرر 40→80. **Arc**: 6 خلايا/s، مدى 1500، فرط تسخين 5 s وتبريد 2.5 s. **Minelayer**: تفعيل 150 qu، عد تنازلي 0.5 s، عمر 10 s، remote 45/40/300/200. **Shotgun melee**: تأخير 0.25 s.
 - HUD: `CHG %` / `HEAT %` / `LOAD n/4` بجانب اسم السلاح. `docs/ROADMAP.md` جديد (dev.15 → dev.20).
 - اختبارات Editor: PASS **742** (كان 698) — `Dev15WeaponTests`. playtest وgameplay-playtest PASS (نجحا، صفر أخطاء؛ الضوضاء الوحيدة ALSA/FMOD من بيئة الحاوية).
-- APK versionCode 16: `my-xonotic-full.apk` 404,824,528 بايت، SHA256 `868dd71739963fb38be680534c00e1d8d78dbd970d7dde374c5dffc6af0400d0`، توقيع debug، غير مُجرَّب على جهاز. التفاصيل في `docs/UNITY-DEV15.md`.
+- APK versionCode 16: `my-xonotic-full.apk` 404,824,528 بايت، SHA256 `868dd71739963fb38be680534c00e1d8d78dbd970d7dde374c5dffc6af0400d0`، توقيع debug. **Firebase Test Lab (Robo)**: Passed على Galaxy S24/Android 16 (60 FPS) وGalaxy A15/Android 14 (30–43 FPS)؛ خطأ واحد في logcat (`CapsuleCollider` محذوف بسبب strip engine code) → يُصلَح في dev.16. التفاصيل في `docs/UNITY-DEV15.md`.
 
 ## 0.1.0-dev.14 — 2026-09-23 — فيزياء Xonotic الأصلية، توازن الأسلحة من bal-wep-xonotic.cfg، تجدّد الصحة، أزرار لمس بنمط Warzone Mobile
 

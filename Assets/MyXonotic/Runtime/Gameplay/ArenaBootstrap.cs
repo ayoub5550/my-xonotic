@@ -72,6 +72,14 @@ namespace MyXonotic
         public int SpawnCount => _spawns.Count;
         public bool UsedImportedArena { get; private set; }
         public bool UsedFallbackSpawnMarker { get; private set; }
+        /// dev.13: spawns moved down onto the floor found below them (no floor within SpawnGroundProbe).
+        public int SnappedSpawns { get; private set; }
+        /// dev.13: spawns removed because no floor exists below them at all (bot would fall into the void at once).
+        public int DroppedSpawns { get; private set; }
+        /// A spawn is "grounded" when a non-trigger collider lies within this distance below it.
+        public const float SpawnGroundProbe = 2f;
+        /// How far down to look for a floor to snap an ungrounded spawn onto.
+        public const float SpawnSnapProbe = 40f;
 
         readonly List<Bot> _bots = new List<Bot>();
         readonly List<Pickup> _pickups = new List<Pickup>();
@@ -97,6 +105,7 @@ namespace MyXonotic
             Mode = TestMode ? GameMode.Deathmatch : MatchSettings.Mode;
             BuildLighting();
             BuildSpawns();
+            ValidateSpawns();
             BuildPlayer();
             BuildBots();
             BuildPickups();
@@ -114,6 +123,60 @@ namespace MyXonotic
             ComputeVoidKillHeight();
             IsReady = true;
             Instance = this;
+            if (Application.isPlaying)
+            {
+                DevCapture.Ensure();
+                RuntimeErrorLog.Note("arena " + gameObject.scene.name + " | mode " + Mode + " | bots " + _bots.Count +
+                    " (menu setting " + MatchSettings.BotCount + ") | spawns " + _spawns.Count + " snapped " + SnappedSpawns +
+                    " dropped " + DroppedSpawns + " | voidY " + VoidKillY.ToString("0.0") + " | imported " + UsedImportedArena);
+            }
+        }
+
+        /// <summary>
+        /// dev.13: bots invisible on device, hypothesis 3 — a spawn inside a wall
+        /// or over nothing drops the bot straight into the void, where VoidKillY
+        /// kills and respawns it, so it never appears. Every imported spawn must
+        /// have a floor within <see cref="SpawnGroundProbe"/>; otherwise it is
+        /// snapped onto the first floor below (up to <see cref="SpawnSnapProbe"/>)
+        /// or dropped. Counts are reported by DevCapture and the Editor test
+        /// <c>BotSpawnGeometry</c> checks the same rule for every packaged map.
+        /// </summary>
+        void ValidateSpawns()
+        {
+            SnappedSpawns = 0;
+            DroppedSpawns = 0;
+            if (!UsedImportedArena || UsedFallbackSpawnMarker) return;
+            Physics.SyncTransforms();
+            for (int i = _spawns.Count - 1; i >= 0; i--)
+            {
+                var spawn = _spawns[i];
+                if (SpawnHasFloor(spawn.Position, SpawnGroundProbe, out _)) continue;
+                RaycastHit hit;
+                if (SpawnHasFloor(spawn.Position, SpawnSnapProbe, out hit))
+                {
+                    spawn.Position = hit.point + Vector3.up * 0.1f;
+                    _spawns[i] = spawn;
+                    SnappedSpawns++;
+                    continue;
+                }
+                _spawns.RemoveAt(i);
+                DroppedSpawns++;
+            }
+            if (SnappedSpawns > 0 || DroppedSpawns > 0)
+                Debug.LogWarning("MyXonotic.ArenaBootstrap: spawn validation snapped " + SnappedSpawns + " and dropped " + DroppedSpawns + " spawn(s).");
+            if (_spawns.Count == 0)
+            {
+                UsedFallbackSpawnMarker = true;
+                _spawns.Add(new SpawnRuntime { Position = Vector3.up, Yaw = 0f });
+                CreateFallbackMarker(Vector3.zero);
+            }
+        }
+
+        /// Shared with the Editor spawn test: is there a non-trigger collider within
+        /// <paramref name="maxDistance"/> below <paramref name="position"/>?
+        public static bool SpawnHasFloor(Vector3 position, float maxDistance, out RaycastHit hit)
+        {
+            return Physics.Raycast(position + Vector3.up * 0.3f, Vector3.down, out hit, maxDistance + 0.3f, ~0, QueryTriggerInteraction.Ignore);
         }
 
         /// <summary>
@@ -150,6 +213,8 @@ namespace MyXonotic
                 if (TouchLayout.Pause.Contains(touch.position)) SetPaused(!IsPaused);
                 else if (IsPaused && TouchLayout.Restart.Contains(touch.position)) Restart();
                 else if (IsPaused && TouchLayout.MainMenu.Contains(touch.position)) ReturnToMenu();
+                else if (IsPaused && TouchLayout.ShareLog.Contains(touch.position)) DevCapture.Share();
+                else if (IsPaused && TouchLayout.CopyLog.Contains(touch.position)) DevCapture.Copy();
             }
             if (Input.touchCount == 0 && Input.GetMouseButtonDown(0) &&
                 Cursor.lockState != CursorLockMode.Locked)
@@ -157,6 +222,8 @@ namespace MyXonotic
                 if (TouchLayout.Pause.Contains(Input.mousePosition)) SetPaused(!IsPaused);
                 else if (IsPaused && TouchLayout.Restart.Contains(Input.mousePosition)) Restart();
                 else if (IsPaused && TouchLayout.MainMenu.Contains(Input.mousePosition)) ReturnToMenu();
+                else if (IsPaused && TouchLayout.ShareLog.Contains(Input.mousePosition)) DevCapture.Share();
+                else if (IsPaused && TouchLayout.CopyLog.Contains(Input.mousePosition)) DevCapture.Copy();
             }
         }
 

@@ -1,5 +1,35 @@
 # سجل التغييرات
 
+## 0.1.0-dev.13 — 2026-09-23 — DevCapture، صيد البوتات وتصحيح spawns، قائمة دخول جديدة، HUD بأيقونات الأصل، إعدادات اللمس
+
+- **DevCapture** (`Runtime/Debugging/DevCapture.cs`): عيّنة كل 5 ث (FPS/أسوأ إطار/ذاكرة/
+  بوتات حيّة ومرئية وأقرب مسافة/موضع اللاعب/VoidKillY) تُكتب في السجل؛ تقرير
+  كامل مع جدول الرسائل المتكررة؛ **SHARE LOG** (Android share sheet) و**COPY LOG**
+  في شاشة PAUSE وصفحة SETTINGS. `RuntimeErrorLog` يعدّ التكرارات بعد 20 نسخة
+  بدل إغراق الملف، ويلتقط `lowMemory`.
+- البوتات: `ArenaBootstrap.ValidateSpawns()` يسحب أي spawn بلا أرض ضمن 2 م إلى
+  الأرض تحته أو يحذفه (اختبار `BotSpawnGeometry`: 583 spawn في 29 خريطة —
+  569 على الأرض، 14 تُسحب، 0 عائم)؛ `Bot` يصطاد أقرب عدو بعد 4 ث بلا رؤية بدل
+  التجوّل العشوائي، مع انحراف عند التعثّر. سطر NOTE عند بداية كل ساحة بعدد
+  البوتات الفعلي.
+- القائمة الرئيسية أُعيدت كتابتها: HOME (خلفية luminos الأصلية، PLAY/SETTINGS/QUIT
+  بحجم إبهام، كارت خريطة مميّزة)، PLAY (DM/TDM/CTF بأيقونات gametype الأصلية،
+  الشبكة مفلترة حسب `gametype` في mapinfo + ALL MAPS)، SETTINGS (حجم الأزرار
+  0.8–1.4×، حساسية 0.5–2×، عكس Y، تخطيط يساري، RESET، لوحة DevCapture).
+- HUD بنمط luma: لوحة سفلية بأيقونات health/armor/ammo الأصلية وأرقام كبيرة،
+  أيقونات الأسلحة الأصلية في الشريط، النتيجة/المؤقّت تحت البانر، سطر FPS/BOTS.
+- `HudArtImporter` جديد: 29 صورة من `gfx/hud/luma` و`gfx/menu/luminos` مع دمج
+  `_alpha.jpg` وضغط ETC2 + mips إلى `Generated/Resources/Hud`.
+- `TouchLayout` يكبّر/يصغّر ويعكس التخطيط حسب `TouchSettings`؛ `Player` يطبّق
+  الحساسية وعكس Y.
+- اختبارات Editor: PASS **671** (كان 455): `MainMenuGeometry` للشاشات الثلاث،
+  `HudGeometry` مع الصور، `TouchLayoutSettings`، `DevCaptureReport`، `HudArtAssets`،
+  `BotSpawnGeometry`. playtest وgameplay-playtest نجحا.
+- البيئة: Unity 2022.3.62f3 + Android مثبّتان من جديد في sandbox gVisor مع وصفة
+  my-librequake (qemu shader compiler، FMOD shim). الرندرة عبر llvmpipe تعمل
+  في المحرر (OpenGL 4.5) — أول مرة لا تتجمّد.
+- APK versionCode 14: `my-xonotic-full.apk` 405,422,879 بايت، SHA256 `cda3a010db6868a12e334955b30234fab4b40cac6ac6234d178f6d14411e72ef`، توقيع debug، غير مُجرَّب على جهاز. التفاصيل في `docs/UNITY-DEV13.md`.
+
 ## 0.1.0-dev.12 — 2026-09-22 — إصلاحات أول فيديوهات الجهاز: خامات مضغوطة، موت الفراغ، HUD، سجل أخطاء
 
 - خامات الأسلحة ونماذج الالتقاط تمرّ الآن عبر `ImportedTexturePolicy.Finalize`

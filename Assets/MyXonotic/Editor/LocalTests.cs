@@ -76,6 +76,10 @@ namespace MyXonotic.EditorTools
             WeaponRigs();
             WeaponPlacement();
             HudGeometry();
+            TouchLayoutSettings();
+            DevCaptureReport();
+            HudArtAssets();
+            BotSpawnGeometry();
             LocalBuild.CreateDevelopmentScene();
             Directory.CreateDirectory("Artifacts");
             File.WriteAllText("Artifacts/editor-tests.txt", string.Join("\n", Passed));
@@ -90,47 +94,81 @@ namespace MyXonotic.EditorTools
         static void MainMenuGeometry()
         {
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            HudArt.ClearCache();
             var go = new GameObject("MainMenu", typeof(MainMenu));
+            var menu = go.GetComponent<MainMenu>();
             var start = typeof(MainMenu).GetMethod("Start",
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            start.Invoke(go.GetComponent<MainMenu>(), null);
-            Canvas.ForceUpdateCanvases();
-            foreach (var rt in go.GetComponentsInChildren<RectTransform>(true))
-                LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
-            Canvas.ForceUpdateCanvases();
+            start.Invoke(menu, null);
+            var catalog = MapCatalog.Load();
+            int expected = catalog != null ? catalog.maps.Count : 0;
 
-            var texts = go.GetComponentsInChildren<Text>(true);
-            Check(texts.Length > 0, "menu builds text elements");
-            foreach (var t in texts)
+            // dev.13: three screens; each is laid out and checked while active.
+            foreach (MenuScreen screen in Enum.GetValues(typeof(MenuScreen)))
             {
-                var r = t.rectTransform.rect;
-                Check(r.width > 0f && r.height > 0f,
-                    "menu text '" + t.name + "' has a positive rect (" + r.width.ToString("0") + "x" + r.height.ToString("0") + ")");
+                menu.ShowScreen(screen);
+                Canvas.ForceUpdateCanvases();
+                foreach (var rt in go.GetComponentsInChildren<RectTransform>(false))
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+                Canvas.ForceUpdateCanvases();
+                var texts = go.GetComponentsInChildren<Text>(false);
+                Check(texts.Length > 0, "menu " + screen + " builds text elements");
+                foreach (var t in texts)
+                {
+                    var r = t.rectTransform.rect;
+                    Check(r.width > 0f && r.height > 0f,
+                        "menu " + screen + " text '" + t.name + "' has a positive rect (" + r.width.ToString("0") + "x" + r.height.ToString("0") + ")");
+                }
+                foreach (var g in go.GetComponentsInChildren<Graphic>(false))
+                {
+                    var r = g.rectTransform.rect;
+                    Check(r.width > 0f && r.height > 0f, "menu " + screen + " graphic '" + g.name + "' has a positive rect");
+                }
+                foreach (var b in go.GetComponentsInChildren<Button>(false))
+                {
+                    var r = b.GetComponent<RectTransform>().rect;
+                    if (b.name.StartsWith("Card_")) continue; // grid cells are 290x210
+                    Check(r.height >= 44f, "menu " + screen + " button '" + b.name + "' is thumb-sized (" + r.height.ToString("0") + " px high)");
+                }
             }
-            foreach (var g in go.GetComponentsInChildren<Graphic>(true))
-            {
-                var r = g.rectTransform.rect;
-                Check(r.width > 0f && r.height > 0f, "menu graphic '" + g.name + "' has a positive rect");
-            }
-            Text Find(string n) { foreach (var t in texts) if (t.name == n) return t; return null; }
+            Check(go.GetComponentsInChildren<Mask>(true).Length == 0, "menu uses no stencil Mask");
+
+            menu.ShowScreen(MenuScreen.Home);
+            Text Find(string n) { foreach (var t in go.GetComponentsInChildren<Text>(true)) if (t.name == n) return t; return null; }
             Check(Find("Title") != null && Find("Title").text == "MY XONOTIC", "menu title text present");
             Check(Find("Subtitle") != null && Find("Subtitle").text.Contains("maps"), "menu subtitle text present");
-            var minus = go.transform.Find("MenuCanvas/SafeArea/BotsMinus/Label");
-            var plus = go.transform.Find("MenuCanvas/SafeArea/BotsPlus/Label");
+            var quit = go.transform.Find("MenuCanvas/SafeArea/Home/Quit");
+            Check(quit != null && quit.GetComponent<RectTransform>().rect.height > 0f, "quit button visible");
+            Check(go.transform.Find("MenuCanvas/SafeArea/Home/Play") != null, "home has PLAY");
+            Check(go.transform.Find("MenuCanvas/SafeArea/Home/Settings") != null, "home has SETTINGS");
+
+            menu.ShowScreen(MenuScreen.Play);
+            var minus = go.transform.Find("MenuCanvas/SafeArea/Play/BotsMinus/Label");
+            var plus = go.transform.Find("MenuCanvas/SafeArea/Play/BotsPlus/Label");
             Check(minus != null && minus.GetComponent<Text>().text == "-", "bots minus label set");
             Check(plus != null && plus.GetComponent<Text>().text == "+", "bots plus label set");
-            var quit = go.transform.Find("MenuCanvas/SafeArea/Quit");
-            Check(quit != null && quit.GetComponent<RectTransform>().rect.height > 0f, "quit button visible");
-            Check(go.GetComponentsInChildren<Mask>(true).Length == 0, "menu uses no stencil Mask");
-            var scroll = go.transform.Find("MenuCanvas/SafeArea/MapScroll");
+            var scroll = go.transform.Find("MenuCanvas/SafeArea/Play/MapScroll");
             Check(scroll != null && scroll.GetComponent<RectMask2D>() != null, "map scroll clips with RectMask2D");
-            var catalog = MapCatalog.Load();
-            int cards = go.GetComponentsInChildren<Button>(true).Length;
-            int expected = catalog != null ? catalog.maps.Count : 0;
-            Check(cards >= expected, "one card button per catalog map (" + expected + " maps, " + cards + " buttons)");
+            int cards = 0, activeCards = 0;
+            foreach (var b in go.GetComponentsInChildren<Button>(true)) if (b.name.StartsWith("Card_")) { cards++; if (b.gameObject.activeSelf) activeCards++; }
+            Check(cards == expected, "one card per catalog map (" + expected + " maps, " + cards + " cards)");
+            int visible = MainMenu.VisibleMapCount(catalog, MatchSettings.Mode, false);
+            Check(activeCards == visible, "map grid filtered to maps supporting " + MatchSettings.Mode + " (" + activeCards + " shown, " + visible + " expected)");
+            if (expected > 0) Check(visible > 0, "at least one map supports the default mode");
             var content = scroll != null ? scroll.Find("Content") as RectTransform : null;
             if (expected > 0)
+            {
+                Canvas.ForceUpdateCanvases();
+                LayoutRebuilder.ForceRebuildLayoutImmediate(content);
                 Check(content != null && content.rect.height > 0f, "map grid content has positive height after layout");
+            }
+
+            menu.ShowScreen(MenuScreen.Settings);
+            Check(go.transform.Find("MenuCanvas/SafeArea/Settings/TouchPanel/ButtonScaleValue") != null, "settings has button-size stepper");
+            Check(go.transform.Find("MenuCanvas/SafeArea/Settings/TouchPanel/SensitivityValue") != null, "settings has sensitivity stepper");
+            Check(go.transform.Find("MenuCanvas/SafeArea/Settings/TouchPanel/InvertY") != null, "settings has invert toggle");
+            Check(go.transform.Find("MenuCanvas/SafeArea/Settings/TouchPanel/LeftHanded") != null, "settings has left-handed toggle");
+            Check(go.transform.Find("MenuCanvas/SafeArea/Settings/DevPanel/ShareLog") != null, "settings has DevCapture SHARE LOG");
             UnityEngine.Object.DestroyImmediate(go);
         }
 
@@ -149,9 +187,28 @@ namespace MyXonotic.EditorTools
             var corners = new Vector3[4];
             var texts = hud.GetComponentsInChildren<Text>(true);
             Check(texts.Length >= 5, "hud builds its texts (" + texts.Length + ")");
+            // dev.13 bottom panel: health/armor/ammo numbers + weapon name exist
+            Check(Array.Exists(texts, t => t.name == "Health"), "hud has health number");
+            Check(Array.Exists(texts, t => t.name == "Armor"), "hud has armor number");
+            Check(Array.Exists(texts, t => t.name == "AmmoCount"), "hud has ammo number");
+            foreach (var img in hud.GetComponentsInChildren<Image>(true))
+            {
+                if (img.transform.IsChildOf(hud.transform.Find("SafeArea/PausePanel"))) continue;
+                img.rectTransform.GetWorldCorners(corners);
+                float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
+                foreach (var c in corners)
+                {
+                    var l = canvasRt.InverseTransformPoint(c);
+                    minX = Mathf.Min(minX, l.x); maxX = Mathf.Max(maxX, l.x);
+                    minY = Mathf.Min(minY, l.y); maxY = Mathf.Max(maxY, l.y);
+                }
+                Check(minX >= canvasRect.xMin - 0.5f && maxX <= canvasRect.xMax + 0.5f && minY >= canvasRect.yMin - 0.5f && maxY <= canvasRect.yMax + 0.5f,
+                    "hud image '" + img.name + "' inside the screen");
+                Check(img.rectTransform.rect.width > 0f && img.rectTransform.rect.height > 0f, "hud image '" + img.name + "' has a positive rect");
+            }
             foreach (var t in texts)
             {
-                if (t.name == "PauseText") continue; // inside the pause panel, laid out by its parent
+                if (t.name == "PauseText" || t.name == "PauseDevText") continue; // inside the pause panel, laid out by its parent
                 t.rectTransform.GetWorldCorners(corners);
                 float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
                 foreach (var c in corners)
@@ -289,6 +346,133 @@ namespace MyXonotic.EditorTools
                 }
             }
             finally { UnityEngine.Object.DestroyImmediate(host); }
+        }
+
+        /// dev.13: every touch control stays inside the safe area at the extreme
+        /// button scales and in the left-handed mirror; the mirror really swaps sides.
+        static void TouchLayoutSettings()
+        {
+            try
+            {
+                foreach (var scale in new[] { TouchSettings.MinButtonScale, 1f, TouchSettings.MaxButtonScale })
+                foreach (var left in new[] { false, true })
+                {
+                    TouchSettings.OverrideForTest(scale, 1f, false, left);
+                    var safe = TouchLayout.Safe;
+                    var rects = new (string, Rect)[]
+                    {
+                        ("Fire", TouchLayout.Fire), ("Jump", TouchLayout.Jump), ("Alt", TouchLayout.Alt),
+                        ("WpnPlus", TouchLayout.WpnPlus), ("WpnMinus", TouchLayout.WpnMinus), ("Pause", TouchLayout.Pause),
+                        ("Restart", TouchLayout.Restart), ("MainMenu", TouchLayout.MainMenu), ("ShareLog", TouchLayout.ShareLog), ("CopyLog", TouchLayout.CopyLog)
+                    };
+                    string tag = " (scale " + scale.ToString("0.0") + (left ? ", left-handed)" : ")");
+                    foreach (var (name, r) in rects)
+                        Check(r.xMin >= safe.xMin - 0.5f && r.xMax <= safe.xMax + 0.5f && r.yMin >= safe.yMin - 0.5f && r.yMax <= safe.yMax + 0.5f && r.width > 0f,
+                            "touch control " + name + " inside the safe area" + tag);
+                    Check(!TouchLayout.Fire.Overlaps(TouchLayout.Jump), "FIRE and JUMP do not overlap" + tag);
+                    Check(!TouchLayout.ShareLog.Overlaps(TouchLayout.CopyLog) && !TouchLayout.ShareLog.Overlaps(TouchLayout.MainMenu), "pause dev buttons do not overlap" + tag);
+                    bool fireRight = TouchLayout.Fire.center.x > safe.center.x;
+                    Check(fireRight != left, "FIRE is on the " + (left ? "left" : "right") + tag);
+                    Check(TouchLayout.MoveZone.Contains(new Vector2(left ? safe.xMax - 1f : safe.xMin + 1f, safe.center.y)), "joystick zone on the " + (left ? "right" : "left") + tag);
+                }
+                TouchSettings.OverrideForTest(TouchSettings.MaxButtonScale, 1f, false, false);
+                float big = TouchLayout.Fire.width;
+                TouchSettings.OverrideForTest(TouchSettings.MinButtonScale, 1f, false, false);
+                Check(big > TouchLayout.Fire.width * 1.5f, "button scale changes the FIRE diameter");
+            }
+            finally { TouchSettings.OverrideForTest(1f, 1f, false, false); }
+        }
+
+        /// dev.13: the DevCapture report is producible headlessly and carries the
+        /// device header, a sample and the recent log lines.
+        static void DevCaptureReport()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var dc = DevCapture.Ensure();
+            Check(dc != null, "DevCapture singleton exists");
+            string sample = dc.TakeSample();
+            Check(sample.Contains("fps") && sample.Contains("no arena"), "DevCapture sample without an arena reports fps and 'no arena' (" + sample + ")");
+            RuntimeErrorLog.Note("test note " + Guid.NewGuid().ToString("N").Substring(0, 8));
+            string report = DevCapture.BuildReport(false);
+            Check(report.Contains("my-xonotic") && report.Contains("errors ") && report.Contains("NOTE: test note"), "DevCapture report has header, counters and the recent NOTE line");
+            Check(RuntimeErrorLog.Recent.Count > 0 && RuntimeErrorLog.Recent.Count <= RuntimeErrorLog.RecentCapacity, "RuntimeErrorLog keeps a bounded recent buffer");
+            UnityEngine.Object.DestroyImmediate(dc.gameObject);
+        }
+
+        /// dev.13: the luma/luminos art generated by HudArtImporter loads through HudArt
+        /// with alpha merged (icons are not opaque squares) and compressed mips.
+        static void HudArtAssets()
+        {
+            HudArt.ClearCache();
+            var manifestPath = HudArtImporter.ManifestPath;
+            if (!File.Exists(manifestPath))
+            {
+                Passed.Add("SKIP hud art manifest absent (prepare-maps not run) - runtime falls back to text");
+                return;
+            }
+            var manifest = JsonUtility.FromJson<HudArtImporter.Manifest>(File.ReadAllText(manifestPath));
+            Check(manifest.imported >= 20, "hud art imported at least 20 images (" + manifest.imported + ", missing " + manifest.missing + ")");
+            foreach (var name in new[] { "health", "armor", "ammo_rockets", "gametype_dm", "menu_background" })
+                Check(HudArt.Texture(name) != null, "hud art '" + name + "' loads from Resources");
+            for (int i = 0; i < WeaponController.WeaponCount; i++)
+                Check(HudArt.Texture(HudArt.WeaponIconName((WeaponType)i)) != null, "weapon icon for " + (WeaponType)i + " loads");
+            var health = HudArt.Texture("health");
+            Check(health.mipmapCount > 1, "hud art has mipmaps");
+            Check(health.format != TextureFormat.RGBA32 || !Mathf.IsPowerOfTwo(health.width), "hud art is GPU-compressed when power-of-two (" + health.format + ")");
+            Check(health.width <= 256 && health.height <= 256, "hud icons are small (" + health.width + "x" + health.height + ")");
+            var bg = HudArt.Texture("menu_background");
+            Check(bg.width <= HudArtImporter.BackgroundMaxSize && bg.height <= HudArtImporter.BackgroundMaxSize, "menu background downscaled to <= " + HudArtImporter.BackgroundMaxSize);
+            HudArt.ClearCache();
+        }
+
+        [Serializable] sealed class SpawnMapReport { public string map; public int spawns, grounded, snappable, floating; }
+        [Serializable] sealed class SpawnReport { public string utc; public int maps; public List<SpawnMapReport> perMap = new List<SpawnMapReport>(); }
+
+        /// dev.13 (bots invisible, hypothesis 3): every packaged map's spawn points
+        /// must stand on a floor. Opens each generated map scene and probes downward
+        /// exactly like ArenaBootstrap.ValidateSpawns does at runtime; a spawn with
+        /// no floor within SpawnGroundProbe but one within SpawnSnapProbe is
+        /// "snappable" (the arena moves it down), one with no floor at all is
+        /// "floating" (the arena drops it). Every map must keep at least one usable
+        /// spawn and floating spawns must stay rare. Report: Artifacts/bot-spawn-geometry.json.
+        static void BotSpawnGeometry()
+        {
+            if (!Directory.Exists(FullGameBuild.MapsSceneFolder))
+            {
+                Passed.Add("SKIP bot spawn geometry (no generated map scenes)");
+                return;
+            }
+            var scenes = Directory.GetFiles(FullGameBuild.MapsSceneFolder, "map_*.unity");
+            Array.Sort(scenes, StringComparer.Ordinal);
+            var report = new SpawnReport { utc = DateTime.UtcNow.ToString("O"), maps = scenes.Length };
+            int totalSpawns = 0, totalFloating = 0;
+            foreach (var path in scenes)
+            {
+                EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+                Physics.SyncTransforms();
+                var mr = new SpawnMapReport { map = Path.GetFileNameWithoutExtension(path) };
+                foreach (var marker in UnityEngine.Object.FindObjectsOfType<BspSpawnPoint>())
+                {
+                    mr.spawns++;
+                    // ContentBridge: feet = origin - 24 qu.
+                    Vector3 feet = marker.transform.position - Vector3.up * (24f / 32f);
+                    RaycastHit hit;
+                    if (ArenaBootstrap.SpawnHasFloor(feet, ArenaBootstrap.SpawnGroundProbe, out hit)) mr.grounded++;
+                    else if (ArenaBootstrap.SpawnHasFloor(feet, ArenaBootstrap.SpawnSnapProbe, out hit)) mr.snappable++;
+                    else mr.floating++;
+                }
+                report.perMap.Add(mr);
+                totalSpawns += mr.spawns;
+                totalFloating += mr.floating;
+                if (mr.spawns > 0)
+                    Check(mr.grounded + mr.snappable >= 1, mr.map + ": at least one spawn has a floor (" + mr.grounded + " grounded, " + mr.snappable + " snappable, " + mr.floating + " floating of " + mr.spawns + ")");
+                EditorUtility.UnloadUnusedAssetsImmediate();
+            }
+            Directory.CreateDirectory("Artifacts");
+            File.WriteAllText("Artifacts/bot-spawn-geometry.json", JsonUtility.ToJson(report, true));
+            Check(totalSpawns > 0, "bot spawn geometry probed " + totalSpawns + " spawns across " + scenes.Length + " maps");
+            Check(totalFloating * 10 <= totalSpawns, "floating spawns are rare (" + totalFloating + " of " + totalSpawns + ")");
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         }
 
         static Vector3 WorldPosition(CharacterRig rig, int joint)

@@ -61,6 +61,7 @@ namespace MyXonotic.EditorTools
         public sealed class Report
         {
             public int charactersImported;
+            public int hudArtImported, hudArtMissing;
             public List<CharacterReport> characters = new List<CharacterReport>();
             public string utc, mapsRoot, contentRoots, textureFormat;
             public int requested, imported, failed;
@@ -102,6 +103,11 @@ namespace MyXonotic.EditorTools
                 AssetDatabase.CreateAsset(catalog, CatalogPath);
             }
             var entries = new List<MapCatalog.Entry>();
+
+            // dev.13: original HUD/menu art (luma icons, luminos background).
+            var hudArt = HudArtImporter.Generate(new XonoticContentResolver());
+            report.hudArtImported = hudArt.imported;
+            report.hudArtMissing = hudArt.missing;
 
             // Original player models (static idle pose) for bots, shared by all maps.
             var characterWarnings = new List<string>();

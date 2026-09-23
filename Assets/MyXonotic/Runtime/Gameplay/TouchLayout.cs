@@ -34,16 +34,27 @@ namespace MyXonotic
         /// joystick at that exact point (it is not pinned to a fixed base image).
         public static Rect MoveZone
         {
-            get { var s = Safe; return new Rect(s.x, s.y, s.width * 0.5f, s.height); }
+            get
+            {
+                var s = Safe;
+                // dev.13: left-handed mirror puts the joystick on the right half.
+                return TouchSettings.LeftHanded
+                    ? new Rect(s.x + s.width * 0.5f, s.y, s.width * 0.5f, s.height)
+                    : new Rect(s.x, s.y, s.width * 0.5f, s.height);
+            }
         }
+
+        /// dev.13: user button-size multiplier (TouchSettings.ButtonScale, 0.8-1.4)
+        /// applied to every round control and the joystick radii.
+        public static float Scale => TouchSettings.ButtonScale;
 
         // Joystick feel: a small radial dead zone kills thumb jitter/drift near the
         // touch-down point, then the analog value ramps linearly out to MaxRadius
         // (matching the knob's visual travel limit, so what you see is what you get).
-        public static float JoystickDeadZone => Unit * 0.16f;
-        public static float JoystickMaxRadius => Unit * 1.1f;
-        public static float JoystickBaseRadius => Unit * 1.1f;
-        public static float JoystickKnobRadius => Unit * 0.55f;
+        public static float JoystickDeadZone => Unit * 0.16f * Scale;
+        public static float JoystickMaxRadius => Unit * 1.1f * Scale;
+        public static float JoystickBaseRadius => Unit * 1.1f * Scale;
+        public static float JoystickKnobRadius => Unit * 0.55f * Scale;
 
         // Center offset (from the bottom-right safe corner) and diameter, each as a
         // fraction of safe.height. These are the owner's exact LibreQuake reference
@@ -133,6 +144,28 @@ namespace MyXonotic
             }
         }
 
+        /// dev.13 pause-overlay DevCapture buttons, side by side under MAIN MENU:
+        /// SHARE LOG (Android share sheet) and COPY LOG (clipboard).
+        public static Rect ShareLog
+        {
+            get
+            {
+                var s = Safe;
+                return new Rect(s.center.x - s.height * 0.25f, s.center.y - s.height * 0.48f,
+                    s.height * 0.24f, s.height * 0.1f);
+            }
+        }
+
+        public static Rect CopyLog
+        {
+            get
+            {
+                var s = Safe;
+                return new Rect(s.center.x + s.height * 0.01f, s.center.y - s.height * 0.48f,
+                    s.height * 0.24f, s.height * 0.1f);
+            }
+        }
+
         /// <summary>
         /// Bounding box of a round button, given as (left, bottom) offsets — each a
         /// fraction of safe.height — from the bottom-right safe-area corner to the
@@ -145,9 +178,16 @@ namespace MyXonotic
         static Rect Circle(float leftFrac, float bottomFrac, float diameterFrac)
         {
             var s = Safe;
-            float d = diameterFrac * s.height;
-            float cx = s.xMax - leftFrac * s.height;
-            float cy = s.y + bottomFrac * s.height;
+            float scale = Scale;
+            float d = diameterFrac * s.height * scale;
+            // Centres move outward with the scale so enlarged buttons never overlap
+            // each other more than the reference layout does, and mirror for
+            // left-handed play (TouchSettings.LeftHanded).
+            float cx = TouchSettings.LeftHanded ? s.x + leftFrac * s.height * scale : s.xMax - leftFrac * s.height * scale;
+            float cy = s.y + bottomFrac * s.height * scale;
+            // Keep the whole disc inside the safe area at every scale.
+            cx = Mathf.Clamp(cx, s.x + d * 0.5f, s.xMax - d * 0.5f);
+            cy = Mathf.Clamp(cy, s.y + d * 0.5f, s.yMax - d * 0.5f);
             return new Rect(cx - d * 0.5f, cy - d * 0.5f, d, d);
         }
     }

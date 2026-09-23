@@ -1,5 +1,35 @@
 # my-xonotic — developer and agent handoff
 
+## dev.13 bots/DevCapture/menu checkpoint — 2026-09-23 (branch `feat/unity-dev13-bots-hud-menu`)
+
+Read `docs/UNITY-DEV13.md` first. The owner still has not sent the dev.12
+device log/screens, so dev.13 ships **DevCapture** (`Runtime/Debugging/
+DevCapture.cs`): 5 s samples (fps, memory, bots alive/visible/nearest, player
+pos, VoidKillY, snapped spawns) as NOTE lines in `RuntimeErrorLog`, a report
+with a repeated-message table, and **SHARE LOG / COPY LOG** buttons on the PAUSE
+screen and the menu SETTINGS page — ask for that shared report with every device
+test instead of a file path. Bots: `ArenaBootstrap.ValidateSpawns()` snaps/drops
+spawns without a floor (`SpawnHasFloor`, Editor test `BotSpawnGeometry`: 583
+spawns / 29 maps, 569 grounded, 14 snappable, 0 floating → spawns were NOT the
+main cause); `Bot` now hunts the nearest enemy after 4 s without sight (random
+12 m wander + farthest-spawn placement meant no encounter on big maps) with a
+detour when stuck. Menu rewritten as HOME/PLAY/SETTINGS (`MainMenu.ShowScreen`),
+PLAY grid filtered by mapinfo `gametype`, SETTINGS = `TouchSettings` (button
+scale 0.8–1.4, sensitivity, invert Y, left-handed → `TouchLayout.Scale` and
+mirrored `Circle()`). HUD: luma bottom panel (health/armor/ammo icons) via
+`HudArt` ← `Editor/Import/HudArtImporter` (29 images from gfx/hud/luma +
+gfx/menu/luminos, `_alpha.jpg` merged, ETC2+mips, runs in `PrepareFullGame`);
+weapon bar shows original icons, stays at the top (bottom = joystick/FIRE).
+Every HudArt accessor may return null — keep text fallbacks. Editor tests PASS
+671. Sandbox: Unity 2022.3.62f3 + Android module installed from the Release
+API manifest; my-librequake §9 recipe (qemu UnityShaderCompiler, libschedfix
+FMOD shim) applied; **the Editor renders under Xvfb + llvmpipe with
+`-force-glcore` and `LP_NUM_THREADS=16` (OpenGL 4.5, no hang)** — but
+`ScreenCapture.CaptureScreenshot` writes nothing in batchmode (no GameView);
+use a camera RenderTexture + ReadPixels for visual evidence. Never edit C# while
+Unity runs on the project (prepare-maps refreshes the AssetDatabase). APK vc14
+`0.1.0-dev.13`: see `CHANGELOG.md` / `docs/unity-dev13-build-2026-09-23.json`.
+
 ## dev.12 device-fixes checkpoint — 2026-09-22 (branch `feat/unity-dev12-device-fixes`)
 
 Read `docs/UNITY-DEV12.md` first, then `docs/UNITY-DEV13-PLAN.md` for the

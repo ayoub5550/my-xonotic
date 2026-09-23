@@ -1,5 +1,16 @@
 # سجل التغييرات
 
+## 0.1.0-dev.15 — 2026-09-23 — سلوك الأسلحة كما في Xonotic: توجيه Devastator، شحن Vortex، حرارة Arc، تحميل Hagar، ارتداد Mortar، combo Electro
+
+- **Devastator**: انطلاق 1000 → تسارع 1300 qu/s، توجيه بالنظر أثناء ضغط الزناد (90°/s بعد 0.2 s)، تفجير عن بعد بقيم `remote_*` (70/35/300/110).
+- **Mortar/Electro**: `speed_up` عند الانطلاق، ارتداد بقيم cfg، انفجار 0.5 s بعد أول ارتداد (Mortar)، 3 كرات متتابعة (Electro) وcombo عند انفجار البولت قربها (50/25، radius 150، comboradius 300، تسلسل 0.1 s).
+- **Hagar**: الثانوي تحميل حتى 4 صواريخ (0.5 s لكل واحد) وإطلاقها عند الإفلات أو بعد 4 s.
+- **Machinegun**: أول طلقة 0.03/0.125 s ثم انتشار متزايد 0.02→0.05؛ دفعة 3×14 بفاصل 0.06 s.
+- **Vortex**: شحن 0.5→1 بمعدل 0.6/s؛ ضرر 40→80. **Arc**: 6 خلايا/s، مدى 1500، فرط تسخين 5 s وتبريد 2.5 s. **Minelayer**: تفعيل 150 qu، عد تنازلي 0.5 s، عمر 10 s، remote 45/40/300/200. **Shotgun melee**: تأخير 0.25 s.
+- HUD: `CHG %` / `HEAT %` / `LOAD n/4` بجانب اسم السلاح. `docs/ROADMAP.md` جديد (dev.15 → dev.20).
+- اختبارات Editor: PASS **742** (كان 698) — `Dev15WeaponTests`. playtest وgameplay-playtest PASS (نجحا، صفر أخطاء؛ الضوضاء الوحيدة ALSA/FMOD من بيئة الحاوية).
+- APK versionCode 16: `my-xonotic-full.apk` 404,824,528 بايت، SHA256 `868dd71739963fb38be680534c00e1d8d78dbd970d7dde374c5dffc6af0400d0`، توقيع debug. **Firebase Test Lab (Robo)**: Passed على Galaxy S24/Android 16 (60 FPS) وGalaxy A15/Android 14 (30–43 FPS)؛ خطأ واحد في logcat (`CapsuleCollider` محذوف بسبب strip engine code) → يُصلَح في dev.16. التفاصيل في `docs/UNITY-DEV15.md`.
+
 ## 0.1.0-dev.14 — 2026-09-23 — فيزياء Xonotic الأصلية، توازن الأسلحة من bal-wep-xonotic.cfg، تجدّد الصحة، أزرار لمس بنمط Warzone Mobile
 
 - **الحركة** (`Runtime/Gameplay/XonoticPhysics.cs` جديد): نقل `PM_Accelerate`

@@ -51,7 +51,9 @@ namespace MyXonotic
         /// Gravity projectile that sticks to the world, arms, and explodes near an enemy (Minelayer primary).
         Mine,
         /// Grappling hook: pulls the owner towards the hit point while held (Hook primary).
-        Hook
+        Hook,
+        /// Hold to load up to <see cref="FireDef.LoadMax"/> projectiles, release to fire them together (Hagar secondary).
+        Load
     }
 
     /// <summary>One fire mode of one weapon.</summary>
@@ -78,6 +80,28 @@ namespace MyXonotic
         public float GravityScale;
         /// Damage multiplier applied to the instigator's own splash damage.
         public float SelfDamageFactor;
+
+        // --- dev.15 mechanics (all optional; 0 = off) ---
+        /// Extra upward launch velocity (m/s) added to the projectile (Xonotic speed_up).
+        public float SpeedUp;
+        /// Devastator: rocket leaves at SpeedStart and accelerates by SpeedAccel (m/s²) up to Speed.
+        public float SpeedStart, SpeedAccel;
+        /// Devastator: rocket steers towards the owner's aim while the trigger is held.
+        public bool Guided;
+        /// Bouncing projectiles: velocity kept per bounce and the speed below which they come to rest.
+        public float BounceFactor, BounceStop;
+        /// Bouncing projectiles: explode this many seconds after the first bounce (mortar secondary).
+        public float LifetimeAfterBounce;
+        /// Remote detonation stats (Devastator / Minelayer). Radius 0 = same as impact.
+        public int RemoteDamage, RemoteEdgeDamage;
+        public float RemoteKnockback, RemoteRadius;
+        /// Seconds between trigger pull and the shot (shotgun melee swing delay).
+        public float Delay;
+        /// Fire <see cref="Shots"/> one after another this many seconds apart instead of all at once (machinegun burst, electro balls).
+        public float BurstInterval;
+        /// Load mode: max loaded projectiles, seconds per load, seconds a full load may be held before auto-fire.
+        public int LoadMax;
+        public float LoadTime, LoadHold;
     }
 
     /// <summary>
@@ -122,6 +146,29 @@ namespace MyXonotic
             GravityScale = gravity, SelfDamageFactor = selfDmg
         };
 
+        static FireDef WithSpeedUp(FireDef f, float speedUpQu) { f.SpeedUp = speedUpQu * Q; return f; }
+        static FireDef WithBounce(FireDef f, float factor, float stop, float lifeAfterBounce) { f.BounceFactor = factor; f.BounceStop = stop; f.LifetimeAfterBounce = lifeAfterBounce; return f; }
+        static FireDef WithBurst(FireDef f, float interval) { f.BurstInterval = interval; return f; }
+        static FireDef WithRamp(FireDef f, float startQu, float accelQu, bool guided) { f.SpeedStart = startQu * Q; f.SpeedAccel = accelQu * Q; f.Guided = guided; return f; }
+        static FireDef WithRemote(FireDef f, int dmg, int edge, float forceQu, float radiusQu) { f.RemoteDamage = dmg; f.RemoteEdgeDamage = edge; f.RemoteKnockback = forceQu * Q; f.RemoteRadius = radiusQu * Q; return f; }
+        static FireDef WithLoad(FireDef f, int max, float loadTime, float hold) { f.LoadMax = max; f.LoadTime = loadTime; f.LoadHold = hold; return f; }
+
+        // Vortex charge (g_balance_vortex_charge_*): charge starts at 0.5 after a shot, grows 0.6/s to 1; damage scales mindmg 40 → 80.
+        public const float VortexChargeStart = 0.5f, VortexChargeRate = 0.6f, VortexChargeMinDamage = 40f;
+        // Machinegun sustained spread: min 0.02 + 0.012 per consecutive shot, capped 0.05; first shot 0.03 / refire 0.125.
+        public const float MgSpreadMin = 0.02f, MgSpreadAdd = 0.012f, MgSpreadMax = 0.05f, MgFirstSpread = 0.03f, MgFirstRefire = 0.125f;
+        // Arc heat: overheat after 5 s of beam, then 2.5 s forced cooldown; 6 cells/s.
+        public const float ArcOverheatSeconds = 5f, ArcCooldownSeconds = 2.5f, ArcCellsPerSecond = 6f;
+        // Devastator guidance (g_balance_devastator_guide*): 0.2 s delay, 90°/s turn rate, aim goal 512 qu ahead.
+        public const float GuideDelay = 0.2f, GuideRateDeg = 90f, GuideGoal = 512f * Q;
+        // Electro combo: primary blast within 300 qu of a live electro ball makes it explode with 50/25, force 120, radius 150.
+        public const float ElectroComboRadius = 300f * Q, ElectroComboBlastRadius = 150f * Q, ElectroComboKnockback = 120f * Q;
+        public const int ElectroComboDamage = 50, ElectroComboEdgeDamage = 25;
+        // Minelayer proximity (g_balance_minelayer_proximityradius 150, lifetime_countdown 0.5).
+        public const float MineProximityRadius = 150f * Q, MineCountdown = 0.5f;
+
+        public static float SpreadDegFromRatio(float ratio) => SpreadDeg(ratio);
+
         public static WeaponDef Blaster() => new WeaponDef
         {
             Type = WeaponType.Blaster, Name = "Blaster", ShortName = "BLS", Ammo = AmmoType.None, PickupAmmo = 0,
@@ -136,24 +183,26 @@ namespace MyXonotic
             Tint = new Color(0.85f, 0.8f, 0.6f),
             Primary = Hitscan(4, 0.75f, 12, 0.12f, 15f, 1),
             // Melee: g_balance_shotgun_secondary_melee_range 120 qu.
-            Secondary = new FireDef { Mode = FireMode.Melee, Damage = 70, Refire = 1.25f, Shots = 1, Speed = 120f * Q, Knockback = 200f * Q, AmmoCost = 0 }
+            Secondary = new FireDef { Mode = FireMode.Melee, Damage = 70, Refire = 1.25f, Shots = 1, Speed = 120f * Q, Knockback = 200f * Q, AmmoCost = 0, Delay = 0.25f }
         };
 
         public static WeaponDef MachineGun() => new WeaponDef
         {
             Type = WeaponType.MachineGun, Name = "Machine Gun", ShortName = "MG", Ammo = AmmoType.Bullets, PickupAmmo = 60,
             Tint = new Color(0.9f, 0.9f, 0.3f),
+            // Sustained fire 0.1 s; spread grows per shot (see MachineGunSpread).
             Primary = Hitscan(10, 0.1f, 1, 0.03f, 3f, 1),
-            // Burst mode: 3 × first_damage 14, burst_refire2 0.45.
-            Secondary = Hitscan(14, 0.45f, 3, 0.02f, 3f, 3)
+            // Burst mode: 3 × first_damage 14, 0.06 s apart, then burst_refire2 0.45.
+            Secondary = WithBurst(Hitscan(14, 0.45f, 3, 0f, 3f, 3), 0.06f)
         };
 
         public static WeaponDef Mortar() => new WeaponDef
         {
             Type = WeaponType.Mortar, Name = "Mortar", ShortName = "MRT", Ammo = AmmoType.Rockets, PickupAmmo = 15,
             Tint = new Color(0.4f, 0.8f, 0.4f),
-            Primary = Proj(FireMode.Ballistic, 55, 25, 0.8f, 1, 0f, 1900f, 120f, 250f, 2, fuse: 20f, gravity: 1f),
-            Secondary = Proj(FireMode.Bouncing, 55, 30, 0.7f, 1, 0f, 1400f, 120f, 250f, 2, fuse: 2.5f, gravity: 1f)
+            Primary = WithSpeedUp(Proj(FireMode.Ballistic, 55, 25, 0.8f, 1, 0f, 1900f, 120f, 250f, 2, fuse: 20f, gravity: 1f), 225f),
+            // Secondary: bouncefactor 0.5, bouncestop 0.075, explodes 0.5 s after the first bounce (lifetime_bounce), lifetime 20.
+            Secondary = WithBounce(WithSpeedUp(Proj(FireMode.Bouncing, 55, 30, 0.7f, 1, 0f, 1400f, 120f, 250f, 2, fuse: 20f, gravity: 1f), 150f), 0.5f, 0.075f, 0.5f)
         };
 
         public static WeaponDef Electro() => new WeaponDef
@@ -161,7 +210,8 @@ namespace MyXonotic
             Type = WeaponType.Electro, Name = "Electro", ShortName = "ELC", Ammo = AmmoType.Cells, PickupAmmo = 25,
             Tint = new Color(0.3f, 0.6f, 1f),
             Primary = Proj(FireMode.Projectile, 40, 20, 0.6f, 1, 0f, 2500f, 100f, 200f, 4, fuse: 5f),
-            Secondary = Proj(FireMode.Bouncing, 30, 15, 1.2f, 1, 0f, 1000f, 150f, 50f, 2, fuse: 4f, gravity: 0.6f)
+            // Secondary: 3 balls 0.2 s apart (count 3 / refire2 0.2), speed_up 200, bouncefactor 0.3, bouncestop 0.05, 4 s fuse.
+            Secondary = WithBurst(WithBounce(WithSpeedUp(Proj(FireMode.Bouncing, 30, 15, 1.2f, 3, 0f, 1000f, 150f, 50f, 2, fuse: 4f, gravity: 1f), 200f), 0.3f, 0.05f, 0f), 0.2f)
         };
 
         public static WeaponDef Crylink() => new WeaponDef
@@ -186,15 +236,16 @@ namespace MyXonotic
             Type = WeaponType.Hagar, Name = "Hagar", ShortName = "HAG", Ammo = AmmoType.Rockets, PickupAmmo = 25,
             Tint = new Color(1f, 0.5f, 0.3f),
             Primary = Proj(FireMode.Projectile, 25, 12, 0.16667f, 1, 0f, 2200f, 65f, 100f, 1, fuse: 5f),
-            // Secondary: four-rocket volley (Xonotic loads up to 4 and fires them together).
-            Secondary = Proj(FireMode.Projectile, 35, 17, 0.75f, 4, 0.05f, 2000f, 80f, 75f, 4, fuse: 5f)
+            // Secondary: hold to load up to 4 rockets (0.5 s each, 1 rocket ammo each), release fires them (load_spread 0.075); 0.5 s refire.
+            Secondary = WithLoad(Proj(FireMode.Load, 35, 17, 0.5f, 1, 0.075f, 2000f, 80f, 75f, 1, fuse: 10f), 4, 0.5f, 4f)
         };
 
         public static WeaponDef Devastator() => new WeaponDef
         {
             Type = WeaponType.Devastator, Name = "Devastator", ShortName = "DEV", Ammo = AmmoType.Rockets, PickupAmmo = 15,
             Tint = new Color(1f, 0.25f, 0.15f),
-            Primary = Proj(FireMode.Ballistic, 80, 40, 1.1f, 1, 0f, 1300f, 110f, 400f, 4, fuse: 10f, gravity: 0f),
+            // speedstart 1000 → speedaccel 1300 up to speed 1300; guided while the trigger is held (guiderate 90°/s after 0.2 s).
+            Primary = WithRemote(WithRamp(Proj(FireMode.Ballistic, 80, 40, 1.1f, 1, 0f, 1300f, 110f, 400f, 4, fuse: 10f, gravity: 0f), 1000f, 1300f, true), 70, 35, 300f, 110f),
             Secondary = new FireDef { Mode = FireMode.Detonate, Refire = 0.3f }
         };
 
@@ -210,7 +261,8 @@ namespace MyXonotic
         {
             Type = WeaponType.Minelayer, Name = "Mine Layer", ShortName = "MIN", Ammo = AmmoType.Rockets, PickupAmmo = 20,
             Tint = new Color(0.6f, 0.75f, 0.35f),
-            Primary = Proj(FireMode.Mine, 40, 20, 1.5f, 1, 0f, 1000f, 175f, 250f, 4, fuse: 60f, gravity: 1f),
+            // lifetime 10 s, proximityradius 150 qu, remote 45/40/300/200.
+            Primary = WithRemote(Proj(FireMode.Mine, 40, 20, 1.5f, 1, 0f, 1000f, 175f, 250f, 4, fuse: 10f, gravity: 1f), 45, 40, 300f, 200f),
             Secondary = new FireDef { Mode = FireMode.Detonate, Refire = 0.3f }
         };
 
@@ -218,8 +270,9 @@ namespace MyXonotic
         {
             Type = WeaponType.Arc, Name = "Arc", ShortName = "ARC", Ammo = AmmoType.Cells, PickupAmmo = 25,
             Tint = new Color(0.55f, 0.85f, 1f),
-            // Beam: 100 dps / 600 force per second / 6 cells per second, ticked every 0.2 s; range 1000 qu (Speed = range).
-            Primary = new FireDef { Mode = FireMode.Beam, Damage = 20, Refire = 0.2f, Shots = 1, Speed = 1000f * Q, Knockback = 120f * Q, AmmoCost = 1 },
+            // Beam: 100 dps / 600 force per second / 6 cells per second, ticked every 0.25 s (beam_refire); range 1500 qu (Speed = range).
+            // Heat: 5 s continuous fire overheats, 2.5 s cooldown (see ArcHeat).
+            Primary = new FireDef { Mode = FireMode.Beam, Damage = 25, Refire = 0.25f, Shots = 1, Speed = 1500f * Q, Knockback = 150f * Q, AmmoCost = 1 },
             Secondary = Proj(FireMode.Projectile, 25, 12, 0.16667f, 1, 0f, 2300f, 65f, 120f, 1, fuse: 5f)
         };
 
@@ -303,6 +356,40 @@ namespace MyXonotic
         int _ownedMask;
         float _cooldownTimer;
         bool _zooming;
+        bool _primaryHeld, _secondaryHeld;
+
+        // dev.15 mechanic state
+        struct PendingShot { public float Time; public FireDef Fire; public bool Alt; public WeaponType Weapon; }
+        readonly System.Collections.Generic.List<PendingShot> _pending = new System.Collections.Generic.List<PendingShot>();
+        float _vortexCharge = 1f;
+        int _mgConsecutive;
+        float _mgSinceShot = 10f;
+        float _arcHeat, _arcAmmoFrac;
+        bool _arcOverheated;
+        int _hagarLoaded;
+        float _hagarLoadTimer, _hagarHoldTimer;
+
+        /// Owner's current aim (set every frame by the input owner); used by scheduled shots and rocket guidance.
+        public Vector3 AimOrigin { get; private set; }
+        public Vector3 AimDirection { get; private set; } = Vector3.forward;
+        public void UpdateAim(Vector3 origin, Vector3 direction)
+        {
+            AimOrigin = origin;
+            if (direction.sqrMagnitude > 0.001f) AimDirection = direction.normalized;
+        }
+
+        /// Devastator rockets steer towards <see cref="AimDirection"/> while true (primary held on the Devastator).
+        public bool GuideActive => _primaryHeld && Current == WeaponType.Devastator && Owner != null && !Owner.IsDead;
+        /// Vortex charge 0..1 (damage = lerp(40, 80, charge)).
+        public float VortexCharge => _vortexCharge;
+        /// Arc heat 0..1 (1 = overheated).
+        public float ArcHeat => Mathf.Clamp01(_arcHeat / WeaponDef.ArcOverheatSeconds);
+        public bool ArcOverheated => _arcOverheated;
+        /// Rockets currently loaded in the Hagar secondary (0..4).
+        public int HagarLoaded => _hagarLoaded;
+        /// Machinegun spread (degrees) the next sustained shot will use.
+        public float MachineGunSpreadDegrees => WeaponDef.SpreadDegFromRatio(
+            _mgSinceShot > 0.3f ? WeaponDef.MgFirstSpread : Mathf.Min(WeaponDef.MgSpreadMax, WeaponDef.MgSpreadMin + WeaponDef.MgSpreadAdd * _mgConsecutive));
 
         static WeaponDef[] BuildDefs()
         {
@@ -351,6 +438,11 @@ namespace MyXonotic
             Current = WeaponType.Shotgun;
             _cooldownTimer = 0f;
             _zooming = false;
+            _pending.Clear();
+            _vortexCharge = 1f;
+            _mgConsecutive = 0; _mgSinceShot = 10f;
+            _arcHeat = 0f; _arcAmmoFrac = 0f; _arcOverheated = false;
+            _hagarLoaded = 0; _hagarLoadTimer = 0f; _hagarHoldTimer = 0f;
             if (Hook != null) Hook.Release();
             if (MatchSettings.AllWeapons && !ArenaBootstrap.TestMode) GiveAll();
         }
@@ -391,12 +483,72 @@ namespace MyXonotic
         /// Called each frame by the input owner so hold-style weapons (Hook) know the trigger state.
         public void SetPrimaryHeld(bool held)
         {
+            _primaryHeld = held;
             if (Hook != null) Hook.Held = held && CurrentDef.Primary.Mode == FireMode.Hook;
         }
 
         void Update()
         {
-            if (!ArenaBootstrap.IsPaused && _cooldownTimer > 0f) _cooldownTimer -= Time.deltaTime;
+            if (ArenaBootstrap.IsPaused) return;
+            float dt = Time.deltaTime;
+            if (_cooldownTimer > 0f) _cooldownTimer -= dt;
+            TickMechanics(dt);
+        }
+
+        /// Per-frame weapon mechanics: scheduled shots, vortex charge, machinegun spread decay, arc heat, hagar loading.
+        public void TickMechanics(float dt)
+        {
+            // Scheduled shots (bursts, delayed melee) fire along the owner's current aim.
+            for (int i = 0; i < _pending.Count; i++)
+            {
+                if (_pending[i].Time > Time.time) continue;
+                var ps = _pending[i];
+                _pending.RemoveAt(i--);
+                if (Owner == null || Owner.IsDead) continue;
+                Deliver(AimOrigin, AimDirection, ps.Fire, ps.Weapon, ps.Alt, 1, silent: ps.Fire.Mode != FireMode.Melee);
+            }
+
+            // Vortex: charge builds while it is the current weapon (charge_always 0).
+            if (Current == WeaponType.Vortex) _vortexCharge = Mathf.Min(1f, _vortexCharge + WeaponDef.VortexChargeRate * dt);
+
+            _mgSinceShot += dt;
+            if (_mgSinceShot > 0.3f) _mgConsecutive = 0;
+
+            // Arc heat: rises while the beam ticks (added in FireBeam), cools otherwise; overheat forces a full cooldown.
+            bool beaming = _primaryHeld && Current == WeaponType.Arc && !_arcOverheated && Owner != null && !Owner.IsDead;
+            if (!beaming) _arcHeat = Mathf.Max(0f, _arcHeat - dt * (WeaponDef.ArcOverheatSeconds / WeaponDef.ArcCooldownSeconds));
+            if (_arcOverheated && _arcHeat <= 0f) _arcOverheated = false;
+
+            // Hagar secondary: keep loading while held; release (or hold too long) fires the volley.
+            if (_hagarLoaded > 0 || (_secondaryHeld && Current == WeaponType.Hagar))
+            {
+                var fire = WeaponDef.Hagar().Secondary;
+                if (Current != WeaponType.Hagar || Owner == null || Owner.IsDead) { _hagarLoaded = 0; _hagarLoadTimer = 0f; _hagarHoldTimer = 0f; }
+                else if (_secondaryHeld && _hagarLoaded < fire.LoadMax)
+                {
+                    _hagarLoadTimer += dt;
+                    if (_hagarLoadTimer >= fire.LoadTime && _hagarLoaded < fire.LoadMax)
+                    {
+                        _hagarLoadTimer = 0f;
+                        if (_ammo[(int)AmmoType.Rockets] >= fire.AmmoCost) { _ammo[(int)AmmoType.Rockets] -= fire.AmmoCost; _hagarLoaded++; }
+                    }
+                }
+                else if (_secondaryHeld && _hagarLoaded >= fire.LoadMax)
+                {
+                    _hagarHoldTimer += dt;
+                    if (_hagarHoldTimer >= fire.LoadHold) ReleaseHagar(fire);
+                }
+                if (!_secondaryHeld && _hagarLoaded > 0) ReleaseHagar(fire);
+            }
+        }
+
+        void ReleaseHagar(FireDef fire)
+        {
+            int n = _hagarLoaded;
+            _hagarLoaded = 0; _hagarLoadTimer = 0f; _hagarHoldTimer = 0f;
+            if (n <= 0 || Owner == null || Owner.IsDead) return;
+            _cooldownTimer = fire.Refire;
+            Deliver(AimOrigin, AimDirection, fire, WeaponType.Hagar, true, n, silent: false);
         }
 
         /// Adds ammo to a pool; returns false if the pool was already full (nothing granted).
@@ -467,6 +619,7 @@ namespace MyXonotic
         /// Called each frame by the input owner so the Vortex zoom follows the held state.
         public void SetSecondaryHeld(bool held)
         {
+            _secondaryHeld = held;
             _zooming = held && CurrentDef.Secondary.Mode == FireMode.Zoom;
         }
 
@@ -504,6 +657,23 @@ namespace MyXonotic
 
             if (fire.Mode == FireMode.Mine && Projectile.CountMinesOwnedBy(Owner) >= MaxLiveMines) return false;
 
+            // Hagar load: the trigger only starts loading; TickMechanics adds rockets and fires on release.
+            if (fire.Mode == FireMode.Load)
+            {
+                if (_hagarLoaded == 0 && _hagarLoadTimer == 0f && _ammo[(int)def.Ammo] < fire.AmmoCost) return false;
+                if (_hagarLoaded == 0 && _hagarLoadTimer == 0f)
+                {
+                    // First rocket loads immediately (Xonotic loads one on press).
+                    _ammo[(int)def.Ammo] -= fire.AmmoCost;
+                    _hagarLoaded = 1;
+                    _hagarLoadTimer = 0.0001f;
+                    if (View != null && Application.isPlaying) View.PlayFireSound(alt);
+                }
+                return false;
+            }
+
+            if (fire.Mode == FireMode.Beam && _arcOverheated) return false;
+
             if (def.Ammo != AmmoType.None && fire.AmmoCost > 0 && _ammo[(int)def.Ammo] < fire.AmmoCost)
             {
                 // Out of ammo: drop to the best usable weapon so the player is never stuck.
@@ -512,33 +682,83 @@ namespace MyXonotic
                 return false;
             }
 
-            _cooldownTimer = fire.Refire;
-            if (def.Ammo != AmmoType.None && fire.AmmoCost > 0) _ammo[(int)def.Ammo] -= fire.AmmoCost;
+            // Machinegun sustained fire: first shot after a pause is more accurate but slower.
+            float refire = fire.Refire;
+            if (Current == WeaponType.MachineGun && !alt)
+            {
+                fire.SpreadDegrees = MachineGunSpreadDegrees;
+                if (_mgSinceShot > 0.3f) refire = WeaponDef.MgFirstRefire;
+                _mgConsecutive++;
+                _mgSinceShot = 0f;
+            }
+
+            // Vortex: damage and force scale with the charge, which resets to 0.5 on firing.
+            if (Current == WeaponType.Vortex && !alt)
+            {
+                float c = _vortexCharge;
+                fire.Damage = Mathf.RoundToInt(Mathf.Lerp(WeaponDef.VortexChargeMinDamage, fire.Damage, c));
+                fire.Knockback *= Mathf.Lerp(WeaponDef.VortexChargeMinDamage / 80f, 1f, c);
+                _vortexCharge = WeaponDef.VortexChargeStart;
+            }
+
+            _cooldownTimer = refire;
+            if (def.Ammo != AmmoType.None && fire.AmmoCost > 0)
+            {
+                int cost = fire.AmmoCost;
+                if (fire.Mode == FireMode.Beam)
+                {
+                    // 6 cells/s at 4 ticks/s = 1.5 cells per tick: carry the fraction.
+                    _arcAmmoFrac += WeaponDef.ArcCellsPerSecond * fire.Refire - cost;
+                    if (_arcAmmoFrac >= 1f) { cost++; _arcAmmoFrac -= 1f; }
+                }
+                _ammo[(int)def.Ammo] -= cost;
+            }
 
             int shots = Mathf.Max(1, fire.Shots);
+            if (fire.Delay > 0f)
+            {
+                _pending.Add(new PendingShot { Time = Time.time + fire.Delay, Fire = fire, Alt = alt, Weapon = Current });
+                if (View != null && Application.isPlaying) { View.Kick(alt); View.PlayFireSound(alt); }
+                Fired?.Invoke(Current, alt);
+                return true;
+            }
+            if (fire.BurstInterval > 0f && shots > 1)
+            {
+                var single = fire; single.Shots = 1;
+                for (int s = 1; s < shots; s++)
+                    _pending.Add(new PendingShot { Time = Time.time + fire.BurstInterval * s, Fire = single, Alt = alt, Weapon = Current });
+                shots = 1;
+            }
+            Deliver(origin, direction, fire, Current, alt, shots, silent: false);
+            return true;
+        }
+
+        /// Performs <paramref name="shots"/> shots of <paramref name="fire"/> now (spread applied per shot) and plays feedback.
+        void Deliver(Vector3 origin, Vector3 direction, FireDef fire, WeaponType weapon, bool alt, int shots, bool silent)
+        {
             for (int s = 0; s < shots; s++)
             {
                 Vector3 dir = Spread(direction, fire.SpreadDegrees, s, shots);
                 switch (fire.Mode)
                 {
                     case FireMode.Hitscan:
-                        FireHitscan(origin, dir, fire);
+                        FireHitscan(origin, dir, fire, weapon);
                         break;
                     case FireMode.Melee:
                         FireMelee(origin, dir, fire);
                         break;
                     case FireMode.Beam:
-                        FireBeam(origin, dir, fire);
+                        FireBeam(origin, dir, fire, weapon);
                         break;
                     default:
-                        Projectile.Spawn(origin, dir, fire, Owner, Current);
+                        Projectile.Spawn(origin, dir, fire, Owner, weapon);
                         break;
                 }
             }
+            if (silent || !Application.isPlaying) return;
             if (View != null) { View.Kick(alt); View.PlayFireSound(alt); }
-            else WeaponAudio.PlayAt(WeaponAudio.Fire(Current, alt), origin, 0.8f); // bots: positional
-            Fired?.Invoke(Current, alt);
-            return true;
+            else WeaponAudio.PlayAt(WeaponAudio.Fire(weapon, alt), origin, 0.8f); // bots: positional
+            Fired?.Invoke(weapon, alt);
         }
 
         /// Deterministic-ish cone spread: pellets are spaced around the cone so a
@@ -552,7 +772,7 @@ namespace MyXonotic
             return (cone * dir).normalized;
         }
 
-        void FireHitscan(Vector3 origin, Vector3 direction, FireDef fire)
+        void FireHitscan(Vector3 origin, Vector3 direction, FireDef fire, WeaponType weapon)
         {
             // Ignore trigger volumes (pickups etc.) so the hitscan only stops on solid
             // geometry or actor bodies, never on an invisible pickup trigger.
@@ -567,14 +787,16 @@ namespace MyXonotic
                     Vector3 kb = ArenaMath.KnockbackImpulse(direction, fire.Knockback);
                     actor.TakeDamage(fire.Damage, kb, Owner);
                 }
-                ImpactEffects.Spawn(hit.point, hit.normal, Current, actor != null);
+                if (Application.isPlaying) ImpactEffects.Spawn(hit.point, hit.normal, weapon, actor != null);
                 break;
             }
         }
 
         /// Arc beam: a range-limited hitscan tick with a visible beam. Splash-free.
-        void FireBeam(Vector3 origin, Vector3 direction, FireDef fire)
+        void FireBeam(Vector3 origin, Vector3 direction, FireDef fire, WeaponType weapon)
         {
+            _arcHeat += fire.Refire;
+            if (_arcHeat >= WeaponDef.ArcOverheatSeconds) { _arcHeat = WeaponDef.ArcOverheatSeconds; _arcOverheated = true; }
             float range = fire.Speed > 0f ? fire.Speed : 20f;
             Vector3 end = origin + direction * range;
             var hits = Physics.RaycastAll(origin, direction, range, ~0, QueryTriggerInteraction.Ignore);
@@ -590,10 +812,10 @@ namespace MyXonotic
                     actor.TakeDamage(fire.Damage, ArenaMath.KnockbackImpulse(direction, fire.Knockback), Owner);
                     hitActor = true;
                 }
-                ImpactEffects.Spawn(hit.point, hit.normal, Current, actor != null);
+                if (Application.isPlaying) ImpactEffects.Spawn(hit.point, hit.normal, weapon, actor != null);
                 break;
             }
-            ImpactEffects.Beam(origin, end, CurrentDef.Tint, fire.Refire, hitActor);
+            if (Application.isPlaying) ImpactEffects.Beam(origin, end, GetDef(weapon).Tint, fire.Refire, hitActor);
         }
 
         void FireMelee(Vector3 origin, Vector3 direction, FireDef fire)

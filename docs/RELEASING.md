@@ -16,7 +16,7 @@
 4. commit على فرع معزول، مزامنة upstream، push، ومراجعة PR.
 5. عند وجود رخصة صالحة: Unity compile → Editor tests → Play Mode → Android محلي.
 6. سجّل commit المصدر ونسخة Unity والأدوات ونتيجة كل بوابة.
-7. افحص APK باستخدام `aapt` و`apksigner` وSHA256 ثم جهاز فعلي. تحفظ binaries
+7. افحص APK باستخدام `aapt` و`apksigner` وSHA256 ثم جهاز فعلي عبر Firebase Test Lab (`tools/ftl_robo.sh`، انظر `docs/DEVICE-TESTING.md`). تحفظ binaries
    كمرفقات إصدار، لا داخل Git. debug signature ليست توقيع الإنتاج.
 8. لا تستخدم `latest` أو عبارة «اللعبة كاملة» لنقطة مصدر أو prototype.
 

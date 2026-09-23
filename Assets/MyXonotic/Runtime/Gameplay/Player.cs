@@ -269,6 +269,7 @@ namespace MyXonotic
             {
                 Vector3 origin = ViewCamera.transform.position;
                 Vector3 dir = ViewCamera.transform.forward;
+                Weapons.UpdateAim(origin, dir);
                 Weapons.SetSecondaryHeld(fireAlt);
                 Weapons.SetPrimaryHeld(firePrimary);
                 if (firePrimary) Weapons.TryFire(origin, dir, false);

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace MyXonotic
 {
@@ -37,7 +38,10 @@ namespace MyXonotic
         public const float EnemyDetectionSticking = 4f;        // bot_ai_enemydetectioninterval_stickingtoenemy
         public const float ChooseWeaponInterval = 0.5f;        // bot_ai_chooseweaponinterval
         public const float IgnoreGoalTimeout = 3f;             // bot_ai_ignoregoal_timeout
-        public const float IgnoreGoalFor = 10f;                // how long a dropped goal stays blacklisted (ours)
+        public const float IgnoreGoalFor = 10f;
+        public const float ProgressWindow = 2.5f;              // dev.17: seconds without net movement while holding a goal = stuck
+        public const float ProgressMinDistance = 0.6f;         // metres the bot must have moved in that window
+        public const float EdgeGuard = 0.9f;                   // dev.17: roam goals closer than this to a NavMesh edge are rejected                // how long a dropped goal stays blacklisted (ours)
         public const float FriendsAwarePickupRadius = 500f / 32f; // bot_ai_friends_aware_pickup_radius
         public const float CloseRange = 300f / 32f;            // bot_ai_custom_weapon_priority_distances
         public const float FarRange = 850f / 32f;
@@ -78,6 +82,8 @@ namespace MyXonotic
         float _strafeDir = 1f;
         float _jumpTimer;
         float _stuckTime;
+        Vector3 _progressAnchor;
+        float _progressTimer;
         Pickup _wantedPickup;
         bool _goalIsEnemy;
         Vector3 _aimDir;
@@ -224,7 +230,7 @@ namespace MyXonotic
                 for (int attempt = 0; attempt < 4; attempt++)
                 {
                     Vector3 candidate = arena.SpawnPosition(Random.Range(0, arena.SpawnCount));
-                    if ((candidate - transform.position).sqrMagnitude > 16f && !IsIgnored(candidate)) { pick = candidate; break; }
+                    if ((candidate - transform.position).sqrMagnitude > 16f && !IsIgnored(candidate) && !NearNavMeshEdge(candidate)) { pick = candidate; break; }
                 }
                 SetGoal(pick, "roam");
                 return;
@@ -238,6 +244,35 @@ namespace MyXonotic
             _nav.SetGoal(goal);
             GoalKind = kind;
             _stuckTime = 0f;
+            _progressAnchor = transform.position;
+            _progressTimer = 0f;
+        }
+
+        /// dev.17: Test Lab dev.16 showed bots dying to the void (bot_frags=-10). Spawn points that sit
+        /// on a ledge lip are legal goals but the CharacterController slides off; skip goals within
+        /// EdgeGuard of the NavMesh boundary when a NavMesh exists.
+        static bool NearNavMeshEdge(Vector3 point)
+        {
+            if (!MapNavMesh.Available) return false;
+            if (!NavMesh.FindClosestEdge(point, out NavMeshHit hit, NavMesh.AllAreas)) return false;
+            return hit.distance < EdgeGuard;
+        }
+
+        /// dev.17 pure helper (tested): stuck when a goal is held and the bot moved less than
+        /// ProgressMinDistance over ProgressWindow seconds — catches the "pressing into a wall
+        /// with zero wish direction" case that the velocity-based check misses.
+        public static bool NoProgress(Vector3 anchor, Vector3 now, float elapsed) =>
+            elapsed >= ProgressWindow && BotNavigator.FlatDistance(anchor, now) < ProgressMinDistance;
+
+        /// dev.17 (bot_ai avoids self-damage): a splash weapon must not be fired when the shot would
+        /// detonate within its blast radius of the shooter — i.e. world geometry sits closer than
+        /// radius + margin along the aim line (the target itself does not count).
+        public static bool SplashWouldHitSelf(Vector3 origin, Vector3 dir, float splashRadius, Transform target)
+        {
+            if (splashRadius <= 0f) return false;
+            float danger = splashRadius + 1f;
+            if (!Physics.Raycast(origin, dir, out RaycastHit hit, danger, ~0, QueryTriggerInteraction.Ignore)) return false;
+            return target == null || (hit.transform != target && !hit.transform.IsChildOf(target));
         }
 
         bool IsIgnored(Vector3 goal)
@@ -314,7 +349,21 @@ namespace MyXonotic
                              new Vector3(_velocity.x, 0f, _velocity.z).magnitude < 0.5f;
                 _stuckTime = stuck ? _stuckTime + Time.deltaTime : Mathf.Max(0f, _stuckTime - Time.deltaTime * 0.5f);
                 if (stuck && _stuckTime > 0.4f) wantJump = true;
-                if (_stuckTime > IgnoreGoalTimeout || (_nav.GoalUnreachable && !_goalIsEnemy && !seesTarget))
+                // dev.17: position-based progress check (the Game Loop pilot stood at a wall for 90 s in dev.16).
+                bool noProgress = false;
+                if (_nav.HasGoal)
+                {
+                    _progressTimer += Time.deltaTime;
+                    if (_progressTimer >= ProgressWindow)
+                    {
+                        noProgress = NoProgress(_progressAnchor, transform.position, _progressTimer);
+                        _progressAnchor = transform.position;
+                        _progressTimer = 0f;
+                        if (noProgress) wantJump = true;
+                    }
+                }
+                else { _progressAnchor = transform.position; _progressTimer = 0f; }
+                if (noProgress || _stuckTime > IgnoreGoalTimeout || (_nav.GoalUnreachable && !_goalIsEnemy && !seesTarget))
                 {
                     if (_nav.HasGoal) _ignoredGoals[Round(_nav.Goal)] = Time.time + IgnoreGoalFor;
                     _stuckTime = 0f;
@@ -514,6 +563,7 @@ namespace MyXonotic
             }
             Vector3 dir = _aimDir;
             Weapons.UpdateAim(origin, dir);
+            if (SplashWouldHitSelf(origin, dir, fire.SplashRadius, Target)) return;
             if (Weapons.TryFire(origin, dir, false) && Animator != null && fire.Refire >= 0.5f) Animator.PlayOneShot("shoot");
         }
     }

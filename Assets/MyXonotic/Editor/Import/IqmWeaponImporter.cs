@@ -204,6 +204,8 @@ namespace MyXonotic.EditorTools
             foreach (var ctf in WeaponAudio.CtfSources)
                 CopyContentAudio(resolver, "sound/ctf/" + ctf + ".ogg", "Ctf_" + ctf + ".ogg");
             CopyContentAudio(resolver, "sound/plats/medplat1.ogg", "Plats_medplat1.ogg");
+            // dev.17: original projectile models (rocket, grenade, mine, tag rocket).
+            foreach (var line in ProjectileModelImporter.ImportAll(resolver)) Debug.Log("[ProjectileModelImporter] " + line);
             // dev.11: animated first-person rigs (h_ models) next to the static visuals.
             foreach (var rig in WeaponRigImporter.ImportAll(resolver))
             {

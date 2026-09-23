@@ -31,6 +31,7 @@ namespace MyXonotic.EditorTools
             Dev14PhysicsTests.Run(Check);
             Dev15WeaponTests.Run(Check);
             Dev16BotTests.Run(Check);
+            Dev17VisualBotTests.Run(Check);
             LocalBuild.CreateDevelopmentScene();
             var bootstrap = UnityEngine.Object.FindObjectOfType<ArenaBootstrap>();
             Check(bootstrap != null, "serialized bootstrap");

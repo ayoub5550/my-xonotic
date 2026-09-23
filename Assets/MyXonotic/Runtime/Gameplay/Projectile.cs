@@ -57,6 +57,8 @@ namespace MyXonotic
         float _age;
         bool _exploded;
         TrailRenderer _trail;
+        ParticleSystem _smoke;
+        bool _orientToVelocity;
 
         public static Projectile Spawn(Vector3 origin, Vector3 dir, FireDef fire, Actor instigator, WeaponType weapon)
         {
@@ -66,11 +68,21 @@ namespace MyXonotic
             go.transform.position = origin;
             go.transform.localScale = Vector3.one * (heavy ? 0.3f : 0.16f);
 
-            var mf = go.AddComponent<MeshFilter>();
-            mf.mesh = ArenaPrimitives.SphereMesh;
-            var mr = go.AddComponent<MeshRenderer>();
-            mr.sharedMaterial = ArenaMaterials.Get(def.Tint);
-            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            // dev.17: original Xonotic projectile model when imported, tinted sphere otherwise.
+            bool hasModel = Application.isPlaying && ProjectileVisuals.TryAttachModel(go.transform, weapon, out _);
+            if (hasModel)
+            {
+                go.transform.localScale = Vector3.one;
+                go.transform.rotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
+            }
+            else
+            {
+                var mf = go.AddComponent<MeshFilter>();
+                mf.mesh = ArenaPrimitives.SphereMesh;
+                var mr = go.AddComponent<MeshRenderer>();
+                mr.sharedMaterial = ArenaMaterials.Get(def.Tint);
+                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
 
             var light = go.AddComponent<Light>();
             light.type = LightType.Point;
@@ -108,6 +120,8 @@ namespace MyXonotic
             p.IsMine = fire.Mode == FireMode.Mine;
             p.LifeTime = fire.FuseSeconds > 0f ? fire.FuseSeconds : 8f;
             p._trail = trail;
+            p._orientToVelocity = hasModel;
+            if (Application.isPlaying && ProjectileVisuals.HasSmoke(weapon)) p._smoke = ProjectileVisuals.AddSmokeTrail(go.transform, def.Tint);
             return p;
         }
 
@@ -147,7 +161,7 @@ namespace MyXonotic
             {
                 // Fused projectiles (grenades, electro balls, mines) explode on timeout; others fizzle.
                 if (SplashRadius > 0f && (Bounces || GravityScale > 0f || IsMine)) Explode(transform.position, null);
-                else Destroy(gameObject);
+                else { ProjectileVisuals.ReleaseSmoke(_smoke); Destroy(gameObject); }
                 return;
             }
 
@@ -180,6 +194,7 @@ namespace MyXonotic
             }
 
             if (GravityScale > 0f) Velocity += Vector3.down * (Gravity * GravityScale * dt);
+            if (_orientToVelocity && Velocity.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(Velocity.normalized, Vector3.up);
 
             // Devastator: speed ramp and steering towards the owner's aim while the trigger is held.
             if (_accel > 0f && Velocity.sqrMagnitude > 0.0001f)
@@ -311,6 +326,7 @@ namespace MyXonotic
                 }
             }
             ImpactEffects.Spawn(point, Vector3.up, Weapon, hitActorDirect, radius);
+            ProjectileVisuals.ReleaseSmoke(_smoke);
             Destroy(gameObject);
         }
 

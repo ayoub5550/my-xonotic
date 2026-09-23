@@ -109,6 +109,11 @@ namespace MyXonotic
                 int botFrags = 0;
                 foreach (var b in arena.Bots) if (b != null && b.Actor != null) botFrags += b.Actor.Frags;
                 sb.Append("bot_frags=").Append(botFrags).Append('\n');
+                int botSuicides = 0, botDeaths = 0;
+                foreach (var b in arena.Bots) if (b != null && b.Actor != null) { botSuicides += b.Actor.Suicides; botDeaths += b.Actor.Deaths; }
+                sb.Append("bot_deaths=").Append(botDeaths).Append('\n');
+                sb.Append("bot_suicides=").Append(botSuicides).Append('\n');
+                sb.Append("player_suicides=").Append(arena.PlayerActor != null ? arena.PlayerActor.Suicides : 0).Append('\n');
                 sb.Append("navmesh=").Append(MapNavMesh.Available ? 1 : 0).Append('\n');
             }
             sb.Append("last_error=").Append(RuntimeErrorLog.LastError.Replace('\n', ' ')).Append('\n');

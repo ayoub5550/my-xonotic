@@ -57,6 +57,16 @@ namespace MyXonotic
             return maxDamage * t;
         }
 
+        /// Xonotic RadiusDamage falloff: <paramref name="maxDamage"/> at the centre
+        /// blending linearly to <paramref name="edgeDamage"/> at the radius, zero beyond.
+        public static float SplashDamage(float distance, float radius, float maxDamage, float edgeDamage)
+        {
+            if (radius <= 0f) return distance <= 0f ? maxDamage : 0f;
+            if (distance >= radius) return 0f;
+            float power = 1f - Mathf.Clamp01(distance / radius);
+            return maxDamage * power + edgeDamage * (1f - power);
+        }
+
         public static Vector3 KnockbackImpulse(Vector3 direction, float force)
         {
             if (direction.sqrMagnitude < 0.0001f) return Vector3.zero;

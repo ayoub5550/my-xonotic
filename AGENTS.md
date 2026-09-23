@@ -1,5 +1,26 @@
 # my-xonotic — developer and agent handoff
 
+## dev.14 Xonotic-physics/balance checkpoint — 2026-09-23 (branch `feat/unity-dev14-xonotic-physics`)
+
+Read `docs/UNITY-DEV14.md` first. Movement is now a straight port of the
+Xonotic 0.8.6 model in `Runtime/Gameplay/XonoticPhysics.cs` (pure static, all
+constants from `ThirdParty/.../physicsX.cfg`, 32 qu = 1 m): `GroundMove` =
+frame-rate-independent friction + accelerate, `AirMove` = `PM_Accelerate` with
+QW clamp/stretch, strafe blend, airstop, then `CPM_PM_Aircontrol`. `Player`
+jumps before the move step (no friction on the jump frame → bunny-hop), holds
+JUMP = auto-hop, and **knockback is added to `_velocity` directly** (Player and
+Bot; the old decaying `_externalImpulse` is gone — `ApplyExternalImpulse` keeps
+its name). Weapon numbers in `WeaponDef` are 1:1 from `bal-wep-xonotic.cfg`
+(`FireDef.Knockback` = force × Q in m/s, negative pulls; `EdgeDamage` feeds
+`ArenaMath.SplashDamage(d, r, dmg, edge)`); do not "tune by feel" — change the
+cfg mapping. `Actor.TickRegen` implements health regen/rot. Touch buttons are
+skinned by `TouchGlyphs` (procedural glyph masks) via `Hud.DrawGlyphButton`;
+positions still come from `TouchLayout`. Preview the skin with
+`python3 tools/local_unity.py touch-skin` → `Artifacts/visual/touch-skin.png`
+(OnGUI is not captured by VisualProbe). Editor tests PASS 698. Not ported yet:
+Devastator speed ramp/guidance, mortar/electro `speed_up`, Hagar secondary
+charge-up, Arc heat, machinegun wall penetration. APK vc15 `0.1.0-dev.14`.
+
 ## dev.13 bots/DevCapture/menu checkpoint — 2026-09-23 (branch `feat/unity-dev13-bots-hud-menu`)
 
 Read `docs/UNITY-DEV13.md` first. The owner still has not sent the dev.12

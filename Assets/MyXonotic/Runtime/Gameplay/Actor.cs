@@ -58,6 +58,9 @@ namespace MyXonotic
             Health = StartHealth;
             Armor = StartArmor;
             IsDead = false;
+            _sinceDamage = 1000f;
+            _sinceSpawn = 0f;
+            _healthAcc = _armorAcc = 0f;
             var controller = GetComponent<CharacterController>();
             if (controller != null) controller.enabled = true;
             var weapons = GetComponent<WeaponController>();
@@ -88,6 +91,44 @@ namespace MyXonotic
             bool started = ShieldRemaining <= 0f;
             ShieldRemaining = Mathf.Max(ShieldRemaining, seconds);
             if (started) PowerupStarted?.Invoke(this, false);
+        }
+
+        // ---- dev.14: Xonotic health/armor regeneration and rot (balance-xonotic.cfg) ----
+        public const float HealthRegen = 0.08f;        // g_balance_health_regen
+        public const float HealthRegenLinear = 0.5f;   // g_balance_health_regenlinear
+        public const float HealthRot = 0.02f;          // g_balance_health_rot
+        public const float HealthRotLinear = 1f;       // g_balance_health_rotlinear
+        public const float ArmorRot = 0.02f;           // g_balance_armor_rot
+        public const float ArmorRotLinear = 1f;        // g_balance_armor_rotlinear
+        public const int RegenStable = 100;            // g_balance_health_regenstable / rotstable
+        public const float PauseRegen = 5f;            // g_balance_pause_health_regen (after damage)
+        public const float PauseRot = 1f;              // g_balance_pause_health_rot (after damage)
+        public const float PauseRotSpawn = 5f;         // g_balance_pause_health_rot_spawn
+        float _sinceDamage = 1000f;
+        float _sinceSpawn;
+        float _healthAcc;
+        float _armorAcc;
+
+        /// Xonotic CalcRotRegen: health drifts towards 100 (slow regen below, rot
+        /// above) and armor above 100 rots; regen pauses 5 s after taking damage.
+        /// Public and frame-free so the Editor tests can drive it.
+        public void TickRegen(float dt)
+        {
+            if (dt <= 0f || float.IsNaN(dt) || float.IsInfinity(dt) || IsDead) return;
+            _sinceDamage += dt;
+            _sinceSpawn += dt;
+            if (Health < RegenStable && _sinceDamage >= PauseRegen)
+                _healthAcc += (HealthRegen * (RegenStable - Health) + HealthRegenLinear) * dt;
+            else if (Health > RegenStable && _sinceDamage >= PauseRot && _sinceSpawn >= PauseRotSpawn)
+                _healthAcc -= (HealthRot * (Health - RegenStable) + HealthRotLinear) * dt;
+            else _healthAcc = 0f;
+            if (_healthAcc >= 1f) { int n = (int)_healthAcc; _healthAcc -= n; Health = Mathf.Min(RegenStable, Health + n); }
+            else if (_healthAcc <= -1f) { int n = (int)-_healthAcc; _healthAcc += n; Health = Mathf.Max(RegenStable, Health - n); }
+
+            if (Armor > RegenStable && _sinceDamage >= PauseRot && _sinceSpawn >= PauseRotSpawn)
+                _armorAcc -= (ArmorRot * (Armor - RegenStable) + ArmorRotLinear) * dt;
+            else _armorAcc = 0f;
+            if (_armorAcc <= -1f) { int n = (int)-_armorAcc; _armorAcc += n; Armor = Mathf.Max(RegenStable, Armor - n); }
         }
 
         /// Powerup countdown as a plain method (testable without frames).
@@ -124,6 +165,7 @@ namespace MyXonotic
             int toHealth = ArenaMath.ApplyArmor(rawDamage, ref armor, ArmorAbsorbRatio);
             Armor = armor;
             Health -= toHealth;
+            _sinceDamage = 0f;
             AnyDamage?.Invoke(this, instigator, rawDamage);
 
             if (knockback.sqrMagnitude > 0f)
@@ -170,7 +212,7 @@ namespace MyXonotic
         void Update()
         {
             if (ArenaBootstrap.IsPaused) return;
-            if (!IsDead) { TickPowerups(Time.deltaTime); return; }
+            if (!IsDead) { TickPowerups(Time.deltaTime); TickRegen(Time.deltaTime); return; }
             _respawnTimer -= Time.deltaTime;
             if (_respawnTimer <= 0f) Respawn();
         }

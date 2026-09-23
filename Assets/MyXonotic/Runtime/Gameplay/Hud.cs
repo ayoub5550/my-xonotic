@@ -24,10 +24,6 @@ namespace MyXonotic
 
         // Preserve the existing touch palette. The historical brand document
         // is not present in this checkout; no new brand provenance is asserted.
-        static readonly Color FireColor = new Color32(204, 51, 26, 140);       // rgba(204,51,26,0.55)
-        static readonly Color JumpColor = new Color32(51, 128, 230, 128);      // rgba(51,128,230,0.5)
-        static readonly Color WeaponColor = new Color32(255, 255, 255, 89);    // rgba(255,255,255,0.35)
-        static readonly Color AltColor = new Color32(255, 255, 255, 89);       // same "utility" tint, smaller circle
         static readonly Color StickBaseColor = new Color32(255, 255, 255, 64); // rgba(255,255,255,0.25)
         static readonly Color StickKnobColor = new Color32(255, 230, 179, 128);// rgba(255,230,179,0.5)
         static readonly Color LabelColor = new Color32(255, 217, 153, 255);    // rgb(255,217,153)
@@ -517,7 +513,7 @@ namespace MyXonotic
         Texture2D RingTexture()
         {
             if (_ringTexture != null) return _ringTexture;
-            _ringTexture = MakeRingTexture(0.82f, 0.98f);
+            _ringTexture = MakeRingTexture(0.93f, 0.985f);
             return _ringTexture;
         }
 
@@ -618,6 +614,36 @@ namespace MyXonotic
             GUI.color = prev;
         }
 
+        /// dev.14 button skin: disc + rim + glyph + small caption near the bottom.
+        void DrawGlyphButton(Rect screenRect, TouchGlyphs.Glyph glyph, string caption, bool held)
+        {
+            DrawDisc(screenRect, held ? TouchGlyphs.DiscFillHeld : TouchGlyphs.DiscFill);
+            DrawRing(screenRect, TouchGlyphs.Rim);
+            Rect gui = GuiRect(screenRect);
+            float iconSize = screenRect.height * 0.52f;
+            var iconRect = new Rect(gui.center.x - iconSize * 0.5f, gui.center.y - iconSize * 0.58f, iconSize, iconSize);
+            var tex = TouchGlyphs.Get(glyph);
+            var prev = GUI.color;
+            float sh = Mathf.Max(1f, screenRect.height * 0.012f);
+            GUI.color = TouchGlyphs.IconShadow;
+            GUI.DrawTexture(new Rect(iconRect.x + sh, iconRect.y + sh, iconRect.width, iconRect.height), tex, ScaleMode.ScaleToFit, true);
+            GUI.color = TouchGlyphs.Icon;
+            GUI.DrawTexture(iconRect, tex, ScaleMode.ScaleToFit, true);
+            GUI.color = prev;
+            if (!string.IsNullOrEmpty(caption))
+            {
+                if (_captionStyle == null)
+                    _captionStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
+                _captionStyle.fontSize = Mathf.Max(8, Mathf.RoundToInt(screenRect.height * 0.13f));
+                var capRect = new Rect(gui.x, gui.y + gui.height * 0.62f, gui.width, gui.height * 0.24f);
+                _captionStyle.normal.textColor = LabelShadowColor;
+                GUI.Label(new Rect(capRect.x + 1f, capRect.y + 1f, capRect.width, capRect.height), caption, _captionStyle);
+                _captionStyle.normal.textColor = TouchGlyphs.Icon;
+                GUI.Label(capRect, caption, _captionStyle);
+            }
+        }
+        GUIStyle _captionStyle;
+
         void DrawRing(Rect screenRect, Color color)
         {
             var prev = GUI.color;
@@ -699,23 +725,19 @@ namespace MyXonotic
                     TouchLayout.JoystickKnobRadius * 2f), StickKnobColor);
             }
 
-            DrawDisc(TouchLayout.Fire, FireColor);
-            DrawButtonLabel(TouchLayout.Fire, "FIRE");
-
-            // Small utility circle, deliberately plainer than FIRE — Xonotic
-            // secondary-fire modes are real gameplay, kept even though the
-            // owner's LibreQuake reference screenshot has no equivalent button.
-            DrawDisc(TouchLayout.Alt, AltColor);
-            DrawButtonLabel(TouchLayout.Alt, "ALT");
-
-            DrawDisc(TouchLayout.Jump, JumpColor);
-            DrawButtonLabel(TouchLayout.Jump, "JUMP");
-
-            DrawDisc(TouchLayout.WpnMinus, WeaponColor);
-            DrawButtonLabel(TouchLayout.WpnMinus, "WPN -");
-
-            DrawDisc(TouchLayout.WpnPlus, WeaponColor);
-            DrawButtonLabel(TouchLayout.WpnPlus, "WPN +");
+            // dev.14: Warzone-Mobile-style skin — dark translucent discs, thin white
+            // rim, white pictogram, lit while held. Positions/sizes unchanged.
+            bool fireHeld = player != null && player.TouchFireHeld;
+            bool altHeld = player != null && player.TouchAltHeld;
+            bool jumpHeld = player != null && player.TouchJumpHeld;
+            bool plusHeld = player != null && player.TouchWpnPlusHeld;
+            bool minusHeld = player != null && player.TouchWpnMinusHeld;
+            DrawGlyphButton(TouchLayout.Fire, TouchGlyphs.Glyph.Bullet, "FIRE", fireHeld);
+            // Xonotic secondary-fire modes are real gameplay: crosshair glyph (aim/alt).
+            DrawGlyphButton(TouchLayout.Alt, TouchGlyphs.Glyph.Crosshair, "ALT", altHeld);
+            DrawGlyphButton(TouchLayout.Jump, TouchGlyphs.Glyph.ArrowUp, "JUMP", jumpHeld);
+            DrawGlyphButton(TouchLayout.WpnMinus, TouchGlyphs.Glyph.ChevronDown, "WPN", minusHeld);
+            DrawGlyphButton(TouchLayout.WpnPlus, TouchGlyphs.Glyph.ChevronUp, "WPN", plusHeld);
 
             // Right drag = look. Intentionally no visible disc/reticle under the
             // thumb here — only the dynamic joystick (left) and the buttons get a

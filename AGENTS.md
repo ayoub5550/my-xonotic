@@ -1,6 +1,7 @@
 # my-xonotic — developer and agent handoff
 
 **Follow `docs/ROADMAP.md`** (dev.15 → dev.20, rules per release) before planning any new dev.N.
+**Device testing is always done on Firebase Test Lab** — `docs/DEVICE-TESTING.md`, `tools/ftl_robo.sh`; every APK runs on real phones there before the release is announced.
 
 ## dev.15 weapon-mechanics checkpoint — 2026-09-23 (branch `feat/unity-dev15-weapon-mechanics`)
 

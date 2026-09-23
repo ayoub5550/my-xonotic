@@ -50,6 +50,13 @@ namespace MyXonotic
 
         public static bool IsTeamMode => Mode != GameMode.Deathmatch;
 
+        /// dev.16: bot skill 1..10 per bot index. Xonotic servers run one `skill` (default 8);
+        /// we alternate 8 / 6 / 4 so a match has a strong, a medium and a weak bot.
+        public static int BotSkillFor(int index)
+        {
+            switch (index % 3) { case 0: return 8; case 1: return 6; default: return 4; }
+        }
+
         /// Capture limit for CTF (Xonotic default 10).
         public const int CaptureLimit = 10;
 

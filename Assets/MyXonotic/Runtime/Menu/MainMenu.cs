@@ -51,6 +51,8 @@ namespace MyXonotic.Menu
             Cursor.visible = true;
             _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             _catalog = MapCatalog.Load();
+            // dev.16: Firebase Test Lab Game Loop starts a match without a human.
+            if (GameLoop.LaunchFromMenu(_catalog)) return;
             Build();
         }
 

@@ -1,13 +1,21 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MyXonotic
 {
     /// <summary>
-    /// Grounded arena bot: wanders, hunts nearby pickups it needs, picks the
-    /// best owned weapon for the current range, leads moving targets with
-    /// projectile weapons, keeps a spread of inaccuracy, and avoids firing
-    /// explosives point-blank. Disabled by ArenaBootstrap.TestMode so
-    /// automated tests get deterministic, stationary bots.
+    /// dev.16: Xonotic-style bot (qcsrc/server/bot/default/havocbot + bot.qc),
+    /// values from xonotic-server.cfg `bot_ai_*`:
+    ///  - strategy tick every bot_ai_strategyinterval 7 s (5.5 s with a moving goal)
+    ///    picks ONE goal: needed item (weighted by need, whole map) → enemy → roam spawn.
+    ///  - NavMesh path following (BotNavigator) replaces the dev.13 straight-line hunt.
+    ///  - enemy detection every 2 s (4 s while sticking to an enemy), radius 10000 qu.
+    ///  - weapon choice every 0.5 s from bot_ai_custom_weapon_priority_{close,mid,far}
+    ///    with the 300 / 850 qu distance split.
+    ///  - bot_ai_ignoregoal_timeout 3 s: a goal that keeps us stuck is dropped for 10 s.
+    ///  - skill 1..10 (server default `skill 8`): aim error, think cadence, bunnyhop
+    ///    from bot_ai_bunnyhop_skilloffset 7.
+    /// TestMode freezes decisions (deterministic tests) but keeps gravity/knockback.
     /// </summary>
     [RequireComponent(typeof(CharacterController))]
     [RequireComponent(typeof(Actor))]
@@ -18,63 +26,86 @@ namespace MyXonotic
         public const float Gravity = -800f / 32f;
         public const float JumpSpeed = 260f / 32f;
         public const float FireRange = 45f;
-        public const float SightRange = 60f;
+        /// bot_ai_enemydetectionradius 10000 qu.
+        public const float SightRange = 10000f / 32f;
 
-        /// Aim error in degrees (0 = perfect). Lower on higher skill.
+        // xonotic-server.cfg
+        public const float GoalReach = 1.5f;                    // goal considered reached (m)
+        public const float StrategyInterval = 7f;              // bot_ai_strategyinterval
+        public const float StrategyIntervalMoving = 5.5f;      // bot_ai_strategyinterval_movingtarget
+        public const float EnemyDetectionInterval = 2f;        // bot_ai_enemydetectioninterval
+        public const float EnemyDetectionSticking = 4f;        // bot_ai_enemydetectioninterval_stickingtoenemy
+        public const float ChooseWeaponInterval = 0.5f;        // bot_ai_chooseweaponinterval
+        public const float IgnoreGoalTimeout = 3f;             // bot_ai_ignoregoal_timeout
+        public const float IgnoreGoalFor = 10f;                // how long a dropped goal stays blacklisted (ours)
+        public const float FriendsAwarePickupRadius = 500f / 32f; // bot_ai_friends_aware_pickup_radius
+        public const float CloseRange = 300f / 32f;            // bot_ai_custom_weapon_priority_distances
+        public const float FarRange = 850f / 32f;
+        public const float AimSkillOffset = 1.8f;              // bot_ai_aimskill_offset (degrees of induced error)
+        public const int BunnyhopSkill = 7;                    // bot_ai_bunnyhop_skilloffset
+        public const float ThinkInterval = 0.05f;              // bot_ai_thinkinterval (scaled by skill)
+        public const int DefaultSkill = 8;                     // xonotic-server.cfg `skill 8`
+
+        /// Kept for older callers; derived from Skill in SetSkill().
         public float AimErrorDegrees = 3.5f;
-        /// Chance per decision tick to strafe instead of closing in.
         public float StrafeBias = 0.6f;
-        /// dev.13: seconds without seeing any enemy before the bot stops wandering
-        /// randomly and walks straight towards the nearest live enemy instead.
-        /// The dev.11 device videos showed no bot in two minutes: with random
-        /// 12 m wander circles on a full-size map and spawns chosen far from the
-        /// player, bots and player rarely met. Xonotic bots roam waypoints; we
-        /// have none yet, so hunting the nearest enemy is the interim behaviour.
-        public const float HuntAfterSeconds = 4f;
-        /// While hunting, a detour is taken for this long after being stuck.
-        public const float DetourSeconds = 2.5f;
+        public int Skill { get; private set; } = DefaultSkill;
 
-        /// True while the bot is walking towards an enemy it cannot see (diagnostics).
         public bool IsHunting { get; private set; }
-
-        /// Current enemy (re-evaluated every decision tick: nearest visible enemy actor).
         public Transform Target;
         public WeaponController Weapons;
-        /// Skeletal animator of the attached character body (null with the static/capsule body).
         public CharacterAnimator Animator;
         public Actor Actor { get; private set; }
         public Vector3 Velocity => _velocity;
-
-        /// CTF objective this tick: enemy flag, own base (carrying) or own dropped flag.
         public Vector3? Objective { get; private set; }
+        /// Current strategy goal (diagnostics / tests).
+        public Vector3? Goal => _nav.HasGoal ? _nav.Goal : (Vector3?)null;
+        public string GoalKind { get; private set; } = "none";
+        public BotNavigator Navigator => _nav;
+
+        BotNavigator _navStore;
+        BotNavigator _nav => _navStore ?? (_navStore = new BotNavigator());
+        readonly Dictionary<Vector3, float> _ignoredGoals = new Dictionary<Vector3, float>();
 
         Mover _groundMover;
         float _groundMoverTime;
-        float _retargetTimer;
-
         CharacterController _cc;
         Vector3 _velocity;
-        Vector3 _wanderTarget;
-        float _repickTimer;
+        float _strategyTimer;
+        float _retargetTimer;
         float _weaponThinkTimer;
+        float _thinkTimer;
         float _strafeDir = 1f;
         float _jumpTimer;
-        Pickup _wantedPickup;
-        float _lastSeenTime = -100f;
         float _stuckTime;
-        float _detourUntil;
+        Pickup _wantedPickup;
+        bool _goalIsEnemy;
+        Vector3 _aimDir;
 
         void Awake()
         {
             _cc = GetComponent<CharacterController>();
             Actor = GetComponent<Actor>();
-            _wanderTarget = transform.position;
+            SetSkill(Skill);
         }
 
         void OnEnable() { if (Actor != null) Actor.Respawned += OnRespawned; }
         void OnDisable() { if (Actor != null) Actor.Respawned -= OnRespawned; }
 
-        /// Bots respawn with one random extra core weapon (the player relies on map pickups).
+        /// Skill 1..10. Aim error = bot_ai_aimskill_offset scaled by (10 - skill) / 5:
+        /// skill 10 → 0°, skill 5 → 1.8°, skill 1 → 3.24°. (Xonotic applies the offset
+        /// through a 5-stage filter chain; this linear mapping is our approximation.)
+        public void SetSkill(int skill)
+        {
+            Skill = Mathf.Clamp(skill, 1, 10);
+            AimErrorDegrees = AimErrorFor(Skill);
+        }
+
+        public static float AimErrorFor(int skill) => AimSkillOffset * (10 - Mathf.Clamp(skill, 1, 10)) / 5f;
+        /// bot_ai_thinkinterval 0.05 "scales by skill": low skill thinks less often.
+        public static float ThinkIntervalFor(int skill) => ThinkInterval * Mathf.Max(1, 11 - Mathf.Clamp(skill, 1, 10));
+        public static bool BunnyhopsAt(int skill) => skill >= BunnyhopSkill;
+
         void OnRespawned(Actor actor)
         {
             if (ArenaBootstrap.TestMode || Weapons == null) return;
@@ -90,7 +121,8 @@ namespace MyXonotic
             _groundMoverTime = Time.time;
         }
 
-        /// Picks the nearest live enemy with line of sight (any actor, not only the player).
+        // ------------------------------------------------------------ targeting
+
         void Retarget()
         {
             Actor best = null;
@@ -112,13 +144,11 @@ namespace MyXonotic
             if (best != null) Target = best.transform;
             else if (Target != null)
             {
-                // Keep the last target only if it is still a live enemy.
                 var t = Target.GetComponent<Actor>();
                 if (t == null || t.IsDead || !Actor.IsEnemyOf(t)) Target = null;
             }
         }
 
-        /// Nearest live enemy regardless of line of sight (hunting target).
         Actor NearestEnemy()
         {
             Actor best = null;
@@ -132,7 +162,6 @@ namespace MyXonotic
             return best;
         }
 
-        /// CTF: where this bot wants to go (null = no flag objective).
         Vector3? CtfObjective()
         {
             var arena = ArenaBootstrap.Instance;
@@ -140,38 +169,92 @@ namespace MyXonotic
             var carried = CtfFlag.CarriedBy(Actor);
             var own = CtfFlag.ForTeam(Actor.Team);
             var enemy = CtfFlag.ForTeam(MatchSettings.Opponent(Actor.Team));
-            if (carried != null) return own != null ? own.Home : (Vector3?)null;               // bring it home
-            if (own != null && own.State == CtfFlag.FlagState.Dropped) return own.transform.position; // return ours
-            if (enemy != null && enemy.State != CtfFlag.FlagState.Carried) return enemy.transform.position; // go get theirs
+            if (carried != null) return own != null ? own.Home : (Vector3?)null;
+            if (own != null && own.State == CtfFlag.FlagState.Dropped) return own.transform.position;
+            if (enemy != null && enemy.State != CtfFlag.FlagState.Carried) return enemy.transform.position;
             return null;
         }
 
-        /// dev.14: knockback goes straight into velocity (Xonotic Damage()).
         public void ApplyExternalImpulse(Vector3 impulse) => _velocity += impulse;
-        public void Launch(Vector3 velocity)
-        {
-            _velocity = velocity;
-        }
+        public void Launch(Vector3 velocity) { _velocity = velocity; }
 
         public void ResetMotion()
         {
             _velocity = Vector3.zero;
-            _wanderTarget = transform.position;
-            _repickTimer = 0f;
+            _strategyTimer = 0f;
             _wantedPickup = null;
             _stuckTime = 0f;
-            _detourUntil = 0f;
+            _goalIsEnemy = false;
             IsHunting = false;
+            _nav.Clear();
+            GoalKind = "none";
         }
+
+        // ------------------------------------------------------------- strategy
+
+        /// havocbot_chooseweapon/havocbot_goalrating: one goal per strategy tick.
+        void ChooseStrategy(bool seesTarget)
+        {
+            Objective = CtfObjective();
+            _wantedPickup = FindWantedPickup();
+            _goalIsEnemy = false;
+            if (Objective.HasValue && (CtfFlag.CarriedBy(Actor) != null || _wantedPickup == null))
+            {
+                SetGoal(Objective.Value, "flag");
+                return;
+            }
+            if (_wantedPickup != null)
+            {
+                SetGoal(_wantedPickup.transform.position, "item:" + _wantedPickup.Type);
+                return;
+            }
+            Actor prey = seesTarget ? null : NearestEnemy();
+            if (prey != null)
+            {
+                _goalIsEnemy = true;
+                IsHunting = true;
+                SetGoal(prey.transform.position, "enemy");
+                return;
+            }
+            // bot_wander_enable 1: roam to a spawn point we are not standing on.
+            var arena = ArenaBootstrap.Instance;
+            if (arena != null && arena.SpawnCount > 0)
+            {
+                Vector3 pick = transform.position;
+                for (int attempt = 0; attempt < 4; attempt++)
+                {
+                    Vector3 candidate = arena.SpawnPosition(Random.Range(0, arena.SpawnCount));
+                    if ((candidate - transform.position).sqrMagnitude > 16f && !IsIgnored(candidate)) { pick = candidate; break; }
+                }
+                SetGoal(pick, "roam");
+                return;
+            }
+            Vector2 rand = Random.insideUnitCircle * 12f;
+            SetGoal(transform.position + new Vector3(rand.x, 0f, rand.y), "wander");
+        }
+
+        void SetGoal(Vector3 goal, string kind)
+        {
+            _nav.SetGoal(goal);
+            GoalKind = kind;
+            _stuckTime = 0f;
+        }
+
+        bool IsIgnored(Vector3 goal)
+        {
+            float until;
+            return _ignoredGoals.TryGetValue(Round(goal), out until) && Time.time < until;
+        }
+
+        static Vector3 Round(Vector3 v) => new Vector3(Mathf.Round(v.x), Mathf.Round(v.y), Mathf.Round(v.z));
+
+        // ---------------------------------------------------------------- update
 
         void Update()
         {
             if (ArenaBootstrap.IsPaused) return;
             if (Actor != null && Actor.IsDead) return;
 
-            // In TestMode wander/attack decision-making is frozen for deterministic
-            // tests, but gravity/grounding keeps running so bots stay on the floor
-            // and still react to external impulses (splash knockback etc.).
             bool testMode = ArenaBootstrap.TestMode;
             Vector3 wishDir = Vector3.zero;
             bool wantJump = false;
@@ -180,70 +263,73 @@ namespace MyXonotic
             if (!testMode)
             {
                 _retargetTimer -= Time.deltaTime;
-                if (_retargetTimer <= 0f) { _retargetTimer = 0.5f; Retarget(); }
+                if (_retargetTimer <= 0f)
+                {
+                    _retargetTimer = Target != null ? EnemyDetectionSticking : EnemyDetectionInterval;
+                    Retarget();
+                }
                 bool seesTarget = TargetVisible(out Vector3 toTarget, out float dist);
-                _repickTimer -= Time.deltaTime;
-                if (_repickTimer <= 0f)
+                if (seesTarget) IsHunting = false;
+
+                _strategyTimer -= Time.deltaTime;
+                bool goalDone = _nav.HasGoal && BotNavigator.FlatDistance(_nav.Goal, transform.position) < GoalReach;
+                bool itemGone = _wantedPickup != null && !_wantedPickup.IsAvailable;
+                if (_strategyTimer <= 0f || !_nav.HasGoal || goalDone || itemGone || (_goalIsEnemy && seesTarget))
                 {
-                    _repickTimer = Random.Range(1.2f, 3f);
+                    _strategyTimer = _goalIsEnemy ? StrategyIntervalMoving : StrategyInterval;
                     _strafeDir = Random.value < 0.5f ? -1f : 1f;
-                    _wantedPickup = FindWantedPickup();
-                    Objective = CtfObjective();
-                    if (_wantedPickup == null && !Objective.HasValue)
-                    {
-                        Vector2 rand = Random.insideUnitCircle * 12f;
-                        Actor prey = seesTarget || Time.time - _lastSeenTime < HuntAfterSeconds || Time.time < _detourUntil
-                            ? null : NearestEnemy();
-                        IsHunting = prey != null;
-                        if (prey != null)
-                        {
-                            // Head for the enemy with a little scatter so several bots do not stack.
-                            rand *= 0.25f;
-                            _wanderTarget = prey.transform.position + new Vector3(rand.x, 0f, rand.y);
-                        }
-                        else _wanderTarget = transform.position + new Vector3(rand.x, 0f, rand.y);
-                    }
-                    else IsHunting = false;
+                    ChooseStrategy(seesTarget);
                 }
-                if (seesTarget) { _lastSeenTime = Time.time; IsHunting = false; }
-
-                if (Objective.HasValue && (CtfFlag.CarriedBy(Actor) != null || !seesTarget))
-                    _wanderTarget = Objective.Value;
-                else if (_wantedPickup != null && _wantedPickup.IsAvailable)
-                    _wanderTarget = _wantedPickup.transform.position;
-                else if (seesTarget)
+                // Moving goal: keep the enemy position fresh between strategy ticks.
+                if (_goalIsEnemy && !seesTarget)
                 {
-                    // Keep a preferred distance for the weapon in hand and strafe around the target.
+                    var prey = NearestEnemy();
+                    if (prey != null) _nav.SetGoal(prey.transform.position);
+                }
+
+                bool navJump;
+                Vector3 navDir = _nav.Steer(transform.position, out navJump);
+
+                if (seesTarget && !(Objective.HasValue && CtfFlag.CarriedBy(Actor) != null))
+                {
+                    // Combat: hold the weapon's preferred range and strafe; path in when far.
                     float preferred = PreferredRange();
-                    Vector3 flat = new Vector3(toTarget.x, 0f, toTarget.z).normalized;
-                    Vector3 side = Vector3.Cross(Vector3.up, flat) * _strafeDir;
-                    float closeFactor = Mathf.Clamp((dist - preferred) / preferred, -1f, 1f);
-                    _wanderTarget = transform.position + (flat * closeFactor + side * StrafeBias) * 6f;
+                    Vector3 flat = BotNavigator.Flat(toTarget);
+                    if (dist > preferred * 1.6f && navDir != Vector3.zero && _goalIsEnemy) wishDir = navDir;
+                    else
+                    {
+                        Vector3 side = Vector3.Cross(Vector3.up, flat) * _strafeDir;
+                        float closeFactor = Mathf.Clamp((dist - preferred) / preferred, -1f, 1f);
+                        wishDir = BotNavigator.Flat(flat * closeFactor + side * StrafeBias);
+                    }
+                }
+                else
+                {
+                    wishDir = navDir;
+                    wantJump = navJump;
                 }
 
-                Vector3 toWander = _wanderTarget - transform.position;
-                toWander.y = 0f;
-                wishDir = toWander.sqrMagnitude > 0.5f ? toWander.normalized : Vector3.zero;
-
-                // Occasional hop while fighting; also hop when stuck against geometry.
-                _jumpTimer -= Time.deltaTime;
-                bool stuck = wishDir.sqrMagnitude > 0.01f && new Vector3(_velocity.x, 0f, _velocity.z).magnitude < 0.5f && grounded;
-                // Stuck against geometry for a while: give up the current heading and
-                // take a random detour before hunting again (no navmesh yet, M3).
-                _stuckTime = stuck ? _stuckTime + Time.deltaTime : 0f;
-                if (_stuckTime > 1.5f)
+                // Stuck handling (bot_ai_ignoregoal_timeout): jump first, then drop the goal.
+                bool stuck = wishDir.sqrMagnitude > 0.01f && grounded &&
+                             new Vector3(_velocity.x, 0f, _velocity.z).magnitude < 0.5f;
+                _stuckTime = stuck ? _stuckTime + Time.deltaTime : Mathf.Max(0f, _stuckTime - Time.deltaTime * 0.5f);
+                if (stuck && _stuckTime > 0.4f) wantJump = true;
+                if (_stuckTime > IgnoreGoalTimeout || (_nav.GoalUnreachable && !_goalIsEnemy && !seesTarget))
                 {
+                    if (_nav.HasGoal) _ignoredGoals[Round(_nav.Goal)] = Time.time + IgnoreGoalFor;
                     _stuckTime = 0f;
-                    _detourUntil = Time.time + DetourSeconds;
-                    Vector2 rand = Random.insideUnitCircle.normalized * 8f;
-                    _wanderTarget = transform.position + new Vector3(rand.x, 0f, rand.y);
-                    _repickTimer = DetourSeconds;
-                    IsHunting = false;
+                    _strategyTimer = 0f;
+                    _nav.Clear();
                 }
-                if (grounded && (_jumpTimer <= 0f && seesTarget && Random.value < 0.15f || stuck))
+
+                // Bunnyhop (skill >= 7): keep hopping while running roughly straight.
+                _jumpTimer -= Time.deltaTime;
+                if (grounded && wishDir.sqrMagnitude > 0.01f)
                 {
-                    wantJump = true;
-                    _jumpTimer = Random.Range(1.5f, 3.5f);
+                    Vector3 horizontal = new Vector3(_velocity.x, 0f, _velocity.z);
+                    float turn = horizontal.sqrMagnitude > 0.1f ? Vector3.Angle(horizontal, wishDir) : 180f;
+                    if (BunnyhopsAt(Skill) && turn <= 20f && !seesTarget) wantJump = true;   // bot_ai_bunnyhop_dir_deviation_max 20
+                    else if (_jumpTimer <= 0f && seesTarget && Random.value < 0.15f) { wantJump = true; _jumpTimer = Random.Range(1.5f, 3.5f); }
                 }
 
                 if (seesTarget) EngageTarget(toTarget, dist);
@@ -251,12 +337,12 @@ namespace MyXonotic
                     transform.rotation = Quaternion.LookRotation(wishDir, Vector3.up);
             }
 
-            var horizontal = new Vector3(_velocity.x, 0f, _velocity.z);
+            var horiz = new Vector3(_velocity.x, 0f, _velocity.z);
             if (grounded && wishDir.sqrMagnitude < 0.01f)
-                horizontal = ArenaMath.ApplyGroundFriction(horizontal, Player.GroundFriction, Player.StopSpeed, Time.deltaTime);
-            horizontal = ArenaMath.Accelerate(horizontal, wishDir, MoveSpeed, grounded ? Acceleration : Player.AirAcceleration, Time.deltaTime);
-            _velocity.x = horizontal.x;
-            _velocity.z = horizontal.z;
+                horiz = ArenaMath.ApplyGroundFriction(horiz, Player.GroundFriction, Player.StopSpeed, Time.deltaTime);
+            horiz = ArenaMath.Accelerate(horiz, wishDir, MoveSpeed, grounded ? Acceleration : Player.AirAcceleration, Time.deltaTime);
+            _velocity.x = horiz.x;
+            _velocity.z = horiz.z;
 
             if (grounded && _velocity.y < 0f) _velocity.y = -1f;
             _velocity.y += Gravity * Time.deltaTime;
@@ -284,7 +370,6 @@ namespace MyXonotic
             toTarget = aim - eye;
             dist = toTarget.magnitude;
             if (dist > SightRange) return false;
-            // Line of sight: solid geometry blocks; the target's own colliders do not.
             if (Physics.Raycast(eye, toTarget / dist, out RaycastHit hit, dist, ~0, QueryTriggerInteraction.Ignore))
             {
                 var hitActor = hit.collider.GetComponentInParent<Actor>();
@@ -293,6 +378,10 @@ namespace MyXonotic
             return true;
         }
 
+        // ------------------------------------------------------------------ items
+
+        /// havocbot item rating: need-weighted, whole map, discounted by distance; teammates
+        /// within bot_ai_friends_aware_pickup_radius claim the item.
         Pickup FindWantedPickup()
         {
             var arena = ArenaBootstrap.Instance;
@@ -302,24 +391,44 @@ namespace MyXonotic
             Vector3 here = transform.position;
             foreach (var p in arena.Pickups)
             {
-                if (p == null || !p.IsAvailable) continue;
+                if (p == null || !p.IsAvailable || IsIgnored(p.transform.position)) continue;
                 float d = Vector3.Distance(here, p.transform.position);
-                if (d > 25f || Mathf.Abs(p.transform.position.y - here.y) > 3f) continue;
-                float want = 0f;
-                switch (p.Type)
-                {
-                    case PickupType.Weapon: want = Weapons.Has(p.Weapon) ? 0.2f : (p.Weapon == WeaponType.Hook ? 0.1f : 3f); break;
-                    case PickupType.Health: want = Actor.Health < 70 ? 2.5f : 0.3f; break;
-                    case PickupType.Armor: want = Actor.Armor < 60 ? 1.5f : 0.2f; break;
-                    case PickupType.Strength:
-                    case PickupType.Shield: want = 4f; break;
-                    default: want = Weapons.OwnedCount > 2 && Weapons.GetAmmo(Weapons.Current) < 10 ? 1.8f : 0.5f; break;
-                }
-                float score = want / (1f + d * 0.15f);
+                if (!MapNavMesh.Available && (d > 25f || Mathf.Abs(p.transform.position.y - here.y) > 3f)) continue;
+                if (TeammateNear(p.transform.position)) continue;
+                float want = ItemWant(p.Type, p.Weapon, Weapons.Has(p.Weapon), Actor.Health, Actor.Armor,
+                    Weapons.OwnedCount, Weapons.GetAmmo(Weapons.Current));
+                float score = want / (1f + d * 0.05f);
                 if (score > bestScore) { bestScore = score; best = p; }
             }
             return bestScore > 0.6f ? best : null;
         }
+
+        /// Pure rating (tested): how much a bot wants an item.
+        public static float ItemWant(PickupType type, WeaponType weapon, bool hasWeapon, int health, int armor, int ownedWeapons, int currentAmmo)
+        {
+            switch (type)
+            {
+                case PickupType.Weapon: return hasWeapon ? 0.2f : (weapon == WeaponType.Hook ? 0.1f : 3f);
+                case PickupType.Health: return health < 40 ? 5f : health < 70 ? 2.5f : 0.3f;
+                case PickupType.Armor: return armor < 60 ? 1.5f : 0.2f;
+                case PickupType.Strength:
+                case PickupType.Shield: return 4f;
+                default: return ownedWeapons > 2 && currentAmmo < 10 ? 1.8f : 0.5f;
+            }
+        }
+
+        bool TeammateNear(Vector3 point)
+        {
+            if (Actor.Team == Team.None) return false;
+            foreach (var a in GameState.Actors)
+            {
+                if (a == null || a == Actor || a.IsDead || a.Team != Actor.Team) continue;
+                if ((a.transform.position - point).sqrMagnitude < FriendsAwarePickupRadius * FriendsAwarePickupRadius) return true;
+            }
+            return false;
+        }
+
+        // ---------------------------------------------------------------- weapons
 
         float PreferredRange()
         {
@@ -338,23 +447,28 @@ namespace MyXonotic
             }
         }
 
+        // bot_ai_custom_weapon_priority_* (xonotic-server.cfg), weapons we do not ship
+        // (vaporizer, oknex, ok*, hlac, shockwave, tuba, seeker) removed, order kept.
+        public static readonly WeaponType[] PriorityClose =
+            { WeaponType.Vortex, WeaponType.Shotgun, WeaponType.MachineGun, WeaponType.Arc, WeaponType.Hagar, WeaponType.Crylink,
+              WeaponType.Mortar, WeaponType.Electro, WeaponType.Devastator, WeaponType.Blaster, WeaponType.Fireball, WeaponType.Rifle };
+        public static readonly WeaponType[] PriorityMid =
+            { WeaponType.Devastator, WeaponType.Vortex, WeaponType.Fireball, WeaponType.Mortar, WeaponType.Electro, WeaponType.MachineGun,
+              WeaponType.Arc, WeaponType.Crylink, WeaponType.Hagar, WeaponType.Shotgun, WeaponType.Blaster, WeaponType.Rifle };
+        public static readonly WeaponType[] PriorityFar =
+            { WeaponType.Vortex, WeaponType.Rifle, WeaponType.Electro, WeaponType.Devastator, WeaponType.Mortar, WeaponType.Hagar,
+              WeaponType.Crylink, WeaponType.Blaster, WeaponType.MachineGun, WeaponType.Fireball, WeaponType.Shotgun };
+
+        public static WeaponType[] PriorityFor(float distMeters) =>
+            distMeters < CloseRange ? PriorityClose : distMeters < FarRange ? PriorityMid : PriorityFar;
+
         void ChooseWeapon(float dist)
         {
             if (Weapons == null) return;
             _weaponThinkTimer -= Time.deltaTime;
             if (_weaponThinkTimer > 0f) return;
-            _weaponThinkTimer = 0.8f;
-
-            // Bots never use the Hook; Minelayer only defensively (not in this table).
-            WeaponType[] order;
-            if (dist < 7f)
-                order = new[] { WeaponType.Arc, WeaponType.Shotgun, WeaponType.MachineGun, WeaponType.Crylink, WeaponType.Electro, WeaponType.Vortex, WeaponType.Blaster };
-            else if (dist < 18f)
-                order = new[] { WeaponType.Fireball, WeaponType.Devastator, WeaponType.Hagar, WeaponType.Electro, WeaponType.Mortar, WeaponType.Crylink, WeaponType.MachineGun, WeaponType.Arc, WeaponType.Vortex, WeaponType.Shotgun, WeaponType.Blaster };
-            else
-                order = new[] { WeaponType.Vortex, WeaponType.Rifle, WeaponType.MachineGun, WeaponType.Devastator, WeaponType.Electro, WeaponType.Hagar, WeaponType.Mortar, WeaponType.Blaster, WeaponType.Shotgun };
-
-            foreach (var w in order)
+            _weaponThinkTimer = ChooseWeaponInterval;
+            foreach (var w in PriorityFor(dist))
             {
                 if (!Weapons.CanFire(w)) continue;
                 if (w != Weapons.Current) Weapons.SwitchTo(w);
@@ -373,31 +487,32 @@ namespace MyXonotic
             var def = Weapons.CurrentDef;
             var fire = def.Primary;
 
-            // Never fire splash weapons into our own face; never fire hold-style weapons blindly.
             if (fire.SplashRadius > 0f && dist < fire.SplashRadius + 1.5f) return;
             if (fire.Mode == FireMode.Hook || fire.Mode == FireMode.Mine || fire.Mode == FireMode.Load) return;
             if (fire.Mode == FireMode.Beam && dist > fire.Speed) return;
 
             Vector3 origin = transform.position + Vector3.up * 1.5f;
-            Vector3 aimPoint = Target.position + Vector3.up * 1f;
 
-            // Lead moving targets with projectile weapons.
-            if (fire.Mode != FireMode.Hitscan && fire.Speed > 0f)
+            // Aim is re-evaluated at the skill think cadence (bot_ai_thinkinterval);
+            // between ticks the bot keeps firing along its last aim like a slow hand.
+            _thinkTimer -= Time.deltaTime;
+            if (_thinkTimer <= 0f || _aimDir == Vector3.zero)
             {
-                var targetPlayer = Target.GetComponent<Player>();
-                var targetBot = Target.GetComponent<Bot>();
-                if (targetPlayer != null || targetBot != null)
+                _thinkTimer = ThinkIntervalFor(Skill);
+                Vector3 aimPoint = Target.position + Vector3.up * 1f;
+                if (fire.Mode != FireMode.Hitscan && fire.Speed > 0f)
                 {
+                    var targetPlayer = Target.GetComponent<Player>();
+                    var targetBot = Target.GetComponent<Bot>();
+                    Vector3 vel = targetPlayer != null && targetPlayer.enabled ? targetPlayer.Velocity : targetBot != null ? targetBot.Velocity : Vector3.zero;
                     float flight = dist / fire.Speed;
-                    aimPoint += (targetPlayer != null ? targetPlayer.Velocity : targetBot.Velocity) * flight;
-                    // Compensate gravity drop for lobbed shots.
+                    aimPoint += vel * flight;
                     if (fire.GravityScale > 0f) aimPoint += Vector3.up * (0.5f * (800f / 32f) * fire.GravityScale * flight * flight);
                 }
+                Vector3 exact = (aimPoint - origin).normalized;
+                _aimDir = Quaternion.Euler(Random.Range(-AimErrorDegrees, AimErrorDegrees), Random.Range(-AimErrorDegrees, AimErrorDegrees), 0f) * exact;
             }
-
-            Vector3 dir = (aimPoint - origin).normalized;
-            // Skill error.
-            dir = Quaternion.Euler(Random.Range(-AimErrorDegrees, AimErrorDegrees), Random.Range(-AimErrorDegrees, AimErrorDegrees), 0f) * dir;
+            Vector3 dir = _aimDir;
             Weapons.UpdateAim(origin, dir);
             if (Weapons.TryFire(origin, dir, false) && Animator != null && fire.Refire >= 0.5f) Animator.PlayOneShot("shoot");
         }

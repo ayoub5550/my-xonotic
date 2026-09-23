@@ -1,0 +1,10 @@
+<linker>
+  <!-- dev.16: Firebase Test Lab logcat on Galaxy S24/A15 showed
+       "Can't add component because class 'CapsuleCollider' doesn't exist!"
+       from ArenaPrimitives.Grab -> GameObject.CreatePrimitive(Capsule).
+       stripEngineCode removes collider types nothing references statically;
+       CreatePrimitive adds them by name at run time. Keep the whole physics
+       module so every primitive collider survives stripping. -->
+  <assembly fullname="UnityEngine.PhysicsModule" preserve="all"/>
+  <assembly fullname="UnityEngine.AIModule" preserve="all"/>
+</linker>

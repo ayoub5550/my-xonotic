@@ -39,6 +39,9 @@ namespace MyXonotic.EditorTools
             public string map, scene, title, status, error;
             public int spawnPoints, warnings, pickups, triggers, mapModels, submodels, decorations;
             public float seconds;
+            // dev.16 navmesh bake
+            public int navmeshPolygons, navmeshSources;
+            public float navmeshArea, navmeshSeconds;
             public string[] warningSamples;
         }
 
@@ -213,6 +216,18 @@ namespace MyXonotic.EditorTools
 
             var rules = new GameObject("MatchRules");
             rules.AddComponent<ArenaBootstrap>();
+            // dev.16: bots path-find on a NavMesh baked from the map's colliders.
+            if (Environment.GetEnvironmentVariable("XONOTIC_SKIP_NAVMESH") != "1")
+            {
+                Physics.SyncTransforms();
+                var nav = NavMeshBake.BakeForScene(root.transform, rules, sceneName);
+                mr.navmeshPolygons = nav.Polygons;
+                mr.navmeshSources = nav.Sources;
+                mr.navmeshArea = nav.WalkableArea;
+                mr.navmeshSeconds = nav.Seconds;
+                if (nav.Data == null) Debug.LogWarning("[FullGameBuild] '" + map + "' navmesh bake produced nothing (" + nav.Sources + " sources).");
+                else Debug.Log("[FullGameBuild] " + map + " navmesh: " + nav.Polygons + " polys, " + nav.WalkableArea.ToString("0") + " m², " + nav.Seconds.ToString("0.0") + "s");
+            }
             var clip = music.ClipForTrack(info.cdtrack);
             if (clip != null)
             {

@@ -3,6 +3,27 @@
 **Follow `docs/ROADMAP.md`** (dev.15 → dev.20, rules per release) before planning any new dev.N.
 **Device testing is always done on Firebase Test Lab** — `docs/DEVICE-TESTING.md`, `tools/ftl_robo.sh`; every APK runs on real phones there before the release is announced.
 
+## dev.16 navmesh-bots checkpoint — 2026-09-23 (branch `feat/unity-dev16-navmesh-bots`)
+
+Read `docs/UNITY-DEV16.md` first. Bots now path on a per-map NavMesh baked in
+`prepare-maps` (`Editor/NavMeshBake.cs`, skip with `XONOTIC_SKIP_NAVMESH=1`);
+`Bot.cs` follows the `qcsrc/server/bot/` strategy/enemy-detection/weapon
+intervals with skill 1–10 (`MatchSettings.BotSkillFor` → 8/6/4). `Assets/link.xml`
+preserves PhysicsModule + AIModule — never remove it while `stripEngineCode` is
+on (dev.15 shipped a `CapsuleCollider` error because of it). `AdaptiveResolution`
+scales render resolution on slow phones. Firebase Game Loop: `GameLoop.cs` runs a
+120 s autopilot match when launched with `com.google.intent.action.TEST_LOOP`
+and writes `results_scenario_N.json`; `GameLoopManifest.cs` injects the
+intent-filter into the generated Gradle manifest (UTF-8 — a utf-16 declaration
+crashes the manifest merger; wipe `Library/Bee/Android/Prj` after such a
+failure). `com.unity.modules.ai` must stay in `Packages/manifest.json`. Editor
+tests PASS 787. APK vc17 `0.1.0-dev.16`, Test Lab Passed on S24 (Robo) and A15
+(Game Loop, 36 FPS). Known open (start of dev.17): autopilot gets stuck against
+walls (no NavMesh), bots die to environment/self-damage (`bot_frags=-10`) and
+never reach the player. Run device tests as
+`tools/ftl_robo.sh <apk> <label> robo` and `gcloud firebase test android run --type game-loop --scenario-numbers 1`
+(free tier: 5 physical devices/day).
+
 ## dev.15 weapon-mechanics checkpoint — 2026-09-23 (branch `feat/unity-dev15-weapon-mechanics`)
 
 Read `docs/UNITY-DEV15.md` first. Weapon *behaviour* is now ported from the

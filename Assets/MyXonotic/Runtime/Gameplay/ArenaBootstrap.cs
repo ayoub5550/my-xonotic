@@ -70,6 +70,10 @@ namespace MyXonotic
         public IReadOnlyList<Pickup> Pickups => _pickups;
 
         public int SpawnCount => _spawns.Count;
+        /// dev.16: Bot driving the player's body in Game Loop runs (null otherwise).
+        public Bot AutoPilot { get; private set; }
+        /// dev.16: spawn position i (bots roam between spawn points when idle).
+        public Vector3 SpawnPosition(int index) => _spawns[Mathf.Clamp(index, 0, _spawns.Count - 1)].Position;
         public bool UsedImportedArena { get; private set; }
         public bool UsedFallbackSpawnMarker { get; private set; }
         /// dev.13: spawns moved down onto the floor found below them (no floor within SpawnGroundProbe).
@@ -123,6 +127,8 @@ namespace MyXonotic
             ComputeVoidKillHeight();
             IsReady = true;
             Instance = this;
+            if (Application.isPlaying && Application.isMobilePlatform) gameObject.AddComponent<AdaptiveResolution>();
+            if (Application.isPlaying && GameLoop.Active) gameObject.AddComponent<GameLoop>();
             if (Application.isPlaying)
             {
                 DevCapture.Ensure();
@@ -474,6 +480,17 @@ namespace MyXonotic
             float yaw = PlaceAtSpawn(go.transform);
             player.SetViewYaw(yaw);
 
+            // dev.16: Firebase Test Lab Game Loop — nobody holds the phone, so a Bot
+            // drives the player's body (same CharacterController, camera follows).
+            if (GameLoop.Active && !TestMode)
+            {
+                player.enabled = false;
+                var pilot = go.AddComponent<Bot>();
+                pilot.Weapons = weapons;
+                pilot.SetSkill(Bot.DefaultSkill);
+                AutoPilot = pilot;
+            }
+
             PlayerObject = go;
             PlayerActor = actor;
             PlayerComponent = player;
@@ -536,7 +553,8 @@ namespace MyXonotic
                 bot.Weapons = weapons;
                 bot.Target = PlayerObject != null ? PlayerObject.transform : null;
                 bot.Animator = animator;
-                bot.AimErrorDegrees = 2.5f + i * 1.5f;
+                // dev.16: skills spread around the server default (`skill 8`): 8, 6, 4, 8, 6, ...
+                bot.SetSkill(TestMode ? Bot.DefaultSkill : MatchSettings.BotSkillFor(i));
                 if (!TestMode)
                 {
                     // One random extra weapon per bot at start; the rest comes from map pickups.

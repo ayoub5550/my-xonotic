@@ -1,5 +1,14 @@
 # سجل التغييرات
 
+## 0.1.0-dev.16 — 2026-09-23 — بوتات NavMesh حقيقية، إصلاح CapsuleCollider على الأجهزة، دقة عرض دينامية، Game Loop على Firebase Test Lab
+
+- **البوتات** (`Bot.cs` أُعيدت كتابته + `BotNavigator.cs`/`MapNavMesh.cs`/`Editor/NavMeshBake.cs` جديدة): NavMesh يُبنى لكل خريطة (29) في `prepare-maps`؛ دورة استراتيجية/كشف أعداء/اختيار سلاح بفواصل `bot_ai_*` من `xonotic-server.cfg`؛ مهارة 1–10 (البوتات 8/6/4)؛ تجوّل → جمع → قتال → هروب.
+- **إصلاح الأجهزة**: `Assets/link.xml` يحفظ PhysicsModule وAIModule من strip engine code → اختفى `Can't add component because class 'CapsuleCollider' doesn't exist!` (مؤكَّد على Galaxy S24 في Test Lab).
+- **الأداء**: `AdaptiveResolution` (1 / 0.85 / 0.7 / 0.6 حسب متوسط الإطار في 3 s).
+- **Game Loop**: `GameLoop.cs` + `GameLoopManifest.cs` — intent `TEST_LOOP`، مباراة آلية 120 s، تقرير `results_scenario_1.json` (FPS/أخطاء/frags/navmesh). أُضيف `com.unity.modules.ai` إلى `Packages/manifest.json`.
+- اختبارات Editor: PASS **787** (كان 742) — `Dev16BotTests`. playtest وgameplay-playtest PASS.
+- APK versionCode 17: `my-xonotic-full.apk` 407,230,072 بايت، SHA256 `ec9d9da9078f7707f0da7e3cfee2e76d50a5de648749734ea65956506c7195a2`، توقيع debug. **Firebase Test Lab**: Robo Passed على S24/Android 16 (0 أخطاء Unity)، Game Loop Passed على A15/Android 14 (36 FPS متوسطًا، 0 أخطاء). **مفتوح لـ dev.17**: الطيار الآلي يعلق أمام جدار، البوتات تموت بيئيًا (`bot_frags=-10`) ولا تصل للاعب. التفاصيل في `docs/UNITY-DEV16.md`.
+
 ## 0.1.0-dev.15 — 2026-09-23 — سلوك الأسلحة كما في Xonotic: توجيه Devastator، شحن Vortex، حرارة Arc، تحميل Hagar، ارتداد Mortar، combo Electro
 
 - **Devastator**: انطلاق 1000 → تسارع 1300 qu/s، توجيه بالنظر أثناء ضغط الزناد (90°/s بعد 0.2 s)، تفجير عن بعد بقيم `remote_*` (70/35/300/110).

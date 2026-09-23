@@ -41,7 +41,12 @@
 - مستويات مهارة 1–10 (دقة، زمن رد فعل، سرعة الدوران) من `skill` في Xonotic.
 - اختبار: كل بوت يجمع ≥1 عنصر ويسجّل ≥1 قتل في playtest 60 s على 3 خرائط.
 
+**الحالة (2026-09-23): صدر.** NavMesh لكل خريطة، حالات البوت والمهارة، `link.xml`، `AdaptiveResolution`، Game Loop على Test Lab — `docs/UNITY-DEV16.md`.
+لم يتحقق على الجهاز: البوت يسجّل قتلًا (`bot_frags=-10`، الطيار الآلي يعلق). ينتقل إلى أول dev.17. jump pads/teleporters للبوت مؤجَّلة.
+
 ## dev.17 — العناصر والصوت والمعلن
+
+- **أولًا (من Test Lab dev.16):** الطيار الآلي يسير على NavMesh؛ حراسة حواف NavMesh وأولوية سلاح تمنع الضرر الذاتي للبوت من قرب؛ معيار Game Loop: `bot_frags ≥ 3` و`player_deaths ≥ 1` في 120 s على A15.
 
 - كل عناصر Xonotic: صحة (5/25/50/100)، درع (5/25/50/100)، ذخيرة، Strength، Shield، Fuel، Jetpack/Hook حسب الخريطة، بأوقات إعادة الظهور من `balance-xonotic.cfg`.
 - المعلن الصوتي (announcer): welcome، 3-2-1-begin، frag streaks، «You have taken the lead»، دقيقة متبقية.

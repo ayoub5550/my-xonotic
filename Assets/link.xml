@@ -7,4 +7,6 @@
        module so every primitive collider survives stripping. -->
   <assembly fullname="UnityEngine.PhysicsModule" preserve="all"/>
   <assembly fullname="UnityEngine.AIModule" preserve="all"/>
+  <!-- dev.17: ParticleSystem smoke trails / fireballs are built at run time. -->
+  <assembly fullname="UnityEngine.ParticleSystemModule" preserve="all"/>
 </linker>

@@ -3,6 +3,27 @@
 **Follow `docs/ROADMAP.md`** (dev.15 → dev.20, rules per release) before planning any new dev.N.
 **Device testing is always done on Firebase Test Lab** — `docs/DEVICE-TESTING.md`, `tools/ftl_robo.sh`; every APK runs on real phones there before the release is announced.
 
+## dev.17 projectile-visuals checkpoint — 2026-09-23 (branch `feat/unity-dev17-projectile-visuals`)
+
+Read `docs/UNITY-DEV17.md` first. Projectiles now use the original Xonotic models
+(`Editor/Import/ProjectileModelImporter.cs`, MD3 **and** IQM — `rocket.md3` and
+`grenademodel.md3` in the 0.8.6 pack are IQM despite the extension; check the
+header, not the suffix) generated into `Resources/Weapons/*Projectile.prefab`
+during the `weapons` gate (git-ignored, regenerated each build). Smoke trails and
+explosion fireballs live in `Runtime/Gameplay/ProjectileVisuals.cs` (`ParticleFx`
+builds its own VertexColor material with `_VertexWeight 1`). A freshly added
+`ParticleSystem` is already playing — call `Stop(true, StopEmittingAndClear)`
+before touching `main.*` or Unity throws `Setting the duration while system is
+still playing`. `com.unity.modules.particlesystem` must stay in
+`Packages/manifest.json` and `UnityEngine.ParticleSystemModule` in `Assets/link.xml`.
+`Bot.cs` gained position-based stuck detection, `SplashWouldHitSelf` and
+`NearNavMeshEdge`; Game Loop reports `bot_deaths/bot_suicides/player_suicides`.
+Editor tests PASS 809. APK vc18 `0.1.0-dev.17`, Test Lab Game Loop Passed on A15:
+autopilot moves, bots reach and hit the player, but `bot_suicides=9` and
+`player_suicides=4` remain — first item of dev.18. The original dev.17 ROADMAP
+items (items/announcer/sounds/scoreboard) were **not** done and move to dev.18.
+Free Test Lab tier is 5 physical devices/day — plan one run per dev.
+
 ## dev.16 navmesh-bots checkpoint — 2026-09-23 (branch `feat/unity-dev16-navmesh-bots`)
 
 Read `docs/UNITY-DEV16.md` first. Bots now path on a per-map NavMesh baked in

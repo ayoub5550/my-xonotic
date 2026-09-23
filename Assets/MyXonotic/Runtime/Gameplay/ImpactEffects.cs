@@ -116,6 +116,7 @@ namespace MyXonotic
                 fx._light.intensity = fx._lightIntensity;
                 fx._light.shadows = LightShadows.None;
                 Shockwave(point, normal, def.Tint, splashRadius);
+                if (Application.isPlaying) ParticleFx.Fireball(point, def.Tint, splashRadius);
                 Debris(point, normal, def.Tint, ExplosionDebrisCount, splashRadius);
                 RequestShake(point, splashRadius);
             }

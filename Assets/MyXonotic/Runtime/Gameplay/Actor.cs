@@ -42,6 +42,8 @@ namespace MyXonotic
         public int Armor { get; private set; } = StartArmor;
         public int Frags { get; private set; }
         public int Deaths { get; private set; }
+        /// dev.17: deaths with no enemy killer (void, self-splash) — what Test Lab reports as bot_suicides.
+        public int Suicides { get; private set; }
         public bool IsDead { get; private set; }
 
         /// victim, killer (killer may be null for environmental/self death).
@@ -188,7 +190,7 @@ namespace MyXonotic
             Health = 0;
             Deaths++;
             if (killer != null && killer != this) killer.Frags++;
-            else Frags--;
+            else { Frags--; Suicides++; }
             StrengthRemaining = 0f;
             ShieldRemaining = 0f;
             var animator = GetComponentInChildren<CharacterAnimator>();

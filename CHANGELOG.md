@@ -1,5 +1,13 @@
 # سجل التغييرات
 
+## 0.1.0-dev.17 — 2026-09-23 — نماذج الطلقات الأصلية، دخان وكرات نار، بوتات لا تنتحر، طيار آلي يتحرك
+
+- **الطلقات** (`Editor/Import/ProjectileModelImporter.cs` + `Runtime/Gameplay/ProjectileVisuals.cs` جديدان): نماذج Xonotic الأصلية للـ Devastator (`rocket` IQM)، Mortar (`grenademodel` IQM)، Minelayer (`mine` MD3) وHagar (`tagrocket` MD3 كبديل) تُستورد إلى `Resources/Weapons/*Projectile.prefab` أثناء `weapons`؛ توجيه النموذج مع السرعة، ذيل دخان جسيمي، كرة نار عند كل انفجار (`ImpactEffects`). Blaster/Electro/Crylink تبقى كرات ملوّنة (MDL غير مدعوم).
+- **البوتات** (`Bot.cs`): كشف تعليق موضعي (0.6 m / 2.5 s → قائمة سوداء + قفزة)، `SplashWouldHitSelf` قبل الإطلاق بسلاح انفجاري، `NearNavMeshEdge` (0.9 m) لأهداف التجوّل. `Actor.Suicides` + `bot_deaths`/`bot_suicides`/`player_suicides` في تقرير Game Loop.
+- `com.unity.modules.particlesystem` في `Packages/manifest.json` و`UnityEngine.ParticleSystemModule` في `Assets/link.xml`.
+- اختبارات Editor: PASS **809** (كان 787) — `Dev17VisualBotTests`. playtest وgameplay-playtest PASS.
+- APK versionCode 18: `my-xonotic-full.apk` 411,475,516 بايت، SHA256 `4751fe25efaeb8418ad00b03208a56a3b3ad800f1e2bceed9dcc0342dfc22994`، توقيع debug. **Firebase Test Lab** Game Loop Passed على A15/Android 14 (35.7 FPS، 0 أخطاء): الطيار الآلي يتحرك طوال المباراة، البوتات مرئية وتصيب اللاعب (player_deaths=4)، `bot_deaths=16` منها 9 انتحار. **مفتوح لـ dev.18**: تقليل `bot_suicides`، ظهور النماذج/الدخان غير مؤكَّد بصريًا على الجهاز، بنود dev.17 الأصلية (العناصر/الصوت/المعلن) مؤجَّلة. التفاصيل في `docs/UNITY-DEV17.md`.
+
 ## 0.1.0-dev.16 — 2026-09-23 — بوتات NavMesh حقيقية، إصلاح CapsuleCollider على الأجهزة، دقة عرض دينامية، Game Loop على Firebase Test Lab
 
 - **البوتات** (`Bot.cs` أُعيدت كتابته + `BotNavigator.cs`/`MapNavMesh.cs`/`Editor/NavMeshBake.cs` جديدة): NavMesh يُبنى لكل خريطة (29) في `prepare-maps`؛ دورة استراتيجية/كشف أعداء/اختيار سلاح بفواصل `bot_ai_*` من `xonotic-server.cfg`؛ مهارة 1–10 (البوتات 8/6/4)؛ تجوّل → جمع → قتال → هروب.

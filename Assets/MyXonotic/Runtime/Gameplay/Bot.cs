@@ -24,6 +24,18 @@ namespace MyXonotic
         public float AimErrorDegrees = 3.5f;
         /// Chance per decision tick to strafe instead of closing in.
         public float StrafeBias = 0.6f;
+        /// dev.13: seconds without seeing any enemy before the bot stops wandering
+        /// randomly and walks straight towards the nearest live enemy instead.
+        /// The dev.11 device videos showed no bot in two minutes: with random
+        /// 12 m wander circles on a full-size map and spawns chosen far from the
+        /// player, bots and player rarely met. Xonotic bots roam waypoints; we
+        /// have none yet, so hunting the nearest enemy is the interim behaviour.
+        public const float HuntAfterSeconds = 4f;
+        /// While hunting, a detour is taken for this long after being stuck.
+        public const float DetourSeconds = 2.5f;
+
+        /// True while the bot is walking towards an enemy it cannot see (diagnostics).
+        public bool IsHunting { get; private set; }
 
         /// Current enemy (re-evaluated every decision tick: nearest visible enemy actor).
         public Transform Target;
@@ -49,6 +61,9 @@ namespace MyXonotic
         float _strafeDir = 1f;
         float _jumpTimer;
         Pickup _wantedPickup;
+        float _lastSeenTime = -100f;
+        float _stuckTime;
+        float _detourUntil;
 
         void Awake()
         {
@@ -104,6 +119,20 @@ namespace MyXonotic
             }
         }
 
+        /// Nearest live enemy regardless of line of sight (hunting target).
+        Actor NearestEnemy()
+        {
+            Actor best = null;
+            float bestDist = float.MaxValue;
+            foreach (var a in GameState.Actors)
+            {
+                if (a == null || a == Actor || a.IsDead || !Actor.IsEnemyOf(a)) continue;
+                float d = (a.transform.position - transform.position).sqrMagnitude;
+                if (d < bestDist) { bestDist = d; best = a; }
+            }
+            return best;
+        }
+
         /// CTF: where this bot wants to go (null = no flag objective).
         Vector3? CtfObjective()
         {
@@ -132,6 +161,9 @@ namespace MyXonotic
             _wanderTarget = transform.position;
             _repickTimer = 0f;
             _wantedPickup = null;
+            _stuckTime = 0f;
+            _detourUntil = 0f;
+            IsHunting = false;
         }
 
         void Update()
@@ -162,9 +194,20 @@ namespace MyXonotic
                     if (_wantedPickup == null && !Objective.HasValue)
                     {
                         Vector2 rand = Random.insideUnitCircle * 12f;
-                        _wanderTarget = transform.position + new Vector3(rand.x, 0f, rand.y);
+                        Actor prey = seesTarget || Time.time - _lastSeenTime < HuntAfterSeconds || Time.time < _detourUntil
+                            ? null : NearestEnemy();
+                        IsHunting = prey != null;
+                        if (prey != null)
+                        {
+                            // Head for the enemy with a little scatter so several bots do not stack.
+                            rand *= 0.25f;
+                            _wanderTarget = prey.transform.position + new Vector3(rand.x, 0f, rand.y);
+                        }
+                        else _wanderTarget = transform.position + new Vector3(rand.x, 0f, rand.y);
                     }
+                    else IsHunting = false;
                 }
+                if (seesTarget) { _lastSeenTime = Time.time; IsHunting = false; }
 
                 if (Objective.HasValue && (CtfFlag.CarriedBy(Actor) != null || !seesTarget))
                     _wanderTarget = Objective.Value;
@@ -187,6 +230,18 @@ namespace MyXonotic
                 // Occasional hop while fighting; also hop when stuck against geometry.
                 _jumpTimer -= Time.deltaTime;
                 bool stuck = wishDir.sqrMagnitude > 0.01f && new Vector3(_velocity.x, 0f, _velocity.z).magnitude < 0.5f && grounded;
+                // Stuck against geometry for a while: give up the current heading and
+                // take a random detour before hunting again (no navmesh yet, M3).
+                _stuckTime = stuck ? _stuckTime + Time.deltaTime : 0f;
+                if (_stuckTime > 1.5f)
+                {
+                    _stuckTime = 0f;
+                    _detourUntil = Time.time + DetourSeconds;
+                    Vector2 rand = Random.insideUnitCircle.normalized * 8f;
+                    _wanderTarget = transform.position + new Vector3(rand.x, 0f, rand.y);
+                    _repickTimer = DetourSeconds;
+                    IsHunting = false;
+                }
                 if (grounded && (_jumpTimer <= 0f && seesTarget && Random.value < 0.15f || stuck))
                 {
                     wantJump = true;

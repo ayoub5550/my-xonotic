@@ -36,8 +36,11 @@ namespace MyXonotic
 
         Text _statusText;
         Text _bannerText;
+        // dev.13 Xonotic-style bottom panel (luma icons + big numbers)
+        Text _healthText, _armorText, _ammoCountText, _weaponNameText, _devText;
+        Image _healthIcon, _armorIcon, _ammoIcon, _bottomPanel;
+        Text _pauseDevText;
         Text _pauseText;
-        Text _ammoText;
         Text _notifyText;
         Text _crosshairText;
         Image _damageFlash;
@@ -96,17 +99,20 @@ namespace MyXonotic
                 new Vector2(12f, -8f), new Vector2(420f, 24f), 14, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.4f, 0.8f));
             _bannerText.text = "my-xonotic " + Application.version + " — development build";
 
-            _statusText = CreateText("Status", _safeAreaRoot, new Vector2(0f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(20f, 20f), new Vector2(0f, 120f), 22, TextAnchor.LowerLeft, Color.white);
+            // dev.13: score/timer line moved under the banner (top-left) so the
+            // bottom centre is free for the Xonotic-style health/armor/ammo panel.
+            _statusText = CreateText("Status", _safeAreaRoot, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(12f, -30f), new Vector2(560f, 66f), 18, TextAnchor.UpperLeft, Color.white);
             _statusText.supportRichText = true;
             _statusText.fontStyle = FontStyle.Bold;
+            _statusText.verticalOverflow = VerticalWrapMode.Overflow;
 
-            // Big ammo readout for the weapon in hand, bottom-centre so it sits
-            // between the joystick zone and the FIRE cluster.
-            _ammoText = CreateText("Ammo", _safeAreaRoot, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 24f), new Vector2(420f, 80f), 40, TextAnchor.LowerCenter, AmmoColor);
-            _ammoText.supportRichText = true;
-            _ammoText.fontStyle = FontStyle.Bold;
+            // DevCapture status (FPS, bots) under the score line — development builds only.
+            _devText = CreateText("DevStatus", _safeAreaRoot, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(12f, -98f), new Vector2(560f, 20f), 12, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.4f, 0.7f));
+
+            BuildBottomPanel();
+
 
             _notifyText = CreateText("Notify", _safeAreaRoot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 new Vector2(0f, 110f), new Vector2(900f, 120f), 22, TextAnchor.LowerCenter, Color.white);
@@ -138,6 +144,11 @@ namespace MyXonotic
             _pauseText.supportRichText = true;
             _pauseText.verticalOverflow = VerticalWrapMode.Overflow;
             _pauseText.text = "PAUSED\nTouch RESUME, RESTART or MAIN MENU\nDesktop: P / R / M";
+            // dev.13 DevCapture panel: last log lines, bottom half of the pause screen.
+            _pauseDevText = CreateText("PauseDevText", _pausePanel.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(-440f, 12f), new Vector2(880f, 150f), 12, TextAnchor.LowerLeft, new Color(1f, 0.9f, 0.6f, 0.9f));
+            _pauseDevText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _pauseDevText.verticalOverflow = VerticalWrapMode.Truncate;
             _pausePanel.SetActive(false);
         }
 
@@ -163,6 +174,98 @@ namespace MyXonotic
             text.color = color;
             text.raycastTarget = false;
             text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            return text;
+        }
+
+        /// <summary>
+        /// dev.13 Xonotic luma layout (hud_luma.cfg: healtharmor panel at
+        /// 0.30..0.70 x 0.925, ammo panel just above it): a dark translucent
+        /// panel bottom-centre with [health icon][number] [armor icon][number]
+        /// and above it [ammo icon][number] + weapon name. Icons come from the
+        /// original gfx/hud/luma art via HudArt; without the art the numbers
+        /// stand alone. All rects are anchor-pivoted (dev.12 rule) so nothing
+        /// can leave the screen; HudGeometry asserts it.
+        /// </summary>
+        void BuildBottomPanel()
+        {
+            const float panelW = 480f, panelH = 62f, ammoH = 44f, icon = 44f;
+            var panelGO = new GameObject("BottomPanel", typeof(RectTransform), typeof(Image));
+            panelGO.transform.SetParent(_safeAreaRoot, false);
+            _bottomPanel = panelGO.GetComponent<Image>();
+            _bottomPanel.color = new Color(0f, 0.14f, 0.25f, 0.55f); // hud_panel_bg_color "0 0.14 0.25"
+            _bottomPanel.raycastTarget = false;
+            var prt = panelGO.GetComponent<RectTransform>();
+            prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 0f);
+            prt.pivot = new Vector2(0.5f, 0f);
+            prt.anchoredPosition = new Vector2(0f, 10f);
+            prt.sizeDelta = new Vector2(panelW, panelH);
+
+            // Health: icon + number in the left half, right-aligned towards the centre.
+            _healthIcon = CreateIcon("HealthIcon", prt, "health", new Vector2(14f, (panelH - icon) * 0.5f), icon);
+            _healthText = CreatePanelText("Health", prt, new Vector2(14f + icon + 6f, 0f), new Vector2(panelW * 0.5f - icon - 30f, panelH), 40, TextAnchor.MiddleLeft, HealthColor);
+            // Armor: mirrored on the right half.
+            _armorIcon = CreateIcon("ArmorIcon", prt, "armor", new Vector2(panelW * 0.5f + 14f, (panelH - icon) * 0.5f), icon);
+            _armorText = CreatePanelText("Armor", prt, new Vector2(panelW * 0.5f + 14f + icon + 6f, 0f), new Vector2(panelW * 0.5f - icon - 30f, panelH), 40, TextAnchor.MiddleLeft, ArmorColor);
+
+            var ammoGO = new GameObject("AmmoPanel", typeof(RectTransform), typeof(Image));
+            ammoGO.transform.SetParent(_safeAreaRoot, false);
+            var ammoImg = ammoGO.GetComponent<Image>();
+            ammoImg.color = new Color(0f, 0.14f, 0.25f, 0.45f);
+            ammoImg.raycastTarget = false;
+            var art = ammoGO.GetComponent<RectTransform>();
+            art.anchorMin = art.anchorMax = new Vector2(0.5f, 0f);
+            art.pivot = new Vector2(0.5f, 0f);
+            art.anchoredPosition = new Vector2(0f, 10f + panelH + 4f);
+            art.sizeDelta = new Vector2(panelW * 0.7f, ammoH);
+            float aw = panelW * 0.7f;
+            _ammoIcon = CreateIcon("AmmoIcon", art, null, new Vector2(12f, (ammoH - 32f) * 0.5f), 32f);
+            _ammoCountText = CreatePanelText("AmmoCount", art, new Vector2(12f + 32f + 6f, 0f), new Vector2(110f, ammoH), 30, TextAnchor.MiddleLeft, AmmoColor);
+            _weaponNameText = CreatePanelText("Ammo", art, new Vector2(12f + 32f + 6f + 110f, 0f), new Vector2(aw - (12f + 32f + 6f + 110f) - 10f, ammoH), 18, TextAnchor.MiddleRight, Color.white);
+            _weaponNameText.supportRichText = true;
+        }
+
+        Image CreateIcon(string name, RectTransform parent, string art, Vector2 bottomLeft, float size)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = Vector2.zero;
+            rt.pivot = Vector2.zero;
+            rt.anchoredPosition = bottomLeft;
+            rt.sizeDelta = new Vector2(size, size);
+            var img = go.GetComponent<Image>();
+            img.raycastTarget = false;
+            img.preserveAspect = true;
+            SetIcon(img, art);
+            return img;
+        }
+
+        static void SetIcon(Image img, string art)
+        {
+            var sprite = HudArt.Sprite(art);
+            img.sprite = sprite;
+            // No art generated: hide the slot instead of drawing a white square.
+            img.color = sprite != null ? Color.white : new Color(1f, 1f, 1f, 0f);
+        }
+
+        Text CreatePanelText(string name, RectTransform parent, Vector2 bottomLeft, Vector2 size, int fontSize, TextAnchor align, Color color)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = Vector2.zero;
+            rt.pivot = Vector2.zero;
+            rt.anchoredPosition = bottomLeft;
+            rt.sizeDelta = size;
+            var text = go.AddComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = fontSize;
+            text.fontStyle = FontStyle.Bold;
+            text.alignment = align;
+            text.color = color;
+            text.raycastTarget = false;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
             return text;
         }
 
@@ -314,16 +417,23 @@ namespace MyXonotic
             if (Weapons != null) TouchLayout.VisibleWeaponSlots = Weapons.VisibleSlotCount;
             var def = Weapons != null ? Weapons.CurrentDef : WeaponController.GetDef(WeaponType.Blaster);
             int ammo = Weapons != null ? Weapons.GetAmmo(Weapons.Current) : 0;
-            string hp = "<color=#" + ColorUtility.ToHtmlStringRGB(Player.Health <= 25 ? Color.red : HealthColor) + ">" + Player.Health + "</color>";
-            string ar = "<color=#" + ColorUtility.ToHtmlStringRGB(ArmorColor) + ">" + Player.Armor + "</color>";
-            _statusText.text =
-                $"HEALTH {hp}   ARMOR {ar}\n" +
-                $"FRAGS {Player.Frags}   DEATHS {Player.Deaths}";
-            if (Player.HasStrength) _statusText.text += "   <color=#ff4aa0>STRENGTH " + Mathf.CeilToInt(Player.StrengthRemaining) + "</color>";
-            if (Player.HasShield) _statusText.text += "   <color=#4ae0ff>SHIELD " + Mathf.CeilToInt(Player.ShieldRemaining) + "</color>";
+            // Bottom panel: Xonotic colours health green -> red when low, armor blue.
+            _healthText.text = Player.Health.ToString();
+            _healthText.color = Player.Health <= 25 ? new Color(1f, 0.3f, 0.25f) : Player.Health > 100 ? new Color(0.75f, 1f, 0.75f) : HealthColor;
+            _armorText.text = Player.Armor.ToString();
+            _armorText.color = Player.Armor > 100 ? new Color(0.8f, 0.9f, 1f) : ArmorColor;
             string ammoStr = ammo < 0 ? "∞" : ammo.ToString();
-            string ammoColor = ammo >= 0 && ammo < Mathf.Max(1, def.Primary.AmmoCost) * 3 ? "#ff5a5a" : "#ffd278";
-            _ammoText.text = "<size=22>" + def.Name.ToUpperInvariant() + "</size>\n<color=" + ammoColor + ">" + ammoStr + "</color>";
+            bool lowAmmo = ammo >= 0 && ammo < Mathf.Max(1, def.Primary.AmmoCost) * 3;
+            _ammoCountText.text = ammoStr;
+            _ammoCountText.color = lowAmmo ? new Color(1f, 0.35f, 0.35f) : AmmoColor;
+            SetIcon(_ammoIcon, HudArt.AmmoIconName(def.Ammo));
+            string powerups = "";
+            if (Player.HasStrength) powerups += " <color=#ff4aa0>STR " + Mathf.CeilToInt(Player.StrengthRemaining) + "</color>";
+            if (Player.HasShield) powerups += " <color=#4ae0ff>SHLD " + Mathf.CeilToInt(Player.ShieldRemaining) + "</color>";
+            _weaponNameText.text = def.Name.ToUpperInvariant() + powerups;
+
+            _statusText.text = $"FRAGS {Player.Frags}   DEATHS {Player.Deaths}";
+            if (_devText != null) _devText.text = DevCapture.StatusLine();
 
             if (_notifyTimer > 0f)
             {
@@ -344,7 +454,7 @@ namespace MyXonotic
             if (arena != null && arena.Match != null)
             {
                 int seconds = Mathf.FloorToInt(arena.Match.ElapsedSeconds);
-                _statusText.text += $"\n{MatchSettings.ModeShort(arena.Mode)}  {seconds / 60:00}:{seconds % 60:00}  LIMIT {arena.ScoreLimit}";
+                _statusText.text = $"{MatchSettings.ModeShort(arena.Mode)}  {seconds / 60:00}:{seconds % 60:00}  LIMIT {arena.ScoreLimit}\n" + _statusText.text;
                 if (arena.IsTeamMode)
                 {
                     _statusText.text += $"\n<color=#ff5a50>RED {arena.TeamScore(Team.Red)}</color>   <color=#5a8cff>BLUE {arena.TeamScore(Team.Blue)}</color>";
@@ -373,7 +483,21 @@ namespace MyXonotic
                 }
                 else _pauseText.text = "PAUSED\nTouch RESUME, RESTART or MAIN MENU\nDesktop: P / R / M\n<size=14>" + RuntimeErrorLog.Summary() + "</size>";
             }
-            if (_pausePanel != null) _pausePanel.SetActive(ArenaBootstrap.IsPaused);
+            if (_pausePanel != null)
+            {
+                bool paused = ArenaBootstrap.IsPaused;
+                if (paused && !_pausePanel.activeSelf && _pauseDevText != null)
+                {
+                    // Refresh the DevCapture excerpt once per pause (not every frame).
+                    var recent = RuntimeErrorLog.Recent;
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("DevCapture: ").Append(DevCapture.StatusLine()).Append('\n');
+                    int from = Mathf.Max(0, recent.Count - 7);
+                    for (int i = from; i < recent.Count; i++) sb.Append(recent[i].Length > 140 ? recent[i].Substring(0, 140) + "…" : recent[i]).Append('\n');
+                    _pauseDevText.text = sb.ToString();
+                }
+                _pausePanel.SetActive(paused);
+            }
         }
 
         static Rect GuiRect(Rect screenRect) => new Rect(screenRect.x,
@@ -459,12 +583,25 @@ namespace MyXonotic
                     GUI.color = def.Tint;
                     GUI.DrawTexture(new Rect(rect.x + 3f, rect.yMax - 5f, rect.width - 6f, 3f), SquareTexture());
                 }
-                GUI.color = Color.white;
                 int ammo = Weapons.GetAmmo(w);
                 string ammoStr = ammo < 0 ? "∞" : ammo.ToString();
                 string tint = owned ? (Weapons.CanFire(w) ? "#ffffff" : "#ff7a7a") : "#6a6a72";
                 _slotStyle.normal.textColor = Color.white;
                 string key = i < WeaponController.CoreWeaponCount ? (i + 1).ToString() : "0";
+                // dev.13: original luma weapon icon fills the slot (dimmed when not
+                // owned, reddish when out of ammo); text falls back when no art.
+                var iconTex = HudArt.Texture(HudArt.WeaponIconName(w));
+                if (iconTex != null)
+                {
+                    GUI.color = owned ? (Weapons.CanFire(w) ? Color.white : new Color(1f, 0.55f, 0.55f, 1f)) : new Color(1f, 1f, 1f, 0.28f);
+                    float pad = rect.width * 0.08f;
+                    GUI.DrawTexture(new Rect(rect.x + pad, rect.y + pad * 0.5f, rect.width - pad * 2f, rect.height - pad * 2.5f), iconTex, ScaleMode.ScaleToFit, true);
+                    GUI.color = Color.white;
+                    GUI.Label(new Rect(rect.x, rect.y, rect.width, rect.height * 0.4f), "<color=#c8c8d0><size=" + Mathf.Max(8, _slotStyle.fontSize - 3) + ">" + key + "</size></color>", _slotStyle);
+                    GUI.Label(new Rect(rect.x, rect.yMax - rect.height * 0.42f, rect.width, rect.height * 0.4f), "<color=" + tint + "><b>" + (owned ? ammoStr : "") + "</b></color>", _slotStyle);
+                    continue;
+                }
+                GUI.color = Color.white;
                 GUI.Label(rect, "<color=#8a8a95><size=" + Mathf.Max(8, _slotStyle.fontSize - 3) + ">" + key + "</size></color>\n<color=" + tint + "><b>" + def.ShortName + "</b></color>\n<color=" + tint + ">" + (owned ? ammoStr : "-") + "</color>", _slotStyle);
             }
             GUI.color = prev;
@@ -540,6 +677,10 @@ namespace MyXonotic
                     GUI.color = Color.white;
                     GUI.Box(GuiRect(TouchLayout.MainMenu), "MAIN MENU", boxStyle);
                 }
+                // dev.13 DevCapture: hand the error report to the owner without a cable.
+                var smallStyle = new GUIStyle(boxStyle) { fontSize = Mathf.Clamp(Mathf.RoundToInt(Screen.height * 0.02f), 11, 28) };
+                GUI.Box(GuiRect(TouchLayout.ShareLog), "SHARE LOG", smallStyle);
+                GUI.Box(GuiRect(TouchLayout.CopyLog), "COPY LOG", smallStyle);
                 return;
             }
 

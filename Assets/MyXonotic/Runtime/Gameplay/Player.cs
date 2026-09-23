@@ -419,7 +419,8 @@ namespace MyXonotic
 
             float deadZone = TouchLayout.JoystickDeadZone;
             float maxRadius = TouchLayout.JoystickMaxRadius;
-            float lookScale = (LookSensitivityTouch * 0.02f) * (720f / Mathf.Max(1f, safe.height));
+            // dev.13: user sensitivity multiplier (SETTINGS page); inverted Y applied once below.
+            float lookScale = (LookSensitivityTouch * 0.02f) * (720f / Mathf.Max(1f, safe.height)) * TouchSettings.Sensitivity;
 
             // Pass 2: drive the frame's output from whichever fingers are still down.
             for (int i = 0; i < Input.touchCount; i++)
@@ -483,6 +484,7 @@ namespace MyXonotic
                 if (released && t.fingerId == _wpnPlusFingerId) _wpnPlusFingerId = -1;
                 if (released && t.fingerId == _wpnMinusFingerId) _wpnMinusFingerId = -1;
             }
+            if (TouchSettings.InvertY) look.y = -look.y;
         }
     }
 }

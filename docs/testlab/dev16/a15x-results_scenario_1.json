@@ -1,0 +1,11 @@
+scenario=1
+elapsed_s=120.0
+avg_fps=36.2
+worst_frame_ms=5622
+errors=0
+warnings=0
+player_frags=0
+player_deaths=0
+bot_frags=-10
+navmesh=1
+last_error=

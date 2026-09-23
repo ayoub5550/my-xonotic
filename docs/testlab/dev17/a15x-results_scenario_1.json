@@ -1,0 +1,14 @@
+scenario=1
+elapsed_s=120.0
+avg_fps=35.7
+worst_frame_ms=4620
+errors=0
+warnings=0
+player_frags=-1
+player_deaths=4
+bot_frags=-5
+bot_deaths=16
+bot_suicides=9
+player_suicides=4
+navmesh=1
+last_error=

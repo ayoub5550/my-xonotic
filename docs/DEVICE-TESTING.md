@@ -51,3 +51,6 @@ Robo يضغط عشوائياً ولا يلعب. من dev.16 يدعم التطب�
 ## فحص الـAPK قبل الرفع
 `unzip -tq`, `aapt dump badging` (versionCode = N+1), `apksigner verify --print-certs`, `sha256sum`.
 الرفع 405 MB ويستغرق مع التشغيل 10–15 دقيقة.
+
+## الأثر الخام
+فيديوهات وتقارير كل تشغيل محفوظة في `docs/testlab/dev<N>/` — انظر `docs/testlab/README.md`.

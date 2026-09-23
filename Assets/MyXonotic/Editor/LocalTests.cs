@@ -74,6 +74,8 @@ namespace MyXonotic.EditorTools
                 Check(behaviour != null, "imported component serializable");
             MainMenuGeometry();
             WeaponRigs();
+            WeaponPlacement();
+            HudGeometry();
             LocalBuild.CreateDevelopmentScene();
             Directory.CreateDirectory("Artifacts");
             File.WriteAllText("Artifacts/editor-tests.txt", string.Join("\n", Passed));
@@ -132,6 +134,41 @@ namespace MyXonotic.EditorTools
             UnityEngine.Object.DestroyImmediate(go);
         }
 
+        /// dev.12 regression: the dev.11 device video showed the bottom HUD texts
+        /// (FRAGS/DEATHS, weapon name) cut off below the screen: centre pivots
+        /// with edge anchors. Builds the real HUD and checks every Text rect lies
+        /// inside its canvas.
+        static void HudGeometry()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var host = new GameObject("HudHost");
+            var hud = Hud.Build(host.transform);
+            Canvas.ForceUpdateCanvases();
+            var canvasRt = hud.GetComponent<RectTransform>();
+            var canvasRect = canvasRt.rect;
+            var corners = new Vector3[4];
+            var texts = hud.GetComponentsInChildren<Text>(true);
+            Check(texts.Length >= 5, "hud builds its texts (" + texts.Length + ")");
+            foreach (var t in texts)
+            {
+                if (t.name == "PauseText") continue; // inside the pause panel, laid out by its parent
+                t.rectTransform.GetWorldCorners(corners);
+                float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
+                foreach (var c in corners)
+                {
+                    var l = canvasRt.InverseTransformPoint(c);
+                    minX = Mathf.Min(minX, l.x); maxX = Mathf.Max(maxX, l.x);
+                    minY = Mathf.Min(minY, l.y); maxY = Mathf.Max(maxY, l.y);
+                }
+                bool inside = minX >= canvasRect.xMin - 0.5f && maxX <= canvasRect.xMax + 0.5f &&
+                              minY >= canvasRect.yMin - 0.5f && maxY <= canvasRect.yMax + 0.5f;
+                Check(inside, "hud text '" + t.name + "' inside the screen (x " + minX.ToString("0") + ".." + maxX.ToString("0") +
+                    ", y " + minY.ToString("0") + ".." + maxY.ToString("0") + " of " + canvasRect.width.ToString("0") + "x" + canvasRect.height.ToString("0") + ")");
+                Check(t.rectTransform.rect.width > 0f && t.rectTransform.rect.height > 0f, "hud text '" + t.name + "' has a positive rect");
+            }
+            UnityEngine.Object.DestroyImmediate(host);
+        }
+
         /// dev.11: every weapon ships an animated first-person rig generated
         /// from Xonotic's h_ model (IQM skeleton-only or DarkPlaces DPM with
         /// its own skinned mesh). Checks are geometric because the sandbox
@@ -168,6 +205,90 @@ namespace MyXonotic.EditorTools
                     type + " muzzle joint in a plausible view-space box (" + shot.ToString("0.00") + ")");
             }
             Check(rigged == WeaponController.WeaponCount, "all " + WeaponController.WeaponCount + " weapons have an animated rig (" + rigged + ")");
+        }
+
+
+        /// <summary>
+        /// dev.12: device video showed several rigged weapons pointing the wrong
+        /// way. Pose every rig at idle exactly as WeaponView does (root yaw −90°),
+        /// skin it on the CPU and report the view-space bounds of what the player
+        /// would see: the gun must sit right/below the eye and extend forward
+        /// (its +Z extent longer than its +X extent).
+        /// </summary>
+        static void WeaponPlacement()
+        {
+            var host = new GameObject("WeaponPlacementTest");
+            try
+            {
+                for (int i = 0; i < WeaponController.WeaponCount; i++)
+                {
+                    var type = (WeaponType)i;
+                    var info = Resources.Load<WeaponRigInfo>("Weapons/" + type + "WeaponRig");
+                    if (info == null || info.Rig == null || info.Rig.JointCount == 0) continue;
+                    var root = new GameObject("Rig_" + type);
+                    root.transform.SetParent(host.transform, false);
+                    root.transform.localRotation = Quaternion.Euler(0f, -90f, 0f);
+                    var anim = CharacterAnimator.Create(root.transform, info.Rig, info.SkinnedMesh, info.Materials);
+                    anim.Play("idle", true);
+                    anim.Step(0.05f);
+                    Bounds b = default; bool any = false;
+                    var obj = new System.Text.StringBuilder(); int vbase = 0;
+                    void Add(Vector3 p) { if (!any) { b = new Bounds(p, Vector3.zero); any = true; } else b.Encapsulate(p); }
+                    void Dump(Mesh m, Matrix4x4 l2w, string group)
+                    {
+                        obj.Append("g ").Append(group).Append('\n');
+                        var verts = m.vertices;
+                        foreach (var v in verts)
+                        {
+                            var p = host.transform.InverseTransformPoint(l2w.MultiplyPoint3x4(v));
+                            Add(p);
+                            obj.Append("v ").Append(p.x.ToString("0.0000")).Append(' ').Append(p.y.ToString("0.0000")).Append(' ').Append(p.z.ToString("0.0000")).Append('\n');
+                        }
+                        var tris = m.triangles;
+                        for (int t = 0; t + 2 < tris.Length; t += 3)
+                            obj.Append("f ").Append(vbase + tris[t] + 1).Append(' ').Append(vbase + tris[t + 1] + 1).Append(' ').Append(vbase + tris[t + 2] + 1).Append('\n');
+                        vbase += verts.Length;
+                    }
+                    if (anim.Skin != null)
+                    {
+                        var baked = new Mesh();
+                        anim.Skin.BakeMesh(baked);
+                        Dump(baked, anim.Skin.transform.localToWorldMatrix, "skin");
+                        UnityEngine.Object.DestroyImmediate(baked);
+                    }
+                    else if (info.WeaponJoint >= 0)
+                    {
+                        var prefab = Resources.Load<GameObject>("Weapons/" + type + "WeaponVisual");
+                        var mf = prefab != null ? prefab.GetComponentInChildren<MeshFilter>() : null;
+                        Check(mf != null && mf.sharedMesh != null, type + " static v_ mesh available for the IQM rig");
+                        var bone = anim.Bones[info.WeaponJoint];
+                        // prefab root rotation is reset to identity by WeaponView; the MeshFilter may sit on a child with its own transform
+                        var childLocal = mf.transform.localToWorldMatrix * prefab.transform.worldToLocalMatrix;
+                        Dump(mf.sharedMesh, bone.localToWorldMatrix * childLocal, "v_");
+                    }
+                    // Bone chain as OBJ lines for the wireframe snapshot.
+                    obj.Append("g bones\n");
+                    for (int j = 0; j < anim.Bones.Length; j++)
+                    {
+                        var p = host.transform.InverseTransformPoint(anim.Bones[j].position);
+                        obj.Append("v ").Append(p.x.ToString("0.0000")).Append(' ').Append(p.y.ToString("0.0000")).Append(' ').Append(p.z.ToString("0.0000")).Append('\n');
+                    }
+                    for (int j = 0; j < anim.Bones.Length; j++)
+                    {
+                        int par = info.Rig.JointParents[j];
+                        if (par >= 0) obj.Append("l ").Append(vbase + par + 1).Append(' ').Append(vbase + j + 1).Append('\n');
+                    }
+                    Directory.CreateDirectory("Artifacts/weapons");
+                    File.WriteAllText("Artifacts/weapons/" + type + ".obj", obj.ToString());
+                    Check(any, type + " rig produced geometry");
+                    Debug.Log("[my-xonotic] weapon placement " + type + " (" + info.SourceFormat + "): min " + b.min.ToString("0.00") + " max " + b.max.ToString("0.00"));
+                    Check(b.size.z > b.size.x && b.size.z > b.size.y, type + " extends forward more than sideways/up (" + b.size.ToString("0.00") + ")");
+                    Check(b.max.z > 0.3f && b.min.z > -0.9f && b.max.z < 2.6f, type + " gun in front of the eye (z " + b.min.z.ToString("0.00") + ".." + b.max.z.ToString("0.00") + ")");
+                    Check(b.max.y < 0.35f && b.min.y > -1.4f, type + " gun below the eye line (y " + b.min.y.ToString("0.00") + ".." + b.max.y.ToString("0.00") + ")");
+                    Check(b.min.x > -0.7f && b.max.x < 1.0f, type + " gun near the right hand (x " + b.min.x.ToString("0.00") + ".." + b.max.x.ToString("0.00") + ")");
+                }
+            }
+            finally { UnityEngine.Object.DestroyImmediate(host); }
         }
 
         static Vector3 WorldPosition(CharacterRig rig, int joint)

@@ -91,8 +91,9 @@ namespace MyXonotic
             _safeAreaRoot.offsetMax = Vector2.zero;
             ApplySafeArea();
 
-            _bannerText = CreateText("Banner", _safeAreaRoot, new Vector2(0f, 1f), new Vector2(1f, 1f),
-                new Vector2(0f, -20f), new Vector2(0f, 30f), 22, TextAnchor.UpperCenter, Color.yellow);
+            // Top-left, small: the weapon bar owns the top centre, PAUSE the top right.
+            _bannerText = CreateText("Banner", _safeAreaRoot, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(12f, -8f), new Vector2(420f, 24f), 14, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.4f, 0.8f));
             _bannerText.text = "my-xonotic " + Application.version + " — development build";
 
             _statusText = CreateText("Status", _safeAreaRoot, new Vector2(0f, 0f), new Vector2(0.5f, 0f),
@@ -133,7 +134,9 @@ namespace MyXonotic
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
             _pauseText = CreateText("PauseText", _pausePanel.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(600f, 100f), 28, TextAnchor.MiddleCenter, Color.white);
+                Vector2.zero, new Vector2(900f, 220f), 28, TextAnchor.MiddleCenter, Color.white);
+            _pauseText.supportRichText = true;
+            _pauseText.verticalOverflow = VerticalWrapMode.Overflow;
             _pauseText.text = "PAUSED\nTouch RESUME, RESTART or MAIN MENU\nDesktop: P / R / M";
             _pausePanel.SetActive(false);
         }
@@ -146,6 +149,11 @@ namespace MyXonotic
             var rt = go.GetComponent<RectTransform>();
             rt.anchorMin = anchorMin;
             rt.anchorMax = anchorMax;
+            // dev.12: pivot follows the anchor so anchoredPosition is measured from
+            // the screen edge the text hugs. With the default centre pivot the
+            // bottom texts extended 40 px below the screen (FRAGS/DEATHS and the
+            // weapon name were cut off on the first device video).
+            rt.pivot = anchorMin;
             rt.anchoredPosition = anchoredPos;
             rt.sizeDelta = size;
             var text = go.AddComponent<Text>();
@@ -363,7 +371,7 @@ namespace MyXonotic
                     _pauseText.text = "MATCH OVER — " + winner + "\n" + result.Reason +
                         "\nTouch RESTART / Desktop R";
                 }
-                else _pauseText.text = "PAUSED\nTouch RESUME, RESTART or MAIN MENU\nDesktop: P / R / M";
+                else _pauseText.text = "PAUSED\nTouch RESUME, RESTART or MAIN MENU\nDesktop: P / R / M\n<size=14>" + RuntimeErrorLog.Summary() + "</size>";
             }
             if (_pausePanel != null) _pausePanel.SetActive(ArenaBootstrap.IsPaused);
         }

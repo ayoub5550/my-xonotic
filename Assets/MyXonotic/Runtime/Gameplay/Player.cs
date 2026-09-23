@@ -239,7 +239,7 @@ namespace MyXonotic
             if ((flags & CollisionFlags.Above) != 0 && _velocity.y > 0) _velocity.y = 0;
             IsGrounded = (flags & CollisionFlags.Below) != 0 || _cc.isGrounded;
             _externalImpulse = Vector3.Lerp(_externalImpulse, Vector3.zero, 6f * dt);
-            if (transform.position.y < -200f) Actor.TakeDamage(10000, Vector3.zero, null);
+            if (transform.position.y < ArenaBootstrap.VoidKillY) Actor.TakeDamage(10000, Vector3.zero, null);
 
             if (Weapons != null && ViewCamera != null)
             {

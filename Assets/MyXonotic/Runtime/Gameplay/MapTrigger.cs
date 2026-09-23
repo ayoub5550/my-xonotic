@@ -39,7 +39,11 @@ namespace MyXonotic
         public const float DefaultPushApexHeight = 2.0f;
 
         /// Default hurt damage per tick when the source entity has no "dmg" key.
-        public const int DefaultHurtDamagePerTick = 10;
+        /// dev.12: Xonotic's trigger_hurt defaults to 1000 (instant kill); the old
+        /// value of 10 let players survive kill volumes under the maps for seconds.
+        public const int DefaultHurtDamagePerTick = 1000;
+        /// Pre-dev.12 imported markers carry 10 for "no dmg key"; treat as lethal at runtime.
+        public const int LegacyDefaultHurtDamagePerTick = 10;
 
         /// Minimum seconds between two hurt applications to the same collider,
         /// so standing in a trigger_hurt volume does not deal damage every frame.
@@ -216,7 +220,8 @@ namespace MyXonotic
             // No knockback direction is derived from the trigger volume itself
             // (a bounding box has no meaningful "hurt surface normal" without the
             // real brush faces); environmental damage, no instigator.
-            actor.TakeDamage(HurtDamagePerTick, Vector3.zero, null);
+            int dmg = HurtDamagePerTick <= LegacyDefaultHurtDamagePerTick ? DefaultHurtDamagePerTick : HurtDamagePerTick;
+            actor.TakeDamage(dmg, Vector3.zero, null);
         }
 
         /// <summary>

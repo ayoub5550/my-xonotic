@@ -111,8 +111,30 @@ namespace MyXonotic
             Match.StartMatch(CurrentMatchConfig(), GameState.Actors);
             CtfFlag.Captured += OnFlagCaptured;
 
+            ComputeVoidKillHeight();
             IsReady = true;
             Instance = this;
+        }
+
+        /// <summary>
+        /// Y below which an actor is dead (fell out of the map). dev.12: the first
+        /// device video showed the player falling under the map for many seconds
+        /// with the old fixed -200 m threshold. Now = lowest collider in the arena
+        /// minus a margin, so every map kills within about a second of free fall.
+        /// </summary>
+        public static float VoidKillY { get; private set; } = -200f;
+        public const float VoidKillMargin = 12f;
+
+        void ComputeVoidKillHeight()
+        {
+            float minY = float.PositiveInfinity;
+            foreach (var col in FindObjectsOfType<Collider>())
+            {
+                if (col.isTrigger) continue;
+                float y = col.bounds.min.y;
+                if (y < minY) minY = y;
+            }
+            VoidKillY = float.IsInfinity(minY) ? -200f : minY - VoidKillMargin;
         }
 
         void Update()

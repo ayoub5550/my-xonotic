@@ -1,5 +1,23 @@
 # سجل التغييرات
 
+## 0.1.0-dev.12 — 2026-09-22 — إصلاحات أول فيديوهات الجهاز: خامات مضغوطة، موت الفراغ، HUD، سجل أخطاء
+
+- خامات الأسلحة ونماذج الالتقاط تمرّ الآن عبر `ImportedTexturePolicy.Finalize`
+  (mipmaps + ETC2) بدل RGBA32 خام بلا mips (سبب Vortex الأبيض والأشكال
+  الداكنة على الجهاز — نفاد ذاكرة GPU). أصول الأسلحة 33.5 → 11.2 MB لكل خامة،
+  `Generated/MapModels` 603 → 199 MB، APK أصغر بـ ~49 MB.
+- موضع أسلحة DPM (Mortar/Devastator) تحقّق أنه مطابق لـXonotic الأصلي عبر
+  أداة `tools/weapon_snapshot.py` الجديدة (رسم هندسي بلا GPU) — لم يُغيَّر.
+- السقوط خارج الخريطة يقتل فورًا (`ArenaBootstrap.VoidKillY` = أدنى مصادم −12 م)
+  و`trigger_hurt` بلا `dmg` قاتل (1000) كما في الأصل.
+- HUD: pivot الحواف أُصلح (صف FRAGS/DEATHS واسم السلاح لم يعودا مقطوعين)؛ بانر
+  النسخة صغير أعلى يسار؛ شاشة PAUSED تعرض ملخص الأخطاء.
+- `RuntimeErrorLog` جديد يكتب التحذيرات/الأخطاء إلى
+  `Android/data/com.ayoub.myxonotic/files/my-xonotic-errors.log`.
+- البوابات المتخطّاة في dev.11 أُعيدت: Editor tests PASS 455 (منها `WeaponRigs`
+  14/14، `WeaponPlacement` 14/14، `HudGeometry` الجديد)، gameplay-playtest نجح.
+- APK versionCode 13: 411,439,725 بايت، SHA256 `6aeed8f0e50f87e71db3efdd2119e12baf297039d99288db13944422585fa198`. التفاصيل في `docs/UNITY-DEV12.md`.
+
 ## 0.1.0-dev.11 — 2026-09-22 — تحريك الأسلحة الأصلي وفلاش الفوهة وشظايا الانفجار
 
 - المنظور الأول يستخدم الآن نماذج `h_*` الأصلية المتحركة (idle/fire/fire2)

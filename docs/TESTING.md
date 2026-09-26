@@ -1,28 +1,28 @@
-# الاختبارات وحدود الإثبات
+# Tests and Evidence Limits
 
-## نتيجة جلسة التأسيس — 2026-09-20
+## Baseline Session Result — 2026-09-20
 
-| الفحص | النتيجة | ماذا يثبت؟ |
+| Check | Result | What does it prove? |
 |---|---|---|
-| C# host API compilation | نجح لـ26 ملف runtime و4 ملفات Editor | صحة الأنواع وواجهات المكتبات المرجعية فقط |
-| asmdef + builtin packages | نجح | أسماء المراجع وإصدارات الحزم المحلية |
-| C# BSP/geometry checks | 53 assertion ناجحة | 49 صناعية + 4 على خريطتين أصليتين |
-| Python | 57 اختبارًا ناجحًا | حماية الاستخراج، provenance، fixtures وHTTP ranges وفهرس الموارد |
-| .meta GUIDs | فحص بلا أخطاء | اكتمال وعدم تكرار GUIDs للكود والأصول الأصلية |
-| الموارد الأصلية | 207 ملفات / 203,918,053 بايت بلا اختلاف | مطابقة الملفات للفهرس، لا اكتمال الترخيص أو التشغيل |
-| Unity import/compile | محجوب عند التفعيل 401 | لا نتيجة ترجمة من Editor |
-| Editor tests / Play Mode | لم تُنفذ | الشيفرة موجودة، ولا تُحسب نجاحًا |
-| APK/device/visual/audio | لم تُنفذ | لا دليل تشغيل على الهاتف أو تطابق بصري |
+| C# host API compilation | Passed for 26 runtime files and 4 Editor files | Type correctness and reference-library APIs only |
+| asmdef + builtin packages | Passed | Reference names and local package versions |
+| C# BSP/geometry checks | 53 assertions passed | 49 synthetic + 4 on two original maps |
+| Python | 57 tests passed | Protection for extraction, provenance, fixtures and HTTP ranges, and the resource index |
+| .meta GUIDs | Check completed without errors | Completeness and no duplicate GUIDs for original code and assets |
+| Original resources | 207 files / 203,918,053 bytes with no differences | Files match the index; this does not establish licensing completeness or runtime functionality |
+| Unity import/compile | Blocked at activation 401 | No compilation result from the Editor |
+| Editor tests / Play Mode | Not run | The code exists, but this is not counted as a pass |
+| APK/device/visual/audio | Not run | No evidence of phone runtime behavior or visual match |
 
-نجاح host compilation لا يتحقق من shader compiler أو استيراد الأصول أو الترتيب
-الفعلي لدورة حياة MonoBehaviour أو IL2CPP/stripping.
+Successful host compilation does not verify the shader compiler, asset importing, the actual
+MonoBehaviour lifecycle ordering, or IL2CPP/stripping.
 
-## أوامر قابلة للإعادة
+## Reproducible Commands
 
 ```bash
 bash tests/run_all.sh mono mcs \
-  ThirdParty/Xonotic/maps-pk3/maps/_hudsetup.bsp \
-  ThirdParty/Xonotic/maps-pk3/maps/boil.bsp
+  ExternalContent/maps/maps/_hudsetup.bsp \
+  ExternalContent/maps/maps/boil.bsp
 python3 tools/asset_meta.py
 python3 tools/content/verify_resources.py
 
@@ -30,41 +30,38 @@ python3 tools/host_compile.py --editor-data "$UNITY_EDITOR_DATA" \
   --ui-dll "$LOCAL_UNITY_UI_DLL"
 ```
 
-يمكن حذف مساري الخرائط لتشغيل الفحوص الصناعية فقط. لا تُنسخ الخرائط إلى مجلد
-fixtures الصناعية، ولا تُعدّلها لجعل الاختبار يمر. أي فشل parsing لخريطة اختبار
-أصلية يُفشل الاختبار فعلًا؛ لا يوجد catch يحوّل الفشل إلى نجاح.
+The map paths may be omitted to run only the synthetic checks. Do not copy the maps into the
+synthetic fixtures directory or modify them to make the test pass. Any parsing failure for an
+original test map genuinely fails the test; there is no catch that turns failure into success.
 
-## نتائج الخريطتين الأصلية
+## Results for the Two Original Maps
 
-من `Xonotic/data/xonotic-20230620-maps.pk3` في الإصدار الرسمي 0.8.6:
+From `Xonotic/data/xonotic-20230620-maps.pk3` in official release 0.8.6:
 
-| الخريطة | كيانات | رؤوس في الملف | أسطح | models | رؤوس model0 المولّدة | مثلثات مرئية | مثلثات تصادم |
+| Map | Entities | Vertices in file | Surfaces | models | Generated model0 vertices | Visible triangles | Collision triangles |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | `_hudsetup` | 5 | 1359 | 93 | 2 | 1695 | 1661 | 1661 |
 | `boil` | 92 | 17021 | 2969 | 6 | 18335 | 12682 | 12654 |
 
-قارئ C# ومولّد الهندسة أعادا صفر diagnostics لهذه الملفات. **هذا لا يعني صفر
-ميزات ناقصة**: مستورد Editor يحذّر من submodels والكيانات غير المنفذة.
-Boil تحتوي 7 نقاط deathmatch. لم نفحص المشهد بصريًا في Unity.
-SHA256 ومصدر كل ملف في manifests الموارد. استخراج BSP تحقق من CRC للعضو،
-ولم يتحقق من SHA512 للأرشيف الرسمي كاملًا.
+The C# reader and geometry generator returned zero diagnostics for these files. **This does not
+mean that no features are missing**: the Editor importer warns about unimplemented submodels and
+entities. Boil contains 7 deathmatch spawn points. The scene was not visually inspected in Unity.
+SHA256 and the source of every file are recorded in the resource manifests. BSP extraction verified
+the member CRC, but did not verify the SHA512 of the complete official archive.
 
-## اختبارات Editor وPlay Mode المكتوبة
+## Written Editor and Play Mode Tests
 
-- Editor: احتفاظ الاحتكاك بالسرعة العمودية، توزيع الدرع، حد splash، مشهد bootstrap
-  بلا script مفقود، shader موجود، تصادم ونقطة ظهور patch صناعية، واستيراد متكرر
-  يحافظ على GUID.
-- Play Mode: عدد الخصوم والـpickups، مشي وقفز فعليان، اصطدام الأرض، إصابة hitscan
-  ومقذوف، نقاط القتل، respawn مؤقت، الدرع، إعادة المباراة وتوقف الحركة عند pause.
-- التقرير `Artifacts/playtest-result.json` يُنشأ فقط من المشغّل الفعلي.
-- لا يثبت test input حقنًا أن لمس الهاتف يعمل؛ يلزم اختبار مستقل على الجهاز.
+- Editor: friction retains vertical velocity, armor distribution, splash limit, bootstrap scene with no missing script, shader presence, collision and spawn-point synthetic patch, and repeated importing preserves GUIDs.
+- Play Mode: enemy and pickup counts, actual walking and jumping, ground collision, hitscan and projectile hits, kill scores, temporary respawn, armor, match reset, and movement stopping when paused.
+- The report `Artifacts/playtest-result.json` is generated only by the actual runner.
+- A test-input injection does not prove that phone touch works; an independent device test is required.
 
-## قائمة الهاتف قبل أي إصدار للاعبين
+## Phone Checklist Before Any Player Release
 
-- [ ] تثبيت نظيف وبدء بلا crash، package/architecture/signature صحيحة.
-- [ ] الحركة والنظر والإطلاق في الوقت نفسه بأصابع مستقلة.
-- [ ] safe area، دوران landscape، pause، فقدان التركيز والعودة بلا لمس عالق.
-- [ ] تصادم الأرض والجدران، المقذوف لا يتجاوز جدارًا قريبًا، splash لا يمر عبر الحائط.
-- [ ] الذخيرة والـpickups والدرع والنقاط وإعادة الظهور وإعادة المباراة.
-- [ ] العرض والـshaders والصوت؛ معدل الإطارات والذاكرة والحرارة على جهاز مسمى.
-- [ ] تسجيل فجوات Xonotic الحقيقية، لا الاكتفاء بنجاح ساحة التطوير.
+- [ ] Clean installation and startup without a crash; package/architecture/signature are correct.
+- [ ] Movement, looking, and firing simultaneously with independent fingers.
+- [ ] Safe area, landscape rotation, pause, loss of focus, and return without stuck touch input.
+- [ ] Ground and wall collision; projectiles do not pass through a nearby wall; splash does not pass through a wall.
+- [ ] Ammunition, pickups, armor, scores, respawning, and match reset.
+- [ ] Rendering, shaders, and audio; frame rate, memory, and temperature on a named device.
+- [ ] Record actual Xonotic gaps; do not rely solely on a successful development arena.

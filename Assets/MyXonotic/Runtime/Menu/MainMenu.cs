@@ -146,10 +146,10 @@ namespace MyXonotic.Menu
             int count = _catalog != null ? _catalog.maps.Count : 0;
             string version = _catalog != null && !string.IsNullOrEmpty(_catalog.buildVersion) ? _catalog.buildVersion : Application.version;
 
-            var title = MakeText("Title", screen, "MY XONOTIC", 56, TextAnchor.MiddleLeft, Accent, FontStyle.Bold);
+            var title = MakeText("Title", screen, "PLASMA VERGE", 56, TextAnchor.MiddleLeft, Accent, FontStyle.Bold);
             SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(0.6f, 1f), new Vector2(0f, 1f), new Vector2(40f, -110f), new Vector2(0f, -30f));
             var sub = MakeText("Subtitle", screen,
-                count + " maps · Unity reimplementation " + version + " · original Xonotic art (GPL) · development build",
+                count + " maps · Plasma Verge " + version + " · Unity arena FPS · original Xonotic art (GPL)",
                 15, TextAnchor.MiddleLeft, SubText, FontStyle.Normal);
             SetRect(sub.rectTransform, new Vector2(0f, 1f), new Vector2(0.62f, 1f), new Vector2(0f, 1f), new Vector2(40f, -140f), new Vector2(0f, -112f));
 

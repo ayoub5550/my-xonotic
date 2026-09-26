@@ -18,7 +18,7 @@ namespace MyXonotic.EditorTools
         static readonly List<GameObject> Spawned = new List<GameObject>();
         public static readonly List<string> Passed = new List<string>();
 
-        [MenuItem("My Xonotic/Tests - dev.9 checks")]
+        [MenuItem("Plasma Verge/Tests - dev.9 checks")]
         public static void RunSelfTests()
         {
             Spawned.Clear();

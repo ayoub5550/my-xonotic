@@ -1,5 +1,8 @@
 # سجل التغييرات
 
+## sale/plasma-verge — 2026-09-26
+- Rebrand to **Plasma Verge** (title, productName, package id, APK names, Editor menu); `tools/setup_content.py` (buyer content setup from the official 0.8.6 zip), `tools/make_sale_package.py` (code kit + optional GPL content pack), `BUYER-GUIDE.md`, English README/docs.
+
 ## 0.1.0-dev.18 — 2026-09-23 — الجرافيك الأصلي (lightmaps/glow/شفافية/bloom)، صفحة إعدادات بتبويبات، بوتات 3/2/1 مع منزلق، طلقات MDL
 
 - **الجرافيك** (`BspImportPipeline.cs`, `Lightmapped.shader`, `LightmappedBlend.shader`/`LightmappedAdd.shader`/`Bloom.shader` جديدة، `MobileBloom.cs`): تصنيف سطوح BSP إلى Opaque/Cutout/Blend/Additive من scripts الأصلية، `tcMod scroll`، توهج `*_glow` بمزج screen، `dp_water` شفاف، bloom بربع الدقة مع وضع LOW يعطّله. 29 خريطة: 2259 Lightmapped / 118 Add / 60 Blend / 29 Sky6Sided، 261 مادة بتوهج، 0 lightmap fallback.

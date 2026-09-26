@@ -19,7 +19,7 @@ namespace MyXonotic.EditorTools
     /// here): run this suite on its own with
     ///   Unity -batchmode -nographics -projectPath . -quit \
     ///     -executeMethod MyXonotic.EditorTools.MatchSessionRegressionTests.Run
-    /// or from the Editor menu ("My Xonotic/Tests - Match session (dedicated)").
+    /// or from the Editor menu ("Plasma Verge/Tests - Match session (dedicated)").
     /// An integrator's aggregator (e.g. GameplayIntegrationTests.Run) can call
     /// <see cref="RunSelfTests"/> directly.
     ///
@@ -32,7 +32,7 @@ namespace MyXonotic.EditorTools
     /// </summary>
     public static class MatchSessionRegressionTests
     {
-        [MenuItem("My Xonotic/Tests - Match session (dedicated)")]
+        [MenuItem("Plasma Verge/Tests - Match session (dedicated)")]
         public static void Run()
         {
             RunSelfTests();

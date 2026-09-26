@@ -1,29 +1,23 @@
-# البناء المحلي
+# Local Build
 
-## المتطلبات
+> Start with **[BUYER-GUIDE.md](../BUYER-GUIDE.md)** — it covers the normal setup path
+> (`tools/setup_content.py` + the Unity menu). This page keeps the lower-level details.
 
-- Unity **2022.3.62f3** مع رخصة صالحة مفعّلة محليًا.
-- Android Build Support وAndroid SDK/NDK وOpenJDK المتوافقة معه.
-- Python **3.10+**، وPillow عند تحويل DDS، وMono لاختبارات C# المستقلة.
-- الإعداد السابق استخدم NDK r23b وOpenJDK 11 وAndroid platform 36.
-  لا تفترض وجودها على جهاز جديد، ولا تعتبر تنزيلها إثباتًا لنجاح البناء.
+## Requirements
 
-المشروع يبنى محليًا فقط، دون Unity Cloud Build أو GitHub Actions.
-لا تنقل ملفات الرخصة أو كلمات المرور أو سجلات الحساب أو مفاتيح التوقيع إلى Git.
-تسجيل الدخول إلى موقع Unity لا يثبت تفعيل المحرر على جهاز البناء.
-استخدم Unity Hub للتفعيل المعتاد؛ لا تتجاوز الترخيص أو إقرار أهلية الحساب.
+- Unity **2022.3.62f3** with a valid license activated locally.
+- Android Build Support, along with the compatible Android SDK/NDK and OpenJDK.
+- Python **3.10+**, Pillow for DDS conversion, and Mono for standalone C# tests.
+- The previous setup used NDK r23b, OpenJDK 11, and Android platform 36.
+  Do not assume these are installed on a new machine, and do not treat downloading them as proof that the build succeeded.
 
-## استعادة الحالة الحالية
+The project is built locally only, without Unity Cloud Build or GitHub Actions.
+Do not commit license files, passwords, account records, or signing keys to Git.
+Logging in to the Unity website does not prove that the editor is activated on the build machine.
+Use Unity Hub for normal activation; do not bypass licensing or account-eligibility requirements.
 
-المتابعة الحالية متعددة الخرائط على `feat/unity-dev5-full-game`؛ راجع
-`UNITY-DEV6.md` للأوامر والأدلة الأحدث. ما يلي يشرح أيضًا مسار Boil التاريخي.
 
-الفرع `main` تعريفي فقط. مصدر نقطة البداية `unity-v0.1.0-dev.2` موجود
-على `feat/unity-original-map`؛ متابعة الإصلاحات على فرع منفصل
-`feat/unity-android-continuation`. اقرأ `AGENTS.md` قبل التعديل.
-النتائج القديمة ليست نتائج اختبارات أُعيد تشغيلها على جهازك.
-
-## فحوص لا تحتاج Unity
+## Checks That Do Not Require Unity
 
 ```sh
 python3 tools/content/pk3_tool.py fixture --out-dir tests/fixtures/generated
@@ -31,38 +25,31 @@ python3 -m unittest discover -s tests/python -p 'test_*.py' -v
 python3 tools/asset_meta.py
 python3 tools/content/verify_resources.py
 bash tests/run_all.sh mono mcs \
-  ThirdParty/Xonotic/maps-pk3/maps/_hudsetup.bsp \
-  ThirdParty/Xonotic/maps-pk3/maps/boil.bsp
+  ExternalContent/maps/maps/_hudsetup.bsp \
+  ExternalContent/maps/maps/boil.bsp
 ```
 
-فحوص Python وقراءة الملفات لا تثبت عرض الخامات أو لعب Android.
-اختبارات تحويل DDS تتطلب Pillow؛ راقب الاختبارات المتخطاة.
+Python checks and file inspection do not prove that textures render or that Android gameplay works.
+DDS conversion tests require Pillow; check for skipped tests.
 
-## إعداد موارد الخريطة الأصلية
+## Preparing the Original Map Resources
 
-الملفات الموجودة في `ThirdParty/Xonotic` مجموعة محدودة وليست كل اللعبة.
-يمكن تجهيز بيانات إصدار Xonotic الرسمي **0.8.6** محليًا، مع التحقق من
-checksum المنشور وحماية استخراج ZIP/PK3 من تجاوز المسارات والتضخم.
-لا تنفّذ برامج أو شيفرة مضمنة في حزم الموارد.
-المصادر الأصلية والتراخيص تبقى مستقلة عن مشتقات Unity.
+`python3 tools/setup_content.py` does all of this for you (download, SHA-512 check, safe
+extraction, DDS→PNG decoding, environment variables). The manual equivalent, if you already have
+an extracted 0.8.6 data tree:
 
 ```sh
-# <extracted-data> هو جذر محتوى حزمة data، وليس جذر ملف ZIP الخارجي.
-python3 tools/content/prepare_unity_textures.py <extracted-data> \
-  --texture models/weapons/laser
-# القائمة الكاملة للخامات المطلوبة قبل prepare-maps (شخصيات، عناصر، الأسلحة التسعة)
-# موجودة في docs/UNITY-DEV8.md قسم «المتطلبات».
-export XONOTIC_CONTENT_ROOTS="<decoded>:<extracted-maps>:<extracted-data>:ThirdParty/Xonotic/maps-pk3"
-export XONOTIC_BSP="<extracted-maps>/maps/boil.bsp"
+# <extracted-data> is the data package content root, not the root of the outer ZIP file.
+python3 tools/content/prepare_unity_textures.py <extracted-data> --output ExternalContent/decoded \
+  --texture models/weapons/laser   # repeat --texture for every skin listed in tools/setup_content.py
+export XONOTIC_CONTENT_ROOTS="ExternalContent/decoded:ExternalContent/worlddecoded:ExternalContent/maps:ExternalContent/data"
+export XONOTIC_BSP="ExternalContent/maps/maps/boil.bsp"   # single-map development builds only
 export XONOTIC_INCLUDE_EXTERNAL=1
 ```
 
-`--texture` قابل للتكرار لتحويل صور DDS المطلوبة فقط؛ تحفظ الأداة أصل كل
-صورة وSHA256 للمدخل والمشتق في سجل التحويل. لا يُعاد ترخيص الأصل.
-وجود جميع الملفات محليًا لا يعني أن المستورد يدعم كل خامة أو نموذج أو
-أن APK يضم كل الخرائط. أوضاع اللعب والشبكة وبقية أنظمة اللعبة عمل مستقل.
+The original is never relicensed; game data stays in the git-ignored `ExternalContent/`.
 
-## تشغيل Unity والبناء
+## Running Unity and Building
 
 ```sh
 export UNITY_EDITOR="<local-editor-executable>"
@@ -77,39 +64,37 @@ python3 tools/local_unity.py original-playtest
 python3 tools/local_unity.py android --timeout 3600
 ```
 
-بدون `XONOTIC_INCLUDE_EXTERNAL=1` يبني أمر Android ساحة التطوير المصطنعة.
-الاستثناء هو `XONOTIC_ALL_MAPS=1`، الذي يختار حزمة كل الخرائط والقائمة؛
-استعمل `XONOTIC_VERSION_CODE` المناسب كما في وثيقة الإصدار.
-عند تفعيله يستورد مسار `XONOTIC_BSP` ويولّد موارد الخريطة الأصلية قبل
-البناء؛ المخرج الحالي اسمه `my-xonotic-unity-boil.apk`، وليس لعبة كاملة.
+Without `XONOTIC_INCLUDE_EXTERNAL=1`, the Android command builds the synthetic development arena.
+The exception is `XONOTIC_ALL_MAPS=1`, which selects the all-maps package and manifest;
+use the appropriate `XONOTIC_VERSION_CODE` as described in the release document.
+When enabled, it imports the `XONOTIC_BSP` path and generates the original map resources before
+building; the output is named `plasma-verge-boil.apk`; with `XONOTIC_ALL_MAPS=1` the full game is `plasma-verge-full.apk`.
 
-- `test` اختبار Editor؛ `playtest` اختبار الساحة المصطنعة؛
-  `original-playtest` اختبار الخريطة الأصلية.
-- الاختبارات بدون `--graphics` لا تثبت صحة العرض. الاختبار الرسومي يحتاج
-  شاشة أو Xvfb ودعم OpenGL مناسبًا.
-- أداة التشغيل تمنع تشغيل Unity مرتين على المشروع وتقيد المهلة.
-- `android` و`linux` لا يعتبران الخروج برمز صفر نجاحًا وحده: يلزم إيصال
-  جديد يطابق معرّف التشغيل والهدف واسم الملف وحجمه وSHA256.
-- تحتفظ الأداة بملف البناء السابق إن فشل تشغيل جديد، لكنها تزيل الإيصال
-  القديم قبل البدء؛ لا تشارك الملف القديم على أنه بناء جديد.
-- إيصال SHA256 يثبت تطابق الملف، لا صحة اللعب ولا توقيع APK. تحقق من
-  التوقيع بأداة `apksigner` ثم اختبر التثبيت والعرض واللمس على هاتف.
+- `test` is an Editor test; `playtest` is a synthetic-arena test;
+  `original-playtest` tests the original map.
+- Tests without `--graphics` do not prove rendering correctness. Graphics testing requires
+  a display or Xvfb and suitable OpenGL support.
+- The runner prevents Unity from being launched twice for the project and enforces a timeout.
+- `android` and `linux` do not consider a zero exit code sufficient for success: a new receipt is required,
+  matching the run ID, target, filename, size, and SHA256.
+- The tool preserves the previous build file if a new run fails, but removes the old receipt before starting;
+  do not share the old file as a new build.
+- A SHA256 receipt proves that the file matches, not that gameplay works or that the APK is signed.
+  Verify the signature with `apksigner`, then test installation, rendering, and touch input on a phone.
 
-## إعداد Android الحالي وحدود الإصدار
+## Current Android Setup and Release Limitations
 
-`com.ayoub.myxonotic`، ARM64/IL2CPP، اتجاه أفقي، OpenGLES3،
-min API 26 وtarget API 36. التوقيع تطويري وليس إصدار متجر جاهزًا.
-أي تغيير في versionCode أو keystore يجب توثيقه.
+`com.ayoub.plasmaverge` (change it in `Editor/LocalBuild.cs`), ARM64/IL2CPP, landscape orientation, OpenGLES3,
+min API 26 and target API 36. The signing is for development and is not ready for a store release.
+Any change to versionCode or the keystore must be documented.
 
-الخريطة تستعمل قواعد قتال وحركة تقريبية. ليست كل أسلحة Xonotic أو
-شخصياتها أو أنيميشنها أو ذكائها الاصطناعي أو أوضاعها أو شبكتها مكتملة.
-مراجعة تطابق المصادر والتراخيص وتوافق التوزيع مع Unity ما زالت منفصلة.
+The map uses approximate combat and movement rules. Not all Xonotic weapons, characters,
+animations, AI, game modes, or networking are complete.
+Reviewing source and license parity and distribution compatibility with Unity remains separate work.
 
-## قيود البيئة
+## Environment Constraints
 
-افحص `nproc` وRAM والمساحة وتوافق النظام على **الجهاز الحالي**. لا تنقل
-أرقام الجهاز السابق إلى تقرير جديد.
-وثّق `my-librequake` حلولًا خاصة لـgVisor: تشغيل ShaderCompiler عبر
-qemu عند ثبوت خطأ FS/GS، وshim لجدولة FMOD عند ثبوت خطئه.
-ليست متطلبات عادية ولا وسائل لتجاوز ترخيص Unity. لا تطبقها قبل التحقق
-من الخطأ الحالي. شغّل نسخة Unity واحدة فقط.
+Check `nproc`, RAM and disk space on the build machine: a full 29-map APK needs ~10 GB of
+scratch space and 40–60 minutes on a 16-core CPU (the first compile after a large change can
+take 6–12 minutes because of IL2CPP post-processing). Run only one Unity instance per project;
+if a headless run is interrupted, delete `Temp/UnityLockfile` and `Artifacts/local-unity.lock`.

@@ -26,7 +26,7 @@ namespace MyXonotic.EditorTools
     /// Editor but NOT Play Mode.
     ///
     /// NOT wired into Editor/LocalTests.cs (LocalTests.cs is not owned by this
-    /// change). Run manually via "My Xonotic/Tests - Pickup checks", or have
+    /// change). Run manually via "Plasma Verge/Tests - Pickup checks", or have
     /// LocalTests.Run() call PickupTests.RunSelfTests() the same way it already
     /// calls BspGameplayImporter.RunSelfTests() (one line + one Check(true, ...)).
     /// Throws on the first failed assertion, matching every other self-test in
@@ -36,7 +36,7 @@ namespace MyXonotic.EditorTools
     {
         static readonly List<GameObject> _spawned = new List<GameObject>();
 
-        [MenuItem("My Xonotic/Tests - Pickup checks")]
+        [MenuItem("Plasma Verge/Tests - Pickup checks")]
         public static void RunSelfTests()
         {
             _spawned.Clear();

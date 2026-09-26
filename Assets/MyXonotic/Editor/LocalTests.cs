@@ -16,7 +16,7 @@ namespace MyXonotic.EditorTools
     {
         static readonly List<string> Passed = new List<string>();
 
-        [MenuItem("My Xonotic/Tests - Editor checks")]
+        [MenuItem("Plasma Verge/Tests - Editor checks")]
         public static void Run()
         {
             Passed.Clear();
@@ -140,7 +140,7 @@ namespace MyXonotic.EditorTools
 
             menu.ShowScreen(MenuScreen.Home);
             Text Find(string n) { foreach (var t in go.GetComponentsInChildren<Text>(true)) if (t.name == n) return t; return null; }
-            Check(Find("Title") != null && Find("Title").text == "MY XONOTIC", "menu title text present");
+            Check(Find("Title") != null && Find("Title").text == "PLASMA VERGE", "menu title text present");
             Check(Find("Subtitle") != null && Find("Subtitle").text.Contains("maps"), "menu subtitle text present");
             var quit = go.transform.Find("MenuCanvas/SafeArea/Home/Quit");
             Check(quit != null && quit.GetComponent<RectTransform>().rect.height > 0f, "quit button visible");

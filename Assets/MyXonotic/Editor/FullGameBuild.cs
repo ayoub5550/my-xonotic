@@ -74,7 +74,7 @@ namespace MyXonotic.EditorTools
         static string MapsRoot => Environment.GetEnvironmentVariable("XONOTIC_MAPS_ROOT") ?? "ExternalContent/maps";
         static string MusicRoot => Environment.GetEnvironmentVariable("XONOTIC_MUSIC_ROOT") ?? "ExternalContent/music";
 
-        [MenuItem("My Xonotic/5 - Prepare ALL maps + menu (full game)")]
+        [MenuItem("Plasma Verge/5 - Prepare ALL maps + menu (full game)")]
         public static void PrepareFullGame()
         {
             var started = DateTime.UtcNow;

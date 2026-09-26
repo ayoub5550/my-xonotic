@@ -43,7 +43,7 @@ namespace MyXonotic.EditorTools
 
         private static readonly List<string> Passed = new List<string>();
 
-        [MenuItem("My Xonotic/Tests - Sky import regression (dedicated)")]
+        [MenuItem("Plasma Verge/Tests - Sky import regression (dedicated)")]
         public static void Run()
         {
             Passed.Clear();

@@ -19,7 +19,7 @@ class ReceiptTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         (self.root / "Builds").mkdir()
-        self.artifact = self.root / "Builds/my-xonotic-unity-boil.apk"
+        self.artifact = self.root / "Builds/plasma-verge-boil.apk"
         self.artifact.write_bytes(b"synthetic artifact, NOT an APK")
         self.receipt = {
             "target": "Android", "invocation": "fresh-id", "result": "Succeeded",

@@ -42,12 +42,12 @@ namespace MyXonotic.EditorTools
             public string invocation, unity;
         }
 
-        [MenuItem("My Xonotic/1 - Configure local project")]
+        [MenuItem("Plasma Verge/1 - Configure local project")]
         public static void Configure()
         {
             PlayerSettings.companyName = "Ayoub";
-            PlayerSettings.productName = FullGame ? "my-xonotic" : "my-xonotic Development";
-            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, "com.ayoub.myxonotic");
+            PlayerSettings.productName = FullGame ? "Plasma Verge" : "Plasma Verge Development";
+            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, "com.ayoub.plasmaverge");
             PlayerSettings.bundleVersion = File.ReadAllText("VERSION").Trim();
             int versionCode;
             if (!int.TryParse(Environment.GetEnvironmentVariable("XONOTIC_VERSION_CODE"), out versionCode)) versionCode = 5;
@@ -115,7 +115,7 @@ namespace MyXonotic.EditorTools
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        [MenuItem("My Xonotic/2 - Create development arena scene")]
+        [MenuItem("Plasma Verge/2 - Create development arena scene")]
         public static void CreateDevelopmentScene()
         {
             Configure();
@@ -128,7 +128,7 @@ namespace MyXonotic.EditorTools
             Debug.Log("[my-xonotic] Development scene generated; this is not an upstream Xonotic map.");
         }
 
-        [MenuItem("My Xonotic/3 - Import external BSP as scene")]
+        [MenuItem("Plasma Verge/3 - Import external BSP as scene")]
         public static void ImportExternalBsp()
         {
             var path = Environment.GetEnvironmentVariable("XONOTIC_BSP");
@@ -148,7 +148,7 @@ namespace MyXonotic.EditorTools
             Debug.Log("[my-xonotic] External geometry imported with development rules; NOT full Xonotic compatibility.");
         }
 
-        [MenuItem("My Xonotic/4 - Build local Android development APK")]
+        [MenuItem("Plasma Verge/4 - Build local Android development APK")]
         public static void BuildAndroid()
         {
             if (!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Android, BuildTarget.Android))
@@ -159,13 +159,13 @@ namespace MyXonotic.EditorTools
             if (FullGame)
             {
                 PrepareFullGamePackage();
-                Build(BuildTarget.Android, "my-xonotic-full.apk");
+                Build(BuildTarget.Android, "plasma-verge-full.apk");
                 return;
             }
             bool imported = Environment.GetEnvironmentVariable("XONOTIC_INCLUDE_EXTERNAL") == "1";
             if (imported) PrepareOriginalMap();
             else CreateDevelopmentScene();
-            Build(BuildTarget.Android, imported ? "my-xonotic-unity-boil.apk" : "my-xonotic-development.apk");
+            Build(BuildTarget.Android, imported ? "plasma-verge-boil.apk" : "plasma-verge-development.apk");
         }
 
         /// <summary>Full package: weapons, every official map scene, menu, notices.</summary>
@@ -245,14 +245,14 @@ namespace MyXonotic.EditorTools
             File.WriteAllText(destination, json);
         }
 
-        [MenuItem("My Xonotic/Build local Linux development player")]
+        [MenuItem("Plasma Verge/Build local Linux development player")]
         public static void BuildLinux()
         {
             Configure();
             if (FullGame) PrepareFullGamePackage();
             else if (Environment.GetEnvironmentVariable("XONOTIC_INCLUDE_EXTERNAL") == "1") PrepareOriginalMap();
             else CreateDevelopmentScene();
-            Build(BuildTarget.StandaloneLinux64, "my-xonotic.x86_64");
+            Build(BuildTarget.StandaloneLinux64, "plasma-verge.x86_64");
         }
 
         static void Build(BuildTarget target, string name)

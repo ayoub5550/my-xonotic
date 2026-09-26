@@ -53,7 +53,7 @@ namespace MyXonotic.EditorTools
             return list.ToArray();
         }
 
-        [MenuItem("My Xonotic/Import/Generate HUD + menu art (luma)")]
+        [MenuItem("Plasma Verge/Import/Generate HUD + menu art (luma)")]
         public static void GenerateMenu() => Generate(new XonoticContentResolver());
 
         public static Manifest Generate(XonoticContentResolver resolver)

@@ -1,76 +1,49 @@
-# my-xonotic — Unity / Android
+# Plasma Verge — Unity Arena FPS Kit (Android)
 
-مشروع مستقل لنقل **Xonotic** إلى **Unity** على **Android**، بالبناء المحلي فقط.
-هذا هو مستودع الكود والموارد والتوثيق وخطة التطوير والإصدارات.
+A complete **Unity 2022.3 LTS** project that builds a fast, touch-controlled arena
+shooter for Android from the free, open-source **Xonotic 0.8.6** game data.
 
-> **الحالة: تطوير `0.1.0-dev.6` على فرع `feat/unity-dev5-full-game`؛ ليست Xonotic مكتملة.**
-> نجحت أبنية Android محلية متعددة. الخرائط والقائمة والموسيقى مجمّعة في APK،
-> مع إصلاح استيراد الأجزاء والنماذج الأصلية. الأدلة والحدود في
-> [dev.6](docs/UNITY-DEV6.md) و[dev.5](docs/UNITY-DEV5.md).
-> لا يوجد تحقق بصري أو اختبار هاتف موثق للنسخة الجديدة.
+- **29 arena maps** imported from Quake-3 BSP (IBSP 46) with lightmaps, curved patches,
+  glow / scrolling / blended surfaces, skyboxes, and per-map music.
+- **14 weapons** with Xonotic's real balance numbers and mechanics (charge, bursts,
+  bounce, guided rockets, combo blasts, overheat), 8 projectile types with the
+  original MD3 / IQM / MDL models, smoke trails and explosions, grappling hook.
+- **Bots** on a baked NavMesh, skill 1–10, ported strategy / aim constants.
+- **Modes**: Deathmatch, Team Deathmatch, Capture the Flag, frag / time limits.
+- **Mobile-first**: multi-touch controls with resizable buttons and left-handed mode,
+  tabbed settings (video / audio / controls / game), quarter-res bloom,
+  adaptive resolution, ETC2 textures with mipmaps, IL2CPP ARM64.
+- **Importers** for BSP maps, MD3 / IQM v1+v2 / DPM / MDL models, Quake shader scripts,
+  skeletal animation (`.framegroups`) — bring your own Q3-format content too.
+- **Tooling**: one-command content setup, headless Linux build runner, 154 Python
+  tests, 1,074 Editor checks, Firebase Test Lab game-loop support.
 
-## الموجود الآن
+Game data is **not** bundled: `python3 tools/setup_content.py` downloads the official
+1.24 GB release, verifies its SHA-512 and prepares everything. See **[BUYER-GUIDE.md](BUYER-GUIDE.md)**.
 
-- مشروع Unity **2022.3.62f3**، مع إعداد بناء محلي **ARM64 / IL2CPP**.
-- كود ساحة اختبار أصلية: حركة وقفز، تحكم لمس متعدد الأصابع، صحة ودرع وذخيرة،
-  ثلاثة أسلحة تجريبية، ثلاثة خصوم بسيطين، pickups، موت وإعادة ظهور، HUD وإيقاف مؤقت.
-  **هذا كود للاختبار، وليس دليلًا على اكتمال هذه الوظائف على الهاتف.**
-- قارئ **IBSP v46** مع أسطح منحنية وخامات وإضاءة وسماء وتصادم ونقاط ظهور؛
-  حزمة متعددة الخرائط مع قائمة وموسيقى. الأبواب والمنصات المستوردة ساكنة.
-- نماذج عناصر وديكور MD3/IQM وشخصيات IQM بوضع idle ثابت؛ لا تحريك هيكلي بعد.
-- **موارد أصلية فعلية** في [ThirdParty/Xonotic](ThirdParty/Xonotic/README.md):
-  دفعة أولى، إضافة إلى شجرة حزم الإصدار في
-  [ThirdParty/Xonotic-0.8.6](ThirdParty/Xonotic-0.8.6/README.md)،
-  منفصلة عن كودنا وتحت تراخيص أصحابها. وجود الموارد لا يعني تكامل كل وظائفها.
-- أدوات محلية للاختبار والبناء وفحص الموارد، مع توثيق SHA256 والمصدر.
-
-## ما لم يكتمل
-
-لا يوجد نقل كامل لمنطق الخرائط أو الأسلحة أو الحركة أو الشبكة. كل الخرائط
-تستعمل Deathmatch أوفلاين تقريبيًا؛ بعض العناصر زينة غير قابلة للالتقاط.
-لا توجد مطابقة بصرية للفيديو ولا اختبار لمس/أداء على Android.
-نجاح البناء أو الاختبار بلا رسوميات ليس إثباتًا لاكتمال اللعبة.
-
-## البداية السريعة
-
-1. ثبّت Unity **2022.3.62f3** محليًا مع Android Build Support وSDK/NDK/OpenJDK،
-   وفعّل رخصتك عبر Unity Hub. لا تضع بيانات حسابك في المستودع.
-2. افتح جذر المشروع، ثم من قائمة `My Xonotic` اختر
-   `1 - Configure local project` ثم `2 - Create development arena scene`.
-3. بعد نجاح الترجمة، اختبر Play Mode ثم البناء المحلي وفق
-   [دليل البناء](docs/LOCAL_BUILD.md). لا يوجد workflow للبناء السحابي.
+## Quick start
 
 ```bash
-python3 tools/content/pk3_tool.py fixture
-bash tests/run_all.sh
-python3 tools/content/verify_resources.py
-python3 tools/asset_meta.py
+pip install Pillow
+python3 tools/setup_content.py        # data, maps, music, decoded textures
+# export the XONOTIC_* variables it prints, then open the project in Unity 2022.3:
+#   Plasma Verge ▸ 1 - Configure local project
+#   Plasma Verge ▸ 5 - Prepare ALL maps + menu (full game)
+#   Plasma Verge ▸ 4 - Build local Android development APK
 ```
 
-الاختبارات المستقلة تتطلب Python وMono (`mono` و`mcs`). يمكن تحديد مساري Mono
-وملفات الخرائط اختياريًا؛ التفاصيل في [الاختبارات](docs/TESTING.md).
+## Documentation
 
-## التحكم في ساحة التطوير
+- [BUYER-GUIDE.md](BUYER-GUIDE.md) — setup, customisation map, licences, limitations.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DEVELOPMENT-GUIDE.md](docs/DEVELOPMENT-GUIDE.md),
+  [docs/LOCAL_BUILD.md](docs/LOCAL_BUILD.md), [docs/TESTING.md](docs/TESTING.md).
+- [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) — provenance and licences of upstream content.
 
-| الوظيفة | الحاسوب | الهاتف |
-|---|---|---|
-| الحركة / النظر | WASD / الفأرة | سحب النصف الأيسر / الأيمن |
-| القفز | Space | JUMP |
-| إطلاق / ثانوي | زرا الفأرة | FIRE / ALT |
-| تبديل السلاح | 1–3 أو Q | NEXT |
-| إيقاف / استئناف | P أو Escape | PAUSE / RESUME |
-| إعادة المباراة | R | RESTART عند الإيقاف |
+## Licence
 
-أرقام وأوضاع الأسلحة تجريبية وليست توازن Xonotic النهائي. الساحة تُظهر ذلك صراحة.
+Original C# / Python code and documentation: **MIT** (`LICENSE`).
+Xonotic game data: **GPL** © Team Xonotic and contributors — downloaded separately, never
+relicensed by this project. Plasma Verge is independent and not endorsed by Team Xonotic.
 
-## فهرس العمل
-
-- [AGENTS.md](AGENTS.md) — نقطة الاستئناف، الحقائق والقيود وأوامر التحقق.
-- [البنية](docs/ARCHITECTURE.md) و[الخطة](docs/ROADMAP.md).
-- [البناء المحلي](docs/LOCAL_BUILD.md) و[الاختبارات](docs/TESTING.md).
-- [CHANGELOG](CHANGELOG.md) و[سياسة الإصدارات](docs/RELEASING.md).
-- [مصادر وتراخيص الطرف الثالث](THIRD_PARTY_NOTICES.md).
-- [الفيديو الذي حدده المالك](https://www.youtube.com/watch?v=ze-zRpsVBCA).
-
-كودنا الأصلي MIT؛ موارد `ThirdParty/Xonotic` **ليست MIT**. اقرأ تراخيصها قبل
-التعديل أو إعادة التوزيع. المشروع ليس إصدارًا رسميًا أو معتمدًا من Team Xonotic.
+Parts of this project were written with AI coding assistants under the author's direction and
+verified by compilation, automated tests and real-device runs.

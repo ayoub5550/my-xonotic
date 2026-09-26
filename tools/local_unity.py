@@ -38,9 +38,9 @@ METHODS = {
 def build_output(task, imported):
     if task == "android":
         if os.environ.get("XONOTIC_ALL_MAPS") == "1":
-            return "my-xonotic-full.apk"
-        return "my-xonotic-unity-boil.apk" if imported else "my-xonotic-development.apk"
-    return "my-xonotic.x86_64"
+            return "plasma-verge-full.apk"
+        return "plasma-verge-boil.apk" if imported else "plasma-verge-development.apk"
+    return "plasma-verge.x86_64"
 
 
 def validate_build_receipt(root, task, invocation, imported):

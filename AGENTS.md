@@ -3,6 +3,24 @@
 **Follow `docs/ROADMAP.md`** (dev.15 → dev.20, rules per release) before planning any new dev.N.
 **Device testing is always done on Firebase Test Lab** — `docs/DEVICE-TESTING.md`, `tools/ftl_robo.sh`; every APK runs on real phones there before the release is announced.
 
+## Sale branch checkpoint — 2026-09-26 (branch `feat/plasma-verge-sale`, product name **Plasma Verge**)
+
+This branch packages dev.18 as a sellable Unity kit. Public name is **Plasma Verge**
+(menu title, `productName`, `com.ayoub.plasmaverge`, `plasma-verge-*.apk`, Editor menu
+`Plasma Verge/…`); folder/namespace `MyXonotic` and `XONOTIC_*` env vars are unchanged.
+`tools/setup_content.py` replaces the ThirdParty tree for buyers: downloads
+`xonotic-0.8.6.zip` (SHA-512 pinned), extracts the 7 pk3s to `ExternalContent/staging_pk3`,
+unpacks data/maps/music (in-pk3 symlinks resolved), writes `music-manifest.json`, decodes the
+58 skins of `derived/decoded` + all 3207 `maps/dds` into `decoded`/`worlddecoded` (verified
+identical-or-superset of the committed derived trees, 0 failures). `tools/make_sale_package.py`
+builds `PlasmaVerge-UnitySource-<VERSION>.zip` (code only, ~0.5 MB, excludes ThirdParty/,
+AGENTS/CHANGELOG, dev.N notes, receipts) and with `--with-content` the GPL
+`PlasmaVerge-ContentPack-Xonotic-0.8.6.zip` (7 pk3 + licences, 1.19 GB) for itch/Gumroad/LS only.
+`README.md`, `docs/{DEVELOPMENT-GUIDE,LOCAL_BUILD,TESTING}.md` are English on this branch;
+`BUYER-GUIDE.md` is the buyer entry point. Do not merge this branch into the dev.N chain —
+rebase it on each new dev.N instead. Unity-side verification of the buyer path (prepare-maps
+with the setup_content roots) is still pending: run `local_unity.py compile/weapons/prepare-maps/test`.
+
 ## dev.18 visuals-settings-bots checkpoint — 2026-09-23 (branch `feat/unity-dev18-visuals-settings-bots`)
 
 Read `docs/UNITY-DEV18.md` first. Map surfaces are now classified from the

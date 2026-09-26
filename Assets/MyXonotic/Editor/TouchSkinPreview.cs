@@ -12,7 +12,7 @@ namespace MyXonotic.EditorTools
     /// </summary>
     public static class TouchSkinPreview
     {
-        [MenuItem("My Xonotic/Preview touch skin")]
+        [MenuItem("Plasma Verge/Preview touch skin")]
         public static void Run()
         {
             const int W = 1280, H = 720;
